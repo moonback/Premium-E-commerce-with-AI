@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export default function Header() {
-  const { cart, user, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
+  const { cart, user, loyaltyPoints, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -55,9 +55,9 @@ export default function Header() {
             
             {user && (
                <div className="hidden lg:flex flex-col items-end">
-                <span className="text-[10px] uppercase opacity-50 font-bold tracking-tighter">Points Fidélité</span>
-                <span className="text-sm font-semibold text-accent">1,450 pts</span>
-              </div>
+                 <span className="text-[10px] uppercase opacity-50 font-bold tracking-tighter">Points Fidélité</span>
+                 <span className="text-sm font-semibold text-accent">{loyaltyPoints.toLocaleString()} pts</span>
+               </div>
             )}
 
             <div className="relative group">

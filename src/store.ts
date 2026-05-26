@@ -250,30 +250,40 @@ export const useStore = create<AppState>()(
       },
 
       fetchUserProfile: async (userId: string, email: string) => {
-        if (!supabase) return;
-        try {
-          const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
-          if (error && error.code === 'PGRST116') {
-            // Profile not found, let's create it as a fallback in case the DB trigger didn't run
-            const role = email.includes('admin') ? 'admin' : 'customer';
-            const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([{ id: userId, email, role, address: '', phone: '' }]).select().single();
-            if (!insertError && newProfile) {
-              set({ user: { id: userId, email, role: newProfile.role } });
-              return;
-            }
-          }
-          if (data) {
-            set({ user: { id: userId, email, role: data.role, address: data.address ?? '', phone: data.phone ?? '' } });
-          } else {
-            // Ultimate fallback
-            set({ user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer', address: '', phone: '' } });
-          }
-        } catch (e) {
-          console.error("Error fetching/creating profile:", e);
-          set({ user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' } });
+      if (error && error.code === 'PGRST116') {
+        // Profile not found, create fallback
+        const role = email.includes('admin') ? 'admin' : 'customer';
+        const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([{ id: userId, email, role, address: '', phone: '' }]).select().single();
+        if (!insertError && newProfile) {
+          set({ user: { id: userId, email, role: newProfile.role } });
+          set({ loyaltyPoints: 0 });
+          return;
         }
-      },
+      }
+      if (data) {
+        set({
+          user: { id: userId, email, role: data.role, address: data.address ?? '', phone: data.phone ?? '' },
+          loyaltyPoints: data.loyalty_points ?? 0,
+        });
+      } else {
+        // Ultimate fallback
+        set({
+          user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer', address: '', phone: '' },
+          loyaltyPoints: 0,
+        });
+      }
+    } catch (e) {
+      console.error("Error fetching/creating profile:", e);
+      set({
+        user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' },
+        loyaltyPoints: 0,
+      });
+    }
+  },
 
       fetchProducts: async () => {
         set({ isLoadingProducts: true });

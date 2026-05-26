@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { supabase } from '../lib/supabase';
 
 export default function ProfileInfo() {
-  const { user } = useStore();
+  const { user, loyaltyPoints } = useStore();
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
