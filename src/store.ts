@@ -65,6 +65,21 @@ export const SEED_PRODUCTS: Product[] = [
 ];
 
 export interface AppState {
+    checkoutInfo: {
+      clientInfo: {
+        name: string;
+        email: string;
+        phone?: string;
+        address?: string;
+      };
+      deliveryMethod: 'clickCollect' | 'courier';
+      paymentStatus: 'idle' | 'processing' | 'succeeded' | 'failed';
+    };
+  setClientInfo: (info: { name: string; email: string; phone?: string; address?: string }) => void;
+  setDeliveryMethod: (method: 'clickCollect' | 'courier') => void;
+  setPaymentStatus: (status: 'idle' | 'processing' | 'succeeded' | 'failed') => void;
+  resetCheckout: () => void;
+  // store slices
   products: Product[];
   categories: Category[];
   cart: CartItem[];
@@ -72,25 +87,18 @@ export interface AppState {
   loyaltyPoints: number;
   searchQuery: string;
   isLoadingProducts: boolean;
-  
-  // Auth State
   user: User | null;
   isAuthModalOpen: boolean;
   isCartOpen: boolean;
-  
-  // Actions
   setAuthModalOpen: (isOpen: boolean) => void;
   setCartOpen: (isOpen: boolean) => void;
   setUser: (user: User | null) => void;
-  
   setSearchQuery: (q: string) => void;
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
-  checkout: () => void;
-  
-  // Initialization
-  initSession: () => void;
+  checkout: () => Promise<void>;
+  initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
   fetchProducts: () => Promise<void>;
   fetchCategories: () => Promise<void>;
@@ -107,13 +115,30 @@ export const useStore = create<AppState>()(
   loyaltyPoints: 1250,
   searchQuery: "",
   isLoadingProducts: true,
-  
+  checkoutInfo: {
+    clientInfo: { name: '', email: '', phone: '', address: '' },
+    deliveryMethod: 'courier',
+    paymentStatus: 'idle'
+  },
   user: null,
   isAuthModalOpen: false,
   isCartOpen: false,
 
-  setAuthModalOpen: (isOpen) => set({ isAuthModalOpen: isOpen }),
+
+
+  setClientInfo: (info) => set(state => ({ ...state, checkoutInfo: { ...state.checkoutInfo, clientInfo: info } })),
+  setDeliveryMethod: (method) => set(state => ({ ...state, checkoutInfo: { ...state.checkoutInfo, deliveryMethod: method } })),
+  setPaymentStatus: (status) => set(state => ({ ...state, checkoutInfo: { ...state.checkoutInfo, paymentStatus: status } })),
+  resetCheckout: () => set(state => ({
+    ...state,
+    checkoutInfo: {
+      clientInfo: { name: '', email: '', phone: '', address: '' },
+      deliveryMethod: 'courier',
+      paymentStatus: 'idle'
+    }
+  })),
   setCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
+  setAuthModalOpen: (isOpen) => set({ isAuthModalOpen: isOpen }),
   setUser: (user) => set({ user }),
 
   setSearchQuery: (q) => set({ searchQuery: q }),
@@ -148,35 +173,22 @@ export const useStore = create<AppState>()(
     if (state.cart.length === 0) return;
     const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
     const pointsEarned = Math.floor(total / 10);
-    
+
     if (supabase && state.user) {
       try {
-        const { data: order, error } = await supabase.from('orders').insert([{
-          user_id: state.user.id,
-          total: total,
-          status: 'En préparation'
-        }]).select().single();
-        
+        const { data: order, error } = await supabase.from('orders').insert([{ user_id: state.user.id, total, status: 'En préparation' }]).select().single();
         if (error) throw error;
-        
-        const orderItems = state.cart.map(item => ({
-          order_id: order.id,
-          product_id: item.product.id,
-          quantity: item.quantity,
-          price: item.product.price
-        }));
-        
+        const orderItems = state.cart.map(item => ({ order_id: order.id, product_id: item.product.id, quantity: item.quantity, price: item.product.price }));
         await supabase.from('order_items').insert(orderItems);
         toast.success(`Commande validée ! +${pointsEarned} points`);
       } catch (e: any) {
-         toast.error("Erreur, commande hors-ligne simulée : " + e.message);
+        toast.error("Erreur, commande hors-ligne simulée : " + e.message);
       }
     } else {
-       toast.success(`Commande locale validée !`);
+      toast.success(`Commande locale validée !`);
     }
-
-    set((state) => ({ 
-      cart: [], 
+    set(state => ({
+      cart: [],
       loyaltyPoints: state.loyaltyPoints + pointsEarned
     }));
   },

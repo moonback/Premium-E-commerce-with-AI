@@ -2,24 +2,26 @@ import React from 'react';
 import { useStore } from '../store';
 import { X, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
+
 
 export default function CartDrawer() {
   const { cart, addToCart, removeFromCart, checkout, isCartOpen, setCartOpen } = useStore();
-  
+
   const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
   return (
     <AnimatePresence>
       {isCartOpen && (
         <>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setCartOpen(false)}
             className="fixed inset-0 bg-ink/20 backdrop-blur-sm z-50"
           />
-          <motion.div 
+          <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -50,11 +52,11 @@ export default function CartDrawer() {
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
                         <h4 className="font-serif font-medium">{item.product.name}</h4>
-                        <p className="text-ink/50 text-xs italic uppercase">{item.product.category}</p>
+                        <p className="text-ink/50 text-xs italic uppercase">{item.product.categories.join(', ')}</p>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 bg-soft-green rounded-lg p-1">
-                          <button 
+                          <button
                             onClick={() => {
                               if (item.quantity > 1) {
                                 addToCart(item.product, -1);
@@ -67,7 +69,7 @@ export default function CartDrawer() {
                             <Minus className="w-3 h-3" />
                           </button>
                           <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
-                          <button 
+                          <button
                             onClick={() => addToCart(item.product, 1)}
                             className="p-1 hover:bg-white rounded-md transition-colors text-ink/60"
                           >
@@ -86,7 +88,7 @@ export default function CartDrawer() {
               <div className="p-6 border-t border-ink/10 bg-soft-green/30">
                 <div className="mb-4">
                   <div className="h-1 w-full bg-ink/10 rounded-full overflow-hidden mb-2">
-                     <div className="h-full bg-accent transition-all" style={{ width: `${Math.min((total / 50) * 100, 100)}%` }} />
+                    <div className="h-full bg-accent transition-all" style={{ width: `${Math.min((total / 50) * 100, 100)}%` }} />
                   </div>
                   <p className="text-[10px] uppercase font-bold tracking-widest text-ink/50 text-center">
                     {total >= 50 ? '🎉 Livraison gratuite débloquée' : `Ajoutez ${(50 - total).toFixed(2)}€ pour la livraison gratuite`}
@@ -96,15 +98,13 @@ export default function CartDrawer() {
                   <span className="text-ink/60 text-sm uppercase tracking-widest font-bold">Subtotal</span>
                   <span className="font-semibold text-xl font-serif">{total.toFixed(2)}€</span>
                 </div>
-                <button 
-                  onClick={() => {
-                    checkout();
-                    setCartOpen(false);
-                  }}
-                  className="w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors border border-ink"
+                <Link
+                  to="/checkout"
+                  onClick={() => setCartOpen(false)}
+                  className="block text-center w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors border border-ink"
                 >
                   Checkout - {total.toFixed(2)}€
-                </button>
+                </Link>
               </div>
             )}
           </motion.div>
