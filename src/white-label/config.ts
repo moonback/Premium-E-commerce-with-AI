@@ -7,6 +7,9 @@ export const DEFAULT_TENANT: TenantBranding = {
   industry: 'fashion',
   locale: 'fr-FR',
   currency: 'EUR',
+  heroBadge: 'Maison de Qualité',
+  heroTitle: 'La Collection Essentielle',
+  heroSubtitle: "Découvrez notre sélection de produits intemporels. L'alliance parfaite entre esthétique et utilité.",
   theme: {
     colorBg: '#f8f8f7',
     colorInk: '#0f172a',
@@ -26,6 +29,9 @@ export const TENANT_REGISTRY: Record<string, TenantBranding> = {
     industry: 'luxe',
     locale: 'fr-FR',
     currency: 'EUR',
+    heroBadge: 'Édition Luxe',
+    heroTitle: 'Signature Maison Premium',
+    heroSubtitle: 'Des pièces exclusives conçues pour une expérience retail haut de gamme.',
     theme: {
       ...DEFAULT_TENANT.theme,
       colorAccent: '#b89b72',
@@ -38,6 +44,9 @@ export const TENANT_REGISTRY: Record<string, TenantBranding> = {
     industry: 'electronics',
     locale: 'en-US',
     currency: 'USD',
+    heroBadge: 'Next-Gen Tech',
+    heroTitle: 'Electro Performance Line',
+    heroSubtitle: 'High-performance devices engineered for modern commerce and everyday life.',
     theme: {
       ...DEFAULT_TENANT.theme,
       colorAccent: '#6366f1',

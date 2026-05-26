@@ -24,5 +24,8 @@ export type TenantBranding = {
   industry: IndustryMode;
   locale: string;
   currency: string;
+  heroBadge: string;
+  heroTitle: string;
+  heroSubtitle: string;
   theme: TenantThemeTokens;
 };

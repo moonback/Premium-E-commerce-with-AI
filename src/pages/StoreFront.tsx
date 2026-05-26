@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
 import { motion } from 'motion/react';
+import { getCurrentTenantBranding } from '../white-label/tenant';
 
 export default function StoreFront() {
   const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
+  const branding = getCurrentTenantBranding();
 
   const categories = ['Tout', ...storeCategories.filter(c => c.level === 1).map(c => c.name)];
 
@@ -31,12 +33,12 @@ export default function StoreFront() {
           transition={{ duration: 1, delay: 0.2 }}
           className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center"
         >
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/70 mb-6">Maison de Qualité</span>
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/70 mb-6">{branding.heroBadge}</span>
           <h1 className="text-6xl md:text-8xl font-light font-serif text-white mb-6 leading-none">
-            La Collection <br/><span className="italic">Essentielle</span>
+            {branding.heroTitle}
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl font-light">
-            Découvrez notre sélection de produits intemporels. L'alliance parfaite entre esthétique et utilité.
+            {branding.heroSubtitle}
           </p>
         </motion.div>
       </div>
