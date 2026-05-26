@@ -8,7 +8,19 @@ export function resolveTenantBranding(hostname: string): TenantBranding {
 
 export function getCurrentTenantBranding(): TenantBranding {
   if (typeof window === 'undefined') return DEFAULT_TENANT;
-  return resolveTenantBranding(window.location.hostname);
+  return resolveTenantBrandingFromLocation(window.location.hostname, window.location.search);
+}
+
+export function resolveTenantBrandingFromLocation(hostname: string, search: string): TenantBranding {
+  const params = new URLSearchParams(search);
+  const tenantPreview = params.get('tenant');
+  if (tenantPreview) {
+    const normalizedPreview = tenantPreview.toLowerCase().split(':')[0];
+    if (TENANT_REGISTRY[normalizedPreview]) {
+      return TENANT_REGISTRY[normalizedPreview];
+    }
+  }
+  return resolveTenantBranding(hostname);
 }
 
 export function applyTenantTheme(theme: TenantBranding['theme']) {
