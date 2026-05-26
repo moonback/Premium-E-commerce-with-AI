@@ -2,9 +2,12 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useStore } from '../store';
 import { Link } from 'react-router-dom';
+import { getCurrentTenantBranding } from '../white-label/tenant';
+import { formatTenantCurrency } from '../white-label/format';
 
 export default function CartReview({ onNext }: { onNext: () => void }) {
   const { cart, setCartOpen } = useStore();
+  const branding = getCurrentTenantBranding();
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   const handleProceed = () => {
@@ -32,12 +35,12 @@ export default function CartReview({ onNext }: { onNext: () => void }) {
                 <p className="font-serif">{item.product.name}</p>
                 <p className="text-xs text-ink/50">{item.product.categories?.[0] ?? 'Sans catégorie'}</p>
               </div>
-              <span className="font-medium">{item.quantity} × {item.product.price.toFixed(2)}€</span>
+              <span className="font-medium">{item.quantity} × {formatTenantCurrency(item.product.price, branding)}</span>
             </div>
           ))}
           <div className="flex justify-between font-bold text-xl pt-4 border-t border-ink/10">
             <span>Sous‑total</span>
-            <span>{subtotal.toFixed(2)}€</span>
+            <span>{formatTenantCurrency(subtotal, branding)}</span>
           </div>
         </div>
       )}

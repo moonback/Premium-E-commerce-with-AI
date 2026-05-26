@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { resolveTenantBranding, resolveTenantBrandingFromLocation } from '../src/white-label/tenant';
+import { formatTenantCurrency } from '../src/white-label/format';
 
 function run() {
   const premium = resolveTenantBranding('PREMIUM.LOCAL:5173');
@@ -19,6 +20,12 @@ function run() {
 
   const invalidPreview = resolveTenantBrandingFromLocation('premium.local', '?tenant=does-not-exist');
   assert.equal(invalidPreview.tenantId, 'premium-fashion');
+
+  const euroFormat = formatTenantCurrency(1234.5, premium);
+  assert.ok(euroFormat.includes('€'));
+
+  const usdFormat = formatTenantCurrency(1234.5, electro);
+  assert.ok(usdFormat.includes('$'));
 
   console.log('tenant-branding tests passed');
 }
