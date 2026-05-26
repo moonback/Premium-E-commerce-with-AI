@@ -22,6 +22,7 @@ CREATE TABLE products (
     categories TEXT[],
     effects TEXT[], -- Array of strings for flavors/textures/effects
     stock INTEGER NOT NULL DEFAULT 0,
+    specs JSONB DEFAULT '[]', -- New field for dynamic specifications (accordions)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

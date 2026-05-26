@@ -15,6 +15,11 @@ export const SEED_PRODUCTS: Product[] = [
     categories: ["Vêtements"],
     effects: ["Coton bio", "Coupe droite", "Confortable"],
     stock: 120,
+    specs: [
+      { title: "Allergènes", content: "Contient des traces de fruits à coque." },
+      { title: "Conseils de dégustation", content: "Laver avant usage." },
+      { title: "Valeurs nutritionnelles", content: "100 kcal pour 100g." }
+    ]
   },
   {
     id: "prod_2",
@@ -25,6 +30,10 @@ export const SEED_PRODUCTS: Product[] = [
     categories: ["Accessoires"],
     effects: ["Cuir", "Artisanal", "Durable"],
     stock: 30,
+    specs: [
+      { title: "Allergènes", content: "Cuir véritable, peut contenir des résidus de tannage." },
+      { title: "Conseils d'entretien", content: "Essuyer avec un chiffon sec." }
+    ]
   },
   {
     id: "prod_3",
@@ -35,6 +44,9 @@ export const SEED_PRODUCTS: Product[] = [
     categories: ["Maison"],
     effects: ["Céramique", "Fait main", "Minimaliste"],
     stock: 50,
+    specs: [
+      { title: "Matériau", content: "Céramique émaillée, sans plomb." }
+    ]
   },
   {
     id: "prod_4",
@@ -45,6 +57,10 @@ export const SEED_PRODUCTS: Product[] = [
     categories: ["Accessoires"],
     effects: ["Inox", "Isotherme", "Écologique"],
     stock: 85,
+    specs: [
+      { title: "Matériau", content: "Acier inoxydable 316L, sans BPA." },
+      { title: "Capacité", content: "750ml, étanche." }
+    ]
   }
 ];
 

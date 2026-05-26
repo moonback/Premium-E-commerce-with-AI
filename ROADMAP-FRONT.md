@@ -17,10 +17,10 @@ Ce document détaille les prochaines étapes de développement pour l'interface 
 
 ## 🟡 Phase 3 : Page Produit (Product Detail)
 - [x] Layout principal avec description, prix, ajout au panier, stock.
-- [ ] **Galerie Multimédia** : Carrousel d'images permettant d'afficher le produit sous plusieurs angles et une vue "à la coupe" du trompe-l'œil.
-- [ ] **Fiches Techniques (Accordéons)** : Sections dépliantes pour "Allergènes", "Conseils de dégustation", "Valeurs nutritionnelles".
-- [ ] **Cross-Selling** : Ajout d'une section "S'accorde parfaitement avec..." (suggestions de thés/cafés ou autres produits).
-- [ ] **Avis Clients** : Affichage d'étoiles et commentaires vérifiés.
+- [x] **Galerie Multimédia** : Carrousel d'images permettant d'afficher le produit sous plusieurs angles et une vue "à la coupe" du trompe-l'œil.
+- [x] **Fiches Techniques (Accordéons)** : Sections dépliantes pour "Allergènes", "Conseils de dégustation", "Valeurs nutritionnelles".
+- [x] **Cross-Selling** : Ajout d'une section "S'accorde parfaitement avec..." (suggestions de thés/cafés ou autres produits).
+- [x] **Avis Clients** : Affichage d'étoiles et commentaires vérifiés.
 
 ## 🟠 Phase 4 : Panier & Checkout (Expérience d'Achat)
 - [x] Panier latéral (CartDrawer) avec jauge de livraison gratuite.

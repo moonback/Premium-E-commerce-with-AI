@@ -5,6 +5,11 @@ export type Category = {
   level: number;
 };
 
+export type Spec = {
+  title: string;
+  content: string;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -14,6 +19,7 @@ export type Product = {
   categories: string[];
   effects: string[];
   stock: number;
+  specs: Spec[];
 };
 
 export type CartItem = {

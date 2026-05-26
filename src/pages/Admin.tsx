@@ -37,6 +37,10 @@ export default function Admin() {
         price: Number(editingProduct.price) || 0,
         stock: Number(editingProduct.stock) || 0,
         effects: Array.isArray(editingProduct.effects) ? editingProduct.effects : (editingProduct.effects as any)?.split(',').map((e:string) => e.trim()) || [],
+        specs: Array.isArray(editingProduct.specs) ? editingProduct.specs : (editingProduct.specs as any)?.split(';;').map((s:string) => {
+          const [title, content] = s.split('::');
+          return { title, content };
+        }) || [],
       } as any;
 
       // Remove legacy field if it still exists in state
@@ -351,6 +355,56 @@ export default function Admin() {
                   ))}
                 </div>
               </div>
+              
+              {/* Spécifications (Accordéons) */}
+              <div className="mt-10 space-y-4">
+                  {((editingProduct.specs as any) || []).map((spec: any, idx: number) => (
+                    <div key={idx} className="border border-ink/10 p-4 rounded">
+                      <input
+                        type="text"
+                        placeholder="Titre"
+                        value={spec.title || ''}
+                        onChange={e => {
+                          const newSpecs = [...(editingProduct.specs as any)];
+                          newSpecs[idx] = { ...newSpecs[idx], title: e.target.value };
+                          setEditingProduct({ ...editingProduct, specs: newSpecs });
+                        }}
+                        className="w-full mb-2 border-b border-ink/20 py-1 focus:outline-none"
+                      />
+                      <textarea
+                        placeholder="Contenu"
+                        value={spec.content || ''}
+                        onChange={e => {
+                          const newSpecs = [...(editingProduct.specs as any)];
+                          newSpecs[idx] = { ...newSpecs[idx], content: e.target.value };
+                          setEditingProduct({ ...editingProduct, specs: newSpecs });
+                        }}
+                        className="w-full border-b border-ink/20 py-1 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSpecs = (editingProduct.specs as any).filter((_s: any, i: number) => i !== idx);
+                          setEditingProduct({ ...editingProduct, specs: newSpecs });
+                        }}
+                        className="mt-2 text-xs text-red-600 hover:underline"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSpecs = [...(editingProduct.specs as any), { title: '', content: '' }];
+                      setEditingProduct({ ...editingProduct, specs: newSpecs });
+                    }}
+                    className="px-4 py-2 border border-ink text-ink hover:bg-ink hover:text-white transition-colors"
+                  >
+                    + Ajouter une spécification
+                  </button>
+                </div>
+              
               <div>
                 <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Description</label>
                 <textarea required value={editingProduct.description || ''} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent italic" />
