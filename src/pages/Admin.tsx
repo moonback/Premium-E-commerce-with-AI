@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { Product } from '../types';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import AdminOrdersList from '../components/AdminOrdersList';
 import KitchenOrders from '../components/KitchenOrders';
 
 export default function Admin() {
@@ -250,12 +251,13 @@ export default function Admin() {
               ))}
             </div>
             
-{activeTab === 'Orders' && (
-    <div className="bg-transparent border border-ink/10 overflow-hidden">
-      <KitchenOrders />
-    </div>
-  )}
           </>
+        )}
+
+        {activeTab === 'Orders' && (
+          <div className="bg-transparent border border-ink/10 overflow-hidden">
+            <AdminOrdersList />
+          </div>
         )}
 
         {activeTab === 'Products' && !isEditing && (
