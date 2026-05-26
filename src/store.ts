@@ -178,8 +178,15 @@ export const useStore = create<AppState>()(
       try {
         const { data: order, error } = await supabase.from('orders').insert([{ user_id: state.user.id, total, status: 'pending' }]).select().single();
         if (error) throw error;
-        const orderItems = state.cart.map(item => ({ order_id: order.id, product_id: item.product.id, quantity: item.quantity, price: item.product.price }));
-        await supabase.from('order_items').insert(orderItems);
+        const { clientInfo } = state.checkoutInfo;
+        // Persist client address and phone into user profile if available
+        if (state.user) {
+          await supabase.from('profiles')
+            .update({ address: clientInfo.address || '', phone: clientInfo.phone || '' })
+            .eq('id', state.user.id);
+          // Update local user state
+          set({ user: { ...state.user, address: clientInfo.address || '', phone: clientInfo.phone || '' } });
+        }
         toast.success(`Commande validée ! +${pointsEarned} points`);
       } catch (e: any) {
         toast.error("Erreur, commande hors-ligne simulée : " + e.message);
@@ -217,19 +224,18 @@ export const useStore = create<AppState>()(
       if (error && error.code === 'PGRST116') {
          // Profile not found, let's create it as a fallback in case the DB trigger didn't run
          const role = email.includes('admin') ? 'admin' : 'customer';
-         const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([{ id: userId, email, role }]).select().single();
+          const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([{ id: userId, email, role, address: '', phone: '' }]).select().single();
          if (!insertError && newProfile) {
             set({ user: { id: userId, email, role: newProfile.role } });
             return;
          }
       }
-      
-      if (data) {
-        set({ user: { id: userId, email, role: data.role } });
-      } else {
-        // Ultimate fallback
-        set({ user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' } });
-      }
+            if (data) {
+          set({ user: { id: userId, email, role: data.role, address: data.address ?? '', phone: data.phone ?? '' } });
+        } else {
+          // Ultimate fallback
+          set({ user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer', address: '', phone: '' } });
+        }
     } catch (e) {
       console.error("Error fetching/creating profile:", e);
       set({ user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' } });
