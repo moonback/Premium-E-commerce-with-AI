@@ -59,7 +59,7 @@ export default function Header() {
             {user && (
                <div className="hidden lg:flex flex-col items-end">
                  <span className="text-[10px] uppercase opacity-50 font-bold tracking-tighter">Points Fidélité</span>
-                 <span className="text-sm font-semibold text-accent">{loyaltyPoints.toLocaleString()} pts</span>
+                 <span className="text-sm font-semibold text-accent">{loyaltyPoints.toLocaleString(branding.locale)} pts</span>
                </div>
             )}
 

@@ -5,6 +5,8 @@ export const DEFAULT_TENANT: TenantBranding = {
   brandName: 'Premium Store',
   logoUrl: '/logo.svg',
   industry: 'fashion',
+  locale: 'fr-FR',
+  currency: 'EUR',
   theme: {
     colorBg: '#f8f8f7',
     colorInk: '#0f172a',
@@ -22,6 +24,8 @@ export const TENANT_REGISTRY: Record<string, TenantBranding> = {
     tenantId: 'premium-fashion',
     brandName: 'Maison Premium',
     industry: 'luxe',
+    locale: 'fr-FR',
+    currency: 'EUR',
     theme: {
       ...DEFAULT_TENANT.theme,
       colorAccent: '#b89b72',
@@ -32,6 +36,8 @@ export const TENANT_REGISTRY: Record<string, TenantBranding> = {
     tenantId: 'electro-pro',
     brandName: 'Electro Pro',
     industry: 'electronics',
+    locale: 'en-US',
+    currency: 'USD',
     theme: {
       ...DEFAULT_TENANT.theme,
       colorAccent: '#6366f1',

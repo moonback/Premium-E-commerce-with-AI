@@ -22,5 +22,7 @@ export type TenantBranding = {
   brandName: string;
   logoUrl: string;
   industry: IndustryMode;
+  locale: string;
+  currency: string;
   theme: TenantThemeTokens;
 };

@@ -5,9 +5,11 @@ function run() {
   const premium = resolveTenantBranding('PREMIUM.LOCAL:5173');
   assert.equal(premium.tenantId, 'premium-fashion');
   assert.equal(premium.brandName, 'Maison Premium');
+  assert.equal(premium.currency, 'EUR');
 
   const electro = resolveTenantBranding('electro.local');
   assert.equal(electro.industry, 'electronics');
+  assert.equal(electro.locale, 'en-US');
 
   const fallback = resolveTenantBranding('unknown.example.com');
   assert.equal(fallback.tenantId, 'default');
