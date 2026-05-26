@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { motion } from 'motion/react';
 
-export default function ClientDeliveryForm({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext: () => void; onBack: () => void; onValid?: (clientInfo: any, deliveryMethod: any) => void }) {
   const { setClientInfo, setDeliveryMethod, checkout } = useStore();
   const [clientInfo, setInfo] = useState({ name: '', email: '', phone: '', address: '' });
   const [deliveryMethod, setMethod] = useState<'clickCollect' | 'courier'>('courier');
@@ -19,6 +19,7 @@ export default function ClientDeliveryForm({ onNext, onBack }: { onNext: () => v
     setDeliveryMethod(deliveryMethod);
     // Persist extra fields in clientInfo (optional, can be stored in supabase later)
     setClientInfo({ ...clientInfo, pickupLocation, fee, timeSlot });
+    onValid?.(clientInfo, deliveryMethod);
     onNext();
   };
 
