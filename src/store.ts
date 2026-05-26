@@ -176,7 +176,7 @@ export const useStore = create<AppState>()(
 
     if (supabase && state.user) {
       try {
-        const { data: order, error } = await supabase.from('orders').insert([{ user_id: state.user.id, total, status: 'En préparation' }]).select().single();
+        const { data: order, error } = await supabase.from('orders').insert([{ user_id: state.user.id, total, status: 'pending' }]).select().single();
         if (error) throw error;
         const orderItems = state.cart.map(item => ({ order_id: order.id, product_id: item.product.id, quantity: item.quantity, price: item.product.price }));
         await supabase.from('order_items').insert(orderItems);
