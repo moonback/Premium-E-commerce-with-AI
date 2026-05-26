@@ -1,10 +1,20 @@
 import React from 'react';
 import { useStore } from '../store';
-import { ShoppingBag, Search, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ShoppingBag, Search, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export default function Header() {
-  const { cart, user, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
+  const { cart, user, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setUser(null);
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full bg-bg/80 backdrop-blur-md border-b border-ink/10 flex flex-col">
@@ -41,19 +51,44 @@ export default function Header() {
               </div>
             )}
 
-            <button 
-              onClick={() => user ? useStore.getState().setUser(null) : setAuthModalOpen(true)}
-              className="text-ink/60 hover:text-ink transition-colors flex items-center gap-2"
-              title={user ? "Se déconnecter" : "Se connecter"}
-            >
-              {user ? (
-                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-1 bg-ink text-white rounded">
-                  {user.email.split('@')[0]}
-                </span>
-              ) : (
-                <User className="w-5 h-5" />
+            <div className="relative group">
+              <button 
+                onClick={() => !user && setAuthModalOpen(true)}
+                className="text-ink/60 hover:text-ink transition-colors flex items-center gap-2 py-2"
+                title={user ? "Mon compte" : "Se connecter"}
+              >
+                {user ? (
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-1 bg-ink text-white rounded">
+                    {user.email.split('@')[0]}
+                  </span>
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* User Dropdown */}
+              {user && (
+                <div className="absolute top-full right-0 pt-2 hidden group-hover:block z-50">
+                  <div className="bg-bg border border-ink/10 shadow-xl p-2 w-48 text-xs font-bold uppercase tracking-widest flex flex-col gap-1">
+                    <div className="px-3 py-2 opacity-50 mb-1 border-b border-ink/10">{user.email}</div>
+                    
+                    <Link to="/profile" className="p-3 hover:bg-soft-green transition-colors text-left flex items-center gap-2 text-ink">
+                      <User className="w-4 h-4"/> Mon Profil
+                    </Link>
+                    
+                    {user.role === 'admin' && (
+                      <Link to="/admin" className="p-3 hover:bg-soft-green transition-colors text-left flex items-center gap-2 text-ink">
+                        <LayoutDashboard className="w-4 h-4"/> Dashboard
+                      </Link>
+                    )}
+                    
+                    <button onClick={handleLogout} className="p-3 mt-1 text-red-600 hover:bg-red-50 transition-colors text-left flex items-center gap-2 border-t border-ink/10">
+                      <LogOut className="w-4 h-4"/> Déconnexion
+                    </button>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
             
             <button 
               onClick={() => setCartOpen(true)}

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import StoreLayout from './components/StoreLayout';
 import StoreFront from './pages/StoreFront';
 import ProductDetail from './pages/ProductDetail';
+import Profile from './pages/Profile';
 import POS from './pages/POS';
 import Admin from './pages/Admin';
 import StoreScreen from './pages/StoreScreen';
@@ -66,6 +67,11 @@ export default function App() {
           <Route element={<StoreLayout />}>
             <Route path="/" element={<StoreFront />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
           </Route>
           
           <Route path="/pos" element={<POS />} />
