@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useStore } from '../store';
 
 export default function VoiceAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -69,6 +70,31 @@ export default function VoiceAssistant() {
           // Clear audio queue
           if (audioCtxRef.current) {
             nextStartTimeRef.current = audioCtxRef.current.currentTime;
+          }
+        }
+        if (msg.functionCall) {
+          const { id, name, args } = msg.functionCall;
+          if (name === "addToCart") {
+            const store = useStore.getState();
+            const product = store.products.find(p => p.id === args.productId);
+            if (product) {
+              store.addToCart(product, args.quantity || 1);
+              ws.send(JSON.stringify({
+                functionResponse: {
+                  id: id,
+                  name: name,
+                  response: { result: `Succès : ${args.quantity || 1} x ${product.name} ajouté(s).` }
+                }
+              }));
+            } else {
+              ws.send(JSON.stringify({
+                functionResponse: {
+                  id: id,
+                  name: name,
+                  response: { error: "Erreur : Produit introuvable." }
+                }
+              }));
+            }
           }
         }
       };

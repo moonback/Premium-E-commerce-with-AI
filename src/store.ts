@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Product, CartItem, User } from './types';
 import { supabase } from './lib/supabase';
 
@@ -73,7 +74,9 @@ interface AppState {
   syncCatalogToDb: () => Promise<void>;
 }
 
-export const useStore = create<AppState>((set, get) => ({
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   products: MOCK_PRODUCTS,
   cart: [],
   favorites: [],
@@ -160,4 +163,7 @@ export const useStore = create<AppState>((set, get) => ({
       alert("Erreur de synchronisation : " + err.message);
     }
   }
+}), {
+  name: 'veridian-session',
+  partialize: (state) => ({ cart: state.cart, favorites: state.favorites })
 }));

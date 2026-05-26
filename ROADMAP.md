@@ -28,12 +28,12 @@ L'objectif de cette phase est de remplacer les données statiques (Mocks) par un
 ## 🟠 Phase 3 : Enrichissement de l'Intelligence Artificielle (Ava 2.0)
 Améliorer les capacités du "Chef Pâtissier IA" pour agir comme un vrai conseiller technique et commercial.
 
-- [ ] **RAG (Retrieval-Augmented Generation) pour l'IA**
-  - Connecter l'assistant vocal à la base de données réelle (Supabase) pour tenir compte de l'état des stocks en temps réel.
-  - Personnalisation : Ava se souvient des achats précédents des clients connectés (ex: "Vous aviez aimé *La Noisette*, voulez-vous essayer *Le Grain de Café* aujourd'hui ?").
-- [ ] **Actions Vocales (Function Calling)**
-  - Permettre à l'IA d'ajouter directement un produit au panier via la voix ("Ava, ajoute deux Citrons Jaunes à ma commande").
-  - Application de codes promotionnels via reconnaissance vocale.
+- [x] **RAG (Retrieval-Augmented Generation) pour l'IA**
+  - [x] Connecter l'assistant vocal à la base de données réelle (Supabase) pour tenir compte de l'état des stocks en temps réel.
+  - [ ] Personnalisation : Ava se souvient des achats précédents des clients connectés (ex: "Vous aviez aimé *La Noisette*, voulez-vous essayer *Le Grain de Café* aujourd'hui ?").
+- [x] **Actions Vocales (Function Calling)**
+  - [x] Permettre à l'IA d'ajouter directement un produit au panier via la voix ("Ava, ajoute deux Citrons Jaunes à ma commande").
+  - [ ] Application de codes promotionnels via reconnaissance vocale.
 - [ ] **Analyse des sentiments Magasin**
   - Analyser l'humeur du client via l'API audio pour adapter l'enthousiasme, le ton ou les recommandations.
 

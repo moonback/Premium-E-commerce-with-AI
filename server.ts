@@ -37,6 +37,13 @@ async function startServer() {
             if (message.serverContent?.interrupted) {
               clientWs.send(JSON.stringify({ interrupted: true }));
             }
+            if (message.serverContent?.modelTurn?.parts) {
+              for (const part of message.serverContent.modelTurn.parts) {
+                if (part.functionCall) {
+                  clientWs.send(JSON.stringify({ functionCall: part.functionCall }));
+                }
+              }
+            }
           },
         },
         config: {
@@ -45,6 +52,23 @@ async function startServer() {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
           },
           systemInstruction: "Vous êtes Ava, une conseillère IA et chef pâtissière pour 'Véridian', une boutique premium de pâtisseries trompe-l'œil. Soyez accueillante, experte et conversationnelle. Posez des questions pour comprendre les préférences de goût du client (fruité, chocolaté, texture, etc.), puis recommandez la pâtisserie idéale. Soyez concise dans vos réponses.",
+          tools: [{
+            functionDeclarations: [{
+              name: "addToCart",
+              description: "Ajoute un produit au panier du client ou propose un achat.",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  productId: {
+                    type: "STRING", 
+                    description: "L'identifiant exact de la pâtisserie choisie. Valeurs possibles: prod_1 (La Noisette Fraîche), prod_2 (Le Citron Jaune), prod_3 (La Gousse de Vanille), prod_4 (Le Grain de Café)."
+                  },
+                  quantity: { type: "INTEGER", description: "La quantité souhaitée par le client" }
+                },
+                required: ["productId", "quantity"]
+              }
+            }]
+          }]
         },
       });
 
@@ -61,6 +85,8 @@ async function startServer() {
             ]);
           } else if (parsed.text) {
              session.sendRealtimeInput([{text: parsed.text}]);
+          } else if (parsed.functionResponse) {
+             session.sendRealtimeInput([{ functionResponse: parsed.functionResponse }]);
           }
         } catch (e) {
           console.error("Error processing client message", e);
