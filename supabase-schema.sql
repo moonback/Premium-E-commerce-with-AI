@@ -73,8 +73,12 @@ BEGIN
     CASE WHEN new.email LIKE '%admin%' THEN 'admin'::user_role ELSE 'customer'::user_role END
   );
   RETURN new;
+EXCEPTION
+  WHEN others THEN
+    -- Fallback: if the trigger fails, do not block the signup process
+    RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
