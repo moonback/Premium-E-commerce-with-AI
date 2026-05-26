@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 
 export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext: () => void; onBack: () => void; onValid?: (clientInfo: any, deliveryMethod: any) => void }) {
   const { setClientInfo, setDeliveryMethod, checkout } = useStore();
-  const [clientInfo, setInfo] = useState({ name: '', email: '', phone: '', address: '' });
+  const [clientInfo, setInfo] = useState({ name: '', email: '', phone: '', address: '', addressLine1: '', addressLine2: '', city: '', postalCode: '', country: '' });
   const [deliveryMethod, setMethod] = useState<'clickCollect' | 'courier'>('courier');
   const [pickupLocation, setPickupLocation] = useState('');
   const [fee, setFee] = useState('0');
@@ -52,9 +52,37 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext
         />
         <input
           type="text"
-          placeholder="Adresse de livraison"
-          value={clientInfo.address}
-          onChange={(e) => setInfo({ ...clientInfo, address: e.target.value })}
+          placeholder="Adresse ligne 1"
+          value={clientInfo.addressLine1 || ''}
+          onChange={(e) => setInfo({ ...clientInfo, addressLine1: e.target.value })}
+          className="p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Adresse ligne 2"
+          value={clientInfo.addressLine2 || ''}
+          onChange={(e) => setInfo({ ...clientInfo, addressLine2: e.target.value })}
+          className="p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Ville"
+          value={clientInfo.city || ''}
+          onChange={(e) => setInfo({ ...clientInfo, city: e.target.value })}
+          className="p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Code postal"
+          value={clientInfo.postalCode || ''}
+          onChange={(e) => setInfo({ ...clientInfo, postalCode: e.target.value })}
+          className="p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Pays"
+          value={clientInfo.country || ''}
+          onChange={(e) => setInfo({ ...clientInfo, country: e.target.value })}
           className="p-2 border rounded"
         />
         <label className="flex items-center">
