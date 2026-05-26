@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 
-// Simple payment form component
-// This component captures basic credit card information.
-// It does not perform any real payment processing; integration with a payment gateway
-// should be added where the handleSubmit function is defined.
+// Props for the payment form – onSuccess is called after a successful (demo) submission.
+interface PaymentFormProps {
+  onSuccess?: () => void;
+}
 
-const PaymentForm: React.FC = () => {
+const PaymentForm: React.FC<PaymentFormProps> = ({ onSuccess }) => {
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
@@ -13,7 +13,6 @@ const PaymentForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const validate = () => {
-    // Very lightweight validation – replace with a library like card-validator for production.
     if (!cardNumber.match(/^\d{13,19}$/)) {
       return "Card number must be 13‑19 digits.";
     }
@@ -37,9 +36,10 @@ const PaymentForm: React.FC = () => {
       return;
     }
     setError(null);
-    // TODO: Integrate with your payment gateway here.
+    // Here you would normally send data to a payment gateway.
     console.log("Submitting payment", { cardNumber, expiry, cvc, name });
-    alert("Payment information submitted (demo).\nImplement real processing logic.");
+    // Notify parent (Checkout) that payment succeeded.
+    onSuccess?.();
   };
 
   return (
@@ -102,7 +102,7 @@ const formStyle: React.CSSProperties = {
   padding: "1rem",
   background: "rgba(255,255,255,0.9)",
   borderRadius: "8px",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
 };
 const headingStyle: React.CSSProperties = { textAlign: "center", marginBottom: "1rem" };
 const fieldStyle: React.CSSProperties = { marginBottom: "0.75rem" };
@@ -111,7 +111,7 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.5rem",
   border: "1px solid #ccc",
-  borderRadius: "4px",
+  borderRadius: "4px"
 };
 const buttonStyle: React.CSSProperties = {
   width: "100%",
@@ -121,7 +121,7 @@ const buttonStyle: React.CSSProperties = {
   border: "none",
   borderRadius: "4px",
   cursor: "pointer",
-  fontSize: "1rem",
+  fontSize: "1rem"
 };
 const errorStyle: React.CSSProperties = { color: "#b91c1c", marginBottom: "0.5rem", textAlign: "center" };
 

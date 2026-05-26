@@ -24,7 +24,7 @@ export default function Checkout() {
 
   // ---- STEP NAVIGATION -------------------------------------------------
   const next = useCallback(
-    (isValid: boolean) => {
+    (isValid: boolean = true) => {
       if (!isValid) {
         toast.error("Please complete the required fields before continuing.");
         return;
