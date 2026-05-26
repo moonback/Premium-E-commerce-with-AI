@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { Search, ShoppingCart, User, Plus, Minus, CreditCard, Banknote, ScanBarcode, ArrowRight } from 'lucide-react';
 import KitchenOrders from '../components/KitchenOrders';
+import { getCurrentTenantBranding } from '../white-label/tenant';
+import { formatTenantCurrency } from '../white-label/format';
 
 export default function POS() {
   const { products } = useStore();
+  const branding = getCurrentTenantBranding();
   const [posCart, setPosCart] = useState<{ product: any, quantity: number }[]>([]);
   const [search, setSearch] = useState('');
 
@@ -62,7 +65,7 @@ export default function POS() {
                   <img src={product.image} className="w-full h-full object-cover mix-blend-overlay opacity-80" alt="" />
                 </div>
                 <h3 className="font-serif text-sm line-clamp-2 leading-tight flex-1">{product.name}</h3>
-                <span className="font-semibold text-sm block mt-1">{product.price.toFixed(2)}€</span>
+                <span className="font-semibold text-sm block mt-1">{formatTenantCurrency(product.price, branding)}</span>
               </button>
             ))}
           </div>
@@ -92,7 +95,7 @@ export default function POS() {
               <div key={item.product.id} className="flex flex-col gap-2 p-3 bg-soft-green/30 border border-ink/5">
                 <div className="flex justify-between items-start">
                   <span className="font-serif text-sm">{item.product.name}</span>
-                  <span className="font-semibold text-sm">{(item.product.price * item.quantity).toFixed(2)}€</span>
+                    <span className="font-semibold text-sm">{formatTenantCurrency(item.product.price * item.quantity, branding)}</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-3 bg-white border border-ink/10 p-1">
@@ -117,15 +120,17 @@ export default function POS() {
         </div>
 
         {/* Orders */}
-        <div className="p-4 border-t border-ink/10 bg-soft-green/20">
-          <h3 className="text-lg font-serif mb-2">Commandes en cours</h3>
-          <KitchenOrders />
-        </div>
+        {branding.features.kitchenEnabled && (
+          <div className="p-4 border-t border-ink/10 bg-soft-green/20">
+            <h3 className="text-lg font-serif mb-2">Commandes en cours</h3>
+            <KitchenOrders />
+          </div>
+        )}
 
         <div className="p-6 border-t border-ink/10 bg-soft-green/20">
           <div className="flex justify-between items-center mb-6 text-xl">
             <span className="text-ink/60 text-sm font-bold uppercase tracking-widest">Total</span>
-            <span className="font-semibold">{total.toFixed(2)}€</span>
+            <span className="font-semibold">{formatTenantCurrency(total, branding)}</span>
           </div>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button className="py-3 bg-white border border-ink/20 font-bold text-xs uppercase tracking-widest text-ink flex items-center justify-center gap-2 hover:bg-soft-green transition-colors">

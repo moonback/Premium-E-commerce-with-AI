@@ -41,6 +41,9 @@ export function applyTenantTheme(theme: TenantBranding['theme']) {
   root.style.setProperty('--tenant-radius', theme.radius);
   root.style.setProperty('--tenant-font-body', theme.fontBody);
   root.style.setProperty('--tenant-font-display', theme.fontDisplay);
+  root.style.setProperty('--tenant-spacing-md', theme.spacingMd);
+  root.style.setProperty('--tenant-shadow-soft', theme.shadowSoft);
+  root.style.setProperty('--tenant-motion-fast', theme.motionFast);
 
   // Bridge existing app tokens to tenant tokens (incremental migration)
   root.style.setProperty('--color-bg', theme.colorBg);

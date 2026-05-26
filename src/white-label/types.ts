@@ -15,6 +15,15 @@ export type TenantThemeTokens = {
   radius: string;
   fontBody: string;
   fontDisplay: string;
+  spacingMd: string;
+  shadowSoft: string;
+  motionFast: string;
+};
+
+export type TenantFeatureFlags = {
+  adminEnabled: boolean;
+  posEnabled: boolean;
+  kitchenEnabled: boolean;
 };
 
 export type TenantBranding = {
@@ -27,5 +36,6 @@ export type TenantBranding = {
   heroBadge: string;
   heroTitle: string;
   heroSubtitle: string;
+  features: TenantFeatureFlags;
   theme: TenantThemeTokens;
 };

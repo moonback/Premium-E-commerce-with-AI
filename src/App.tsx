@@ -56,7 +56,7 @@ function EnvironmentSwitcher() {
 }
 
 export default function App() {
-  useTenantBranding();
+  const branding = useTenantBranding();
   const initSession = useStore((state) => state.initSession);
   const fetchProducts = useStore((state) => state.fetchProducts);
   const fetchCategories = useStore((state) => state.fetchCategories);
@@ -82,13 +82,15 @@ export default function App() {
             } />
           </Route>
 
-          <Route path="/pos" element={<POS />} />
+          <Route path="/pos" element={branding.features.posEnabled ? <POS /> : <StoreFront />} />
           <Route
             path="/admin"
             element={
-              <ProtectedRoute role="admin">
-                <Admin />
-              </ProtectedRoute>
+              branding.features.adminEnabled ? (
+                <ProtectedRoute role="admin">
+                  <Admin />
+                </ProtectedRoute>
+              ) : <StoreFront />
             }
           />
           <Route path="/screen" element={<StoreScreen />} />

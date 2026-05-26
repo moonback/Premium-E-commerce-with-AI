@@ -10,6 +10,11 @@ export const DEFAULT_TENANT: TenantBranding = {
   heroBadge: 'Maison de Qualité',
   heroTitle: 'La Collection Essentielle',
   heroSubtitle: "Découvrez notre sélection de produits intemporels. L'alliance parfaite entre esthétique et utilité.",
+  features: {
+    adminEnabled: true,
+    posEnabled: true,
+    kitchenEnabled: true,
+  },
   theme: {
     colorBg: '#f8f8f7',
     colorInk: '#0f172a',
@@ -17,6 +22,9 @@ export const DEFAULT_TENANT: TenantBranding = {
     radius: '14px',
     fontBody: 'Inter, system-ui, sans-serif',
     fontDisplay: 'Playfair Display, Georgia, serif',
+    spacingMd: '1rem',
+    shadowSoft: '0 10px 30px rgba(0,0,0,0.08)',
+    motionFast: '180ms',
   },
 };
 
@@ -32,6 +40,11 @@ export const TENANT_REGISTRY: Record<string, TenantBranding> = {
     heroBadge: 'Édition Luxe',
     heroTitle: 'Signature Maison Premium',
     heroSubtitle: 'Des pièces exclusives conçues pour une expérience retail haut de gamme.',
+    features: {
+      adminEnabled: true,
+      posEnabled: true,
+      kitchenEnabled: true,
+    },
     theme: {
       ...DEFAULT_TENANT.theme,
       colorAccent: '#b89b72',
@@ -47,6 +60,11 @@ export const TENANT_REGISTRY: Record<string, TenantBranding> = {
     heroBadge: 'Next-Gen Tech',
     heroTitle: 'Electro Performance Line',
     heroSubtitle: 'High-performance devices engineered for modern commerce and everyday life.',
+    features: {
+      adminEnabled: true,
+      posEnabled: true,
+      kitchenEnabled: true,
+    },
     theme: {
       ...DEFAULT_TENANT.theme,
       colorAccent: '#6366f1',

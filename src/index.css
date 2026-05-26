@@ -19,6 +19,9 @@
   --tenant-radius: 14px;
   --tenant-font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --tenant-font-display: 'Playfair Display', ui-serif, Georgia, serif;
+  --tenant-spacing-md: 1rem;
+  --tenant-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --tenant-motion-fast: 180ms;
 }
 
 @media (prefers-color-scheme: dark) {
