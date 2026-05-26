@@ -16,6 +16,9 @@
   --color-ink: #1C2B21;
   --color-accent: #B08D57;
   --color-soft-green: #E8EDE8;
+  --tenant-radius: 14px;
+  --tenant-font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --tenant-font-display: 'Playfair Display', ui-serif, Georgia, serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,7 +33,12 @@
 body {
   background-color: var(--color-bg);
   color: var(--color-ink);
+  font-family: var(--tenant-font-body);
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--tenant-font-display);
 }
 
 .glass {

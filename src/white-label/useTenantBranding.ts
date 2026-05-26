@@ -1,8 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { applyTenantTheme, resolveTenantBranding } from './tenant';
+import { DEFAULT_TENANT } from './config';
 
 export function useTenantBranding() {
-  const branding = useMemo(() => resolveTenantBranding(window.location.hostname), []);
+  const branding = useMemo(() => {
+    if (typeof window === 'undefined') return DEFAULT_TENANT;
+    return resolveTenantBranding(window.location.hostname);
+  }, []);
 
   useEffect(() => {
     applyTenantTheme(branding.theme);
