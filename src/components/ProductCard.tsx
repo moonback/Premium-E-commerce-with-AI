@@ -5,10 +5,13 @@ import { Heart, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { getCurrentTenantBranding } from '../white-label/tenant';
+import { formatTenantCurrency } from '../white-label/format';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addToCart, toggleFavorite, favorites } = useStore();
   const isFavorite = favorites.includes(product.id);
+  const branding = getCurrentTenantBranding();
 
   return (
     <motion.div 
@@ -38,7 +41,7 @@ export default function ProductCard({ product }: { product: Product }) {
           <Link to={`/product/${product.id}`}>
             <h3 className="font-serif text-xl leading-tight hover:text-ink/70 transition-colors">{product.name}</h3>
           </Link>
-          <span className="font-semibold">{product.price.toFixed(2)}€</span>
+          <span className="font-semibold">{formatTenantCurrency(product.price, branding)}</span>
         </div>
         <p className="text-ink/60 text-xs opacity-50 italic uppercase mb-3 line-clamp-2">{product.description}</p>
         

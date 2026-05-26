@@ -6,6 +6,8 @@ import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Product } from '../types';
 import AccordionItem from '../components/AccordionItem';
+import { getCurrentTenantBranding } from '../white-label/tenant';
+import { formatTenantCurrency } from '../white-label/format';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -14,6 +16,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const branding = getCurrentTenantBranding();
 
 
   useEffect(() => {
@@ -120,7 +123,7 @@ export default function ProductDetail() {
           >
 
 
-            <p className="text-xs font-bold uppercase tracking-widest text-ink/50 mb-4">{product.category}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-ink/50 mb-4">{product.categories?.[0] ?? 'Sans catégorie'}</p>
             <h1 className="text-5xl md:text-6xl font-light font-serif leading-none mb-6 text-ink">{product.name}</h1>
 
             <p className="text-xl md:text-2xl text-ink/80 italic mb-8 border-l-2 border-ink/20 pl-6">
@@ -136,7 +139,7 @@ export default function ProductDetail() {
             </div>
 
             <div className="flex items-center gap-8 mb-12">
-              <span className="text-4xl font-serif">{product.price.toFixed(2)}€</span>
+              <span className="text-4xl font-serif">{formatTenantCurrency(product.price, branding)}</span>
               <div className="text-xs uppercase tracking-widest opacity-50 font-bold">TTC</div>
             </div>
 
@@ -198,7 +201,7 @@ export default function ProductDetail() {
                     <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   </div>
                   <h4 className="font-serif text-xl mb-1">{p.name}</h4>
-                  <p className="text-ink/50 text-sm font-semibold">{p.price.toFixed(2)}€</p>
+                  <p className="text-ink/50 text-sm font-semibold">{formatTenantCurrency(p.price, branding)}</p>
                 </Link>
               ))}
             </div>
