@@ -1,0 +1,10 @@
+{
+  "name": "Premium E-commerce with AI",
+  "description": "A modern e-commerce platform featuring a Catalog, POS system, Admin dashboard, and an integrated Gemini Live WebRTC Voice Assistant.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
