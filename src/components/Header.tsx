@@ -9,6 +9,7 @@ import { getCurrentTenantBranding } from '../white-label/tenant';
 export default function Header() {
   const { cart, user, loyaltyPoints, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
   const branding = getCurrentTenantBranding();
+  const isFallbackTenantConfig = typeof document !== 'undefined' && document.documentElement.dataset.tenantConfig === 'fallback';
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -36,6 +37,11 @@ export default function Header() {
               <img src={branding.logoUrl} alt={`${branding.brandName} logo`} className="w-7 h-7 object-contain rounded-sm" />
               <span>{branding.brandName}</span>
             </Link>
+            {isFallbackTenantConfig && (
+              <span className="hidden lg:inline-flex text-[10px] px-2 py-1 rounded border border-amber-300 text-amber-700 bg-amber-50 uppercase tracking-wider">
+                config par défaut
+              </span>
+            )}
             
             <nav className="hidden md:flex gap-6 text-xs uppercase tracking-widest font-bold opacity-70">
               <Link to="/" className="hover:opacity-100 transition-opacity">Catalogue</Link>

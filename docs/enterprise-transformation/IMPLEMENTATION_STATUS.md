@@ -37,5 +37,7 @@
 
 ## ⚠️ Partiellement implémenté
 - [~] Engine white-label branché à une source de config dynamique (support `VITE_TENANT_CONFIG_URL` + cache localStorage ajouté, source Supabase/API dédiée à finaliser).
+- [~] Engine white-label branché à une source de config dynamique (support `VITE_TENANT_CONFIG_URL` + cache localStorage + validation de schéma frontend, migration SQL `tenant_config` ajoutée).
 - [~] Theming complet de tous les composants (migration étendue avec tokens tenant sur surfaces produit/panier/header + PaymentForm, mais d'autres composants legacy restent à migrer).
 - [ ] Couverture de test enterprise (actuellement smoke tests ciblés tenant).
+- [~] Fallback UX chargement config tenant (indicateur visuel “config par défaut” ajouté dans le header, UX globale d’erreur à enrichir).

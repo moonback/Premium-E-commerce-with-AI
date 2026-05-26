@@ -24,11 +24,32 @@ export async function loadDynamicTenantRegistry(): Promise<Record<string, Tenant
     if (!isRecord(payload) || !isRecord(payload.tenants)) return {};
 
     const tenants = payload.tenants as Record<string, TenantBranding>;
-    window.localStorage.setItem(TENANT_STORAGE_KEY, JSON.stringify(tenants));
-    return tenants;
+    const validatedTenants = Object.fromEntries(
+      Object.entries(tenants).filter(([, value]) => isTenantBranding(value))
+    ) as Record<string, TenantBranding>;
+    window.localStorage.setItem(TENANT_STORAGE_KEY, JSON.stringify(validatedTenants));
+    return validatedTenants;
   } catch {
     return getCachedTenantRegistry();
   }
+}
+
+function isTenantBranding(value: unknown): value is TenantBranding {
+  if (!isRecord(value) || !isRecord(value.theme)) return false;
+  return typeof value.tenantId === 'string'
+    && typeof value.brandName === 'string'
+    && typeof value.logoUrl === 'string'
+    && typeof value.locale === 'string'
+    && typeof value.currency === 'string'
+    && typeof value.heroBadge === 'string'
+    && typeof value.heroTitle === 'string'
+    && typeof value.heroSubtitle === 'string'
+    && typeof value.theme.colorBg === 'string'
+    && typeof value.theme.colorInk === 'string'
+    && typeof value.theme.colorAccent === 'string'
+    && typeof value.theme.radius === 'string'
+    && typeof value.theme.fontBody === 'string'
+    && typeof value.theme.fontDisplay === 'string';
 }
 
 export function getCachedTenantRegistry(): Record<string, TenantBranding> {

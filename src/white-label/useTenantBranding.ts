@@ -17,6 +17,8 @@ export function useTenantBranding(): TenantBranding {
   useEffect(() => {
     loadDynamicTenantRegistry().then((dynamicRegistry) => {
       if (typeof window === 'undefined') return;
+      const hasDynamicConfig = Object.keys(dynamicRegistry).length > 0;
+      document.documentElement.dataset.tenantConfig = hasDynamicConfig ? 'dynamic' : 'fallback';
       const resolved = resolveTenantBrandingFromLocation(window.location.hostname, window.location.search, {
         ...dynamicRegistry,
         localhost: DEFAULT_TENANT,
