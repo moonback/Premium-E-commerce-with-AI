@@ -24,7 +24,7 @@ export default function CartDrawer() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-            className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-ink/10"
+            className="fixed inset-y-0 right-0 w-full max-w-md bg-bg shadow-2xl z-50 flex flex-col border-l border-ink/10"
           >
             <div className="flex items-center justify-between p-6 border-b border-ink/10">
               <h2 className="text-xl font-serif tracking-tight">Your Cart</h2>
@@ -101,7 +101,7 @@ export default function CartDrawer() {
                     checkout();
                     setCartOpen(false);
                   }}
-                  className="w-full py-4 bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors border border-ink"
+                  className="w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors border border-ink"
                 >
                   Checkout - {total.toFixed(2)}€
                 </button>

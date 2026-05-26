@@ -14,9 +14,11 @@ export default function ProductCard({ product }: { product: Product }) {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group flex flex-col justify-between bg-white p-6 border border-ink/5 relative"
+      whileHover={{ y: -8 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="group flex flex-col justify-between bg-transparent p-6 border border-ink/5 relative hover:border-ink/20 hover:shadow-2xl transition-all duration-300"
     >
-      <div className="absolute top-4 left-4 text-[10px] font-bold uppercase opacity-30 z-10">N°{product.id.replace('prod_', '').padStart(3, '0')}</div>
+      <div className="absolute top-4 left-4 text-[10px] font-bold uppercase opacity-30 z-10 transition-opacity group-hover:opacity-100">N°{product.id.replace('prod_', '').padStart(3, '0')}</div>
       <Link to={`/product/${product.id}`} className="relative aspect-[4/5] overflow-hidden bg-soft-green rounded-t-full mb-6 block">
         <img 
           src={product.image} 
@@ -25,7 +27,7 @@ export default function ProductCard({ product }: { product: Product }) {
         />
         <button 
           onClick={(e) => { e.preventDefault(); toggleFavorite(product.id); }}
-          className="absolute top-4 right-4 p-2 rounded-full glass text-ink hover:bg-white transition-colors z-20"
+          className="absolute top-4 right-4 p-2 rounded-full glass text-ink hover:bg-bg transition-colors z-20"
         >
           <Heart className={cn("w-4 h-4", isFavorite && "fill-ink")} />
         </button>
@@ -48,13 +50,14 @@ export default function ProductCard({ product }: { product: Product }) {
           ))}
         </div>
 
-        <button 
+        <motion.button 
+          whileTap={{ scale: 0.95 }}
           onClick={() => addToCart(product)}
-          className="w-full py-4 border border-ink text-ink font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-ink hover:text-white transition-colors"
+          className="w-full py-4 border border-ink text-ink font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-ink hover:text-bg transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Add to Cart
-        </button>
+          Ajouter au panier
+        </motion.button>
       </div>
     </motion.div>
   );

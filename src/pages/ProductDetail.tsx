@@ -66,7 +66,7 @@ export default function ProductDetail() {
             />
             <button 
               onClick={() => toggleFavorite(product.id)}
-              className="absolute top-8 right-8 p-3 rounded-full glass text-ink hover:bg-white transition-colors z-20"
+              className="absolute top-8 right-8 p-3 rounded-full glass text-ink hover:bg-bg transition-colors z-20"
             >
               <Heart className={cn("w-5 h-5", isFavorite && "fill-ink")} />
             </button>
@@ -119,7 +119,7 @@ export default function ProductDetail() {
 
               <button 
                 onClick={() => addToCart(product, quantity)}
-                className="flex-1 py-4 bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors"
+                className="flex-1 py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors"
               >
                 Ajouter au panier
               </button>

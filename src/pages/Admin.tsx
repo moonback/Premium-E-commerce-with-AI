@@ -59,7 +59,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-bg flex">
       {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-ink/10 p-6 flex flex-col">
+      <div className="w-64 bg-transparent border-r border-ink/10 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-12">
           <span className="font-bold text-2xl font-serif italic text-ink tracking-tighter">Véridian Admin</span>
         </div>
@@ -111,7 +111,7 @@ export default function Admin() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               {stats.map((stat, i) => (
-                <div key={i} className="bg-white p-6 border border-ink/10">
+                <div key={i} className="bg-transparent p-6 border border-ink/10">
                   <p className="text-ink/50 text-xs font-bold uppercase tracking-widest mb-2">{stat.label}</p>
                   <p className="text-3xl font-serif tracking-tight mb-2">{stat.value}</p>
                   <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 inline-block border ${
@@ -123,7 +123,7 @@ export default function Admin() {
               ))}
             </div>
             
-            <div className="bg-white border border-ink/10 overflow-hidden">
+            <div className="bg-transparent border border-ink/10 overflow-hidden">
               <div className="px-6 py-4 border-b border-ink/10 bg-soft-green/30">
                 <h2 className="font-serif">Recent Orders (Placeholder)</h2>
               </div>
@@ -135,7 +135,7 @@ export default function Admin() {
         )}
 
         {activeTab === 'Products' && !isEditing && (
-           <div className="bg-white border border-ink/10 overflow-hidden">
+           <div className="bg-transparent border border-ink/10 overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-soft-green/20 text-ink/50 uppercase text-xs">
                 <tr>
@@ -169,7 +169,7 @@ export default function Admin() {
         )}
 
         {activeTab === 'Products' && isEditing && (
-          <div className="bg-white border border-ink/10 p-8 max-w-2xl">
+          <div className="bg-transparent border border-ink/10 p-8 max-w-2xl">
             <h2 className="text-2xl font-serif mb-6">{editingProduct.id ? 'Modifier le Produit' : 'Nouveau Produit'}</h2>
             <form onSubmit={handleSaveProduct} className="space-y-4">
               <div>

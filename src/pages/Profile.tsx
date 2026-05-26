@@ -52,7 +52,7 @@ export default function Profile() {
         <div className="grid md:grid-cols-3 gap-8">
           {/* Menu / Recap Sidebar */}
           <div className="col-span-1 flex flex-col gap-6">
-            <div className="p-8 border border-ink/10 bg-white">
+            <div className="p-8 border border-ink/10 bg-transparent">
               <div className="w-12 h-12 bg-soft-green rounded-full flex items-center justify-center mb-4">
                 <UserIcon className="w-5 h-5 text-ink" />
               </div>
@@ -71,7 +71,7 @@ export default function Profile() {
               </div>
             </div>
             
-            <div className="p-8 border border-ink/10 bg-white relative overflow-hidden group">
+            <div className="p-8 border border-ink/10 bg-transparent relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Star className="w-32 h-32" />
               </div>
@@ -86,7 +86,7 @@ export default function Profile() {
 
           {/* Main Content Area */}
           <div className="col-span-1 md:col-span-2">
-            <div className="p-8 border border-ink/10 bg-white min-h-[400px]">
+            <div className="p-8 border border-ink/10 bg-transparent min-h-[400px]">
               <h2 className="text-2xl font-serif mb-6 flex items-center gap-2">
                 Historique des commandes
               </h2>

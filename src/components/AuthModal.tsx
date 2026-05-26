@@ -107,7 +107,7 @@ export default function AuthModal() {
             <button 
               type="submit" 
               disabled={isLoading}
-              className="w-full py-4 bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors flex justify-center items-center gap-2"
+              className="w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors flex justify-center items-center gap-2"
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isLogin ? 'Se Connecter' : 'Créer un Compte'}

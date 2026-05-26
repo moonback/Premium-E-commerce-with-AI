@@ -54,6 +54,7 @@ interface AppState {
   favorites: string[];
   loyaltyPoints: number;
   searchQuery: string;
+  isLoadingProducts: boolean;
   
   // Auth State
   user: User | null;
@@ -86,6 +87,7 @@ export const useStore = create<AppState>()(
   favorites: [],
   loyaltyPoints: 1250,
   searchQuery: "",
+  isLoadingProducts: true,
   
   user: null,
   isAuthModalOpen: false,
@@ -204,7 +206,11 @@ export const useStore = create<AppState>()(
   },
 
   fetchProducts: async () => {
-    if (!supabase) return;
+    set({ isLoadingProducts: true });
+    if (!supabase) {
+      set({ isLoadingProducts: false });
+      return;
+    }
     try {
       const { data, error } = await supabase.from('products').select('*');
       if (error) throw error;
@@ -213,6 +219,8 @@ export const useStore = create<AppState>()(
       }
     } catch (err) {
       console.error("Error fetching products:", err);
+    } finally {
+      set({ isLoadingProducts: false });
     }
   },
 

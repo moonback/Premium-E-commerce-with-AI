@@ -49,7 +49,7 @@ export default function Header() {
                 placeholder="Rechercher (ex: praliné)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pl-10 pr-4 py-2 bg-soft-green border border-ink/10 rounded-none text-xs focus:bg-white focus:border-ink/30 focus:ring-0 transition-all outline-none uppercase tracking-widest font-bold placeholder:text-ink/30"
+                className="w-64 pl-10 pr-4 py-2 bg-transparent border border-ink/10 rounded-none text-xs focus:bg-ink/5 focus:border-ink/30 focus:ring-0 transition-all outline-none uppercase tracking-widest font-bold placeholder:text-ink/30"
               />
             </div>
             
@@ -67,7 +67,7 @@ export default function Header() {
                 title={user ? "Mon compte" : "Se connecter"}
               >
                 {user ? (
-                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-1 bg-ink text-white rounded">
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-1 bg-ink text-bg rounded">
                     {user.email.split('@')[0]}
                   </span>
                 ) : (
@@ -104,7 +104,7 @@ export default function Header() {
               className="text-ink/60 hover:text-ink transition-colors relative"
             >
               <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-white rounded-full text-[10px] flex items-center justify-center font-bold">
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-bg rounded-full text-[10px] flex items-center justify-center font-bold">
                 {cart.length}
               </span>
             </button>
@@ -122,7 +122,7 @@ export default function Header() {
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-soft-green border border-ink/10 rounded-none text-xs focus:bg-white focus:border-ink/30 focus:ring-0 transition-all outline-none uppercase tracking-widest font-bold placeholder:text-ink/30"
+                className="w-full pl-10 pr-4 py-2 bg-transparent border border-ink/10 rounded-none text-xs focus:bg-ink/5 focus:border-ink/30 focus:ring-0 transition-all outline-none uppercase tracking-widest font-bold placeholder:text-ink/30"
               />
             </div>
             

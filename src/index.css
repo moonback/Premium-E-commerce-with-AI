@@ -2,22 +2,46 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F9F7F2;
-  --color-ink: #1C2B21;
-  --color-accent: #B08D57;
-  --color-soft-green: #E8EDE8;
+  --color-bg: var(--color-bg);
+  --color-ink: var(--color-ink);
+  --color-accent: var(--color-accent);
+  --color-soft-green: var(--color-soft-green);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Playfair Display', ui-serif, Georgia, serif;
 }
 
+:root {
+  --color-bg: #F9F7F2;
+  --color-ink: #1C2B21;
+  --color-accent: #B08D57;
+  --color-soft-green: #E8EDE8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1A1A1A;
+    --color-ink: #FAF9F6;
+    --color-accent: #C2A271;
+    --color-soft-green: #2B3A30;
+  }
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-ink);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .glass {
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(28, 43, 33, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass {
+    background: rgba(250, 249, 246, 0.1);
+    border: 1px solid rgba(250, 249, 246, 0.1);
+  }
 }
