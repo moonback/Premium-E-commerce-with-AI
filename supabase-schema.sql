@@ -4,6 +4,14 @@
 CREATE TYPE user_role AS ENUM ('admin', 'customer');
 CREATE TYPE order_status AS ENUM ('pending', 'completed', 'cancelled');
 
+-- 1.5. Create categories table
+CREATE TABLE categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    parent_id TEXT REFERENCES categories(id) ON DELETE CASCADE,
+    level INTEGER NOT NULL
+);
+
 -- 2. Create products table
 CREATE TABLE products (
     id TEXT PRIMARY KEY,
@@ -51,6 +59,19 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public profiles are viewable by everyone." ON profiles FOR SELECT USING (true);
 CREATE POLICY "Users can insert their own profile." ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own profile." ON profiles FOR UPDATE USING (auth.uid() = id);
+
+-- Categories RLS
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Categories are viewable by everyone" ON categories FOR SELECT USING (true);
+CREATE POLICY "Only admins can insert categories" ON categories FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Only admins can update categories" ON categories FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Only admins can delete categories" ON categories FOR DELETE USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- Products RLS
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;

@@ -110,6 +110,19 @@ export default function Admin() {
     }
   };
 
+  const handleDeleteCategory = async (id: string) => {
+    if (!window.confirm("Supprimer cette catégorie ? (Les sous-catégories seront aussi supprimées)")) return;
+    if (!supabase) return;
+    try {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+      toast.success("Catégorie supprimée");
+      useStore.getState().fetchCategories();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-bg flex">
       {/* Sidebar */}
@@ -257,10 +270,6 @@ export default function Admin() {
                        ))}
                      </optgroup>
                    ))}
-                   {/* Fallback old categories */}
-                   <option value="Fruits">Fruits</option>
-                   <option value="Gourmandise">Gourmandise</option>
-                   <option value="Noix & Graines">Noix & Graines</option>
                  </select>
               </div>
               <div>
@@ -302,14 +311,23 @@ export default function Admin() {
               <ul className="space-y-2 mt-4 font-mono text-xs">
                 {categories.filter(c => c.level === 1).map(c1 => (
                    <li key={c1.id}>
-                     <div className="font-bold border-b border-ink/10 pb-1 mb-1">{c1.name} (Niv 1)</div>
+                     <div className="font-bold border-b border-ink/10 pb-1 mb-1 flex justify-between items-center">
+                       <span>{c1.name} (Niv 1)</span>
+                       <button onClick={() => handleDeleteCategory(c1.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                     </div>
                      <ul className="pl-4 space-y-1 mt-1">
                        {categories.filter(c => c.parent_id === c1.id).map(c2 => (
                          <li key={c2.id}>
-                           L {c2.name} (Niv 2)
+                           <div className="flex justify-between items-center">
+                             <span>L {c2.name} (Niv 2)</span>
+                             <button onClick={() => handleDeleteCategory(c2.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                           </div>
                            <ul className="pl-6 space-y-1 text-ink/60">
                              {categories.filter(c => c.parent_id === c2.id).map(c3 => (
-                               <li key={c3.id}>-- {c3.name} (Niv 3)</li>
+                               <li key={c3.id} className="flex justify-between items-center">
+                                 <span>-- {c3.name} (Niv 3)</span>
+                                 <button onClick={() => handleDeleteCategory(c3.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                               </li>
                              ))}
                            </ul>
                          </li>

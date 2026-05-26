@@ -235,23 +235,11 @@ export const useStore = create<AppState>()(
       if (data && data.length > 0) {
         set({ categories: data as Category[] });
       } else {
-        // Fallback default
-        set({ categories: [
-          { id: 'cat_1', name: 'Vêtements', parent_id: null, level: 1 },
-          { id: 'cat_2', name: 'T-Shirts', parent_id: 'cat_1', level: 2 },
-          { id: 'cat_3', name: 'Accessoires', parent_id: null, level: 1 },
-          { id: 'cat_4', name: 'Maison', parent_id: null, level: 1 },
-        ] });
+        set({ categories: [] });
       }
     } catch (e) {
       console.error(e);
-      // Fallback
-       set({ categories: [
-          { id: 'cat_1', name: 'Vêtements', parent_id: null, level: 1 },
-          { id: 'cat_2', name: 'T-Shirts', parent_id: 'cat_1', level: 2 },
-          { id: 'cat_3', name: 'Accessoires', parent_id: null, level: 1 },
-          { id: 'cat_4', name: 'Maison', parent_id: null, level: 1 },
-        ] });
+      set({ categories: [] });
     }
   },
 

@@ -4,10 +4,10 @@ import ProductCard from '../components/ProductCard';
 import { motion } from 'motion/react';
 
 export default function StoreFront() {
-  const { products, searchQuery, isLoadingProducts } = useStore();
+  const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
 
-  const categories = ['Tout', 'Vêtements', 'Accessoires', 'Maison'];
+  const categories = ['Tout', ...storeCategories.filter(c => c.level === 1).map(c => c.name)];
 
   const filteredProducts = products.filter(p => 
     (activeTab === 'Tout' || p.category === activeTab) &&
