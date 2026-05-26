@@ -37,7 +37,10 @@ export default function Admin() {
         price: Number(editingProduct.price) || 0,
         stock: Number(editingProduct.stock) || 0,
         effects: Array.isArray(editingProduct.effects) ? editingProduct.effects : (editingProduct.effects as any)?.split(',').map((e:string) => e.trim()) || [],
-      } as Product;
+      } as any;
+
+      // Remove legacy field if it still exists in state
+      delete p.category;
 
       const { error } = await supabase.from('products').upsert([p]);
       if (error) throw error;
@@ -273,7 +276,7 @@ export default function Admin() {
                       <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded-full" />
                     </td>
                     <td className="px-6 py-4 font-serif font-bold text-lg">{p.name}</td>
-                    <td className="px-6 py-4 text-xs tracking-widest uppercase">{p.category}</td>
+                    <td className="px-6 py-4 text-xs tracking-widest uppercase">{(p.categories || []).join(', ')}</td>
                     <td className="px-6 py-4 font-semibold">{p.price.toFixed(2)}€</td>
                     <td className="px-6 py-4">{p.stock} pcs</td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
@@ -306,22 +309,47 @@ export default function Admin() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Catégorie</label>
-                 <select required value={editingProduct.category || ''} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent uppercase text-xs">
-                   <option value="">Sélectionner</option>
-                   {categories.filter(c => c.level === 1).map(c1 => (
-                     <optgroup key={c1.id} label={c1.name}>
-                       {categories.filter(c => c.parent_id === c1.id).map(c2 => (
-                         <React.Fragment key={c2.id}>
-                           <option value={c2.name}>{c2.name}</option>
-                           {categories.filter(c => c.parent_id === c2.id).map(c3 => (
-                             <option key={c3.id} value={c3.name}>-- {c3.name}</option>
-                           ))}
-                         </React.Fragment>
-                       ))}
-                     </optgroup>
-                   ))}
-                 </select>
+                <label className="block text-xs uppercase tracking-widest font-bold mb-2 opacity-50">Catégories</label>
+                <div className="space-y-2 border border-ink/10 p-4 max-h-48 overflow-y-auto">
+                  {categories.filter(c => c.level === 1).map(c1 => (
+                    <div key={c1.id}>
+                      <label className="flex items-center gap-2 text-sm font-bold mt-2 cursor-pointer">
+                        <input type="checkbox" checked={(editingProduct.categories || []).includes(c1.name)} onChange={(e) => {
+                          const cats = editingProduct.categories || [];
+                          if (e.target.checked) setEditingProduct({...editingProduct, categories: [...cats, c1.name]});
+                          else setEditingProduct({...editingProduct, categories: cats.filter(c => c !== c1.name)});
+                        }} className="accent-ink" />
+                        {c1.name}
+                      </label>
+                      <div className="pl-4 space-y-1 mt-1">
+                        {categories.filter(c => c.parent_id === c1.id).map(c2 => (
+                           <div key={c2.id}>
+                             <label className="flex items-center gap-2 text-sm cursor-pointer">
+                               <input type="checkbox" checked={(editingProduct.categories || []).includes(c2.name)} onChange={(e) => {
+                                 const cats = editingProduct.categories || [];
+                                 if (e.target.checked) setEditingProduct({...editingProduct, categories: [...cats, c2.name]});
+                                 else setEditingProduct({...editingProduct, categories: cats.filter(c => c !== c2.name)});
+                               }} className="accent-ink" />
+                               {c2.name}
+                             </label>
+                             <div className="pl-6 space-y-1">
+                               {categories.filter(c => c.parent_id === c2.id).map(c3 => (
+                                 <label key={c3.id} className="flex items-center gap-2 text-sm text-ink/60 cursor-pointer">
+                                   <input type="checkbox" checked={(editingProduct.categories || []).includes(c3.name)} onChange={(e) => {
+                                     const cats = editingProduct.categories || [];
+                                     if (e.target.checked) setEditingProduct({...editingProduct, categories: [...cats, c3.name]});
+                                     else setEditingProduct({...editingProduct, categories: cats.filter(c => c !== c3.name)});
+                                   }} className="accent-ink" />
+                                   {c3.name}
+                                 </label>
+                               ))}
+                             </div>
+                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Description</label>

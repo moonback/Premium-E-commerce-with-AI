@@ -10,7 +10,7 @@ export default function StoreFront() {
   const categories = ['Tout', ...storeCategories.filter(c => c.level === 1).map(c => c.name)];
 
   const filteredProducts = products.filter(p => 
-    (activeTab === 'Tout' || p.category === activeTab) &&
+    (activeTab === 'Tout' || (p.categories || []).includes(activeTab)) &&
     (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.effects.some(e => e.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 

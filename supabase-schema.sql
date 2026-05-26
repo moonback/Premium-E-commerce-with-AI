@@ -19,7 +19,7 @@ CREATE TABLE products (
     description TEXT,
     price NUMERIC(10, 2) NOT NULL,
     image TEXT,
-    category TEXT,
+    categories TEXT[],
     effects TEXT[], -- Array of strings for flavors/textures/effects
     stock INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -104,3 +104,22 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 7. Setup Storage Bucket for Product Images
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('product-images', 'product-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Images are viewable by everyone" ON storage.objects FOR SELECT USING ( bucket_id = 'product-images' );
+CREATE POLICY "Admins can upload images" ON storage.objects FOR INSERT WITH CHECK ( 
+  bucket_id = 'product-images' AND 
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Admins can update images" ON storage.objects FOR UPDATE USING ( 
+  bucket_id = 'product-images' AND 
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Admins can delete images" ON storage.objects FOR DELETE USING ( 
+  bucket_id = 'product-images' AND 
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);
