@@ -118,6 +118,10 @@ export interface AppState {
   fetchProducts: () => Promise<void>;
   fetchCategories: () => Promise<void>;
   syncCatalogToDb: () => Promise<void>;
+  updateOrderStatus: (
+    orderId: string,
+    status: 'Nouvelle' | 'En préparation' | 'Prête' | 'Livrée' | 'Terminée'
+  ) => Promise<void>;
 }
 
 export const useStore = create<AppState>()(

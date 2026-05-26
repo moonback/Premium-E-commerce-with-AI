@@ -11,8 +11,13 @@ const STAGES: Array<'Nouvelle' | 'En préparation' | 'Prête' | 'Livrée'> = [
   'Livrée',
 ];
 
+type KitchenOrder = {
+  id: string;
+  status: 'Nouvelle' | 'En préparation' | 'Prête' | 'Livrée' | 'Terminée';
+};
+
 export default function KitchenOrders() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const updateOrderStatus = useStore(state => state.updateOrderStatus);
 
   // Fetch orders from Supabase
@@ -21,7 +26,7 @@ export default function KitchenOrders() {
     try {
       const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
       if (error) throw error;
-      setOrders(data as any[]);
+      setOrders((data ?? []) as KitchenOrder[]);
     } catch (e) {
       console.error('Failed to load kitchen orders', e);
     }
@@ -29,6 +34,7 @@ export default function KitchenOrders() {
 
   useEffect(() => {
     fetchOrders();
+    if (!supabase) return;
     // Subscribe to realtime changes (optional)
     const subscription = supabase
       .channel('public:orders')

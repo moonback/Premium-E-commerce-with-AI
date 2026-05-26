@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { Link } from 'react-router-dom';
 
 export default function CartReview({ onNext }: { onNext: () => void }) {
-  const { cart, total, resetCheckout, setCartOpen } = useStore();
+  const { cart, setCartOpen } = useStore();
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   const handleProceed = () => {
@@ -30,7 +30,7 @@ export default function CartReview({ onNext }: { onNext: () => void }) {
               <img src={item.product.image} alt={item.product.name} className="w-16 h-16 object-cover rounded-lg" />
               <div className="flex-1">
                 <p className="font-serif">{item.product.name}</p>
-                <p className="text-xs text-ink/50">{item.product.category}</p>
+                <p className="text-xs text-ink/50">{item.product.categories?.[0] ?? 'Sans catégorie'}</p>
               </div>
               <span className="font-medium">{item.quantity} × {item.product.price.toFixed(2)}€</span>
             </div>
