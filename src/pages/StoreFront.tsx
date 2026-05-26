@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard';
 import CartDrawer from '../components/CartDrawer';
 
 export default function StoreFront() {
-  const { products, searchQuery, setSearchQuery } = useStore();
+  const { products, searchQuery, setSearchQuery, user, setAuthModalOpen } = useStore();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
 
@@ -39,8 +39,18 @@ export default function StoreFront() {
             </div>
 
             <div className="flex items-center gap-6">
-              <button className="text-ink/60 hover:text-ink transition-colors">
-                <User className="w-5 h-5" />
+              <button 
+                onClick={() => user ? useStore.getState().setUser(null) : setAuthModalOpen(true)}
+                className="text-ink/60 hover:text-ink transition-colors flex items-center gap-2"
+                title={user ? "Se déconnecter" : "Se connecter"}
+              >
+                {user ? (
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-1 bg-ink text-white rounded">
+                    {user.email.split('@')[0]}
+                  </span>
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
               </button>
               <button 
                 onClick={() => setIsCartOpen(true)}

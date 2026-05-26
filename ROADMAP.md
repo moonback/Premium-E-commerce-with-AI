@@ -16,10 +16,10 @@ L'objectif de cette phase est de remplacer les données statiques (Mocks) par un
 - [ ] **Base de données Cloud (Supabase/PostgreSQL)**
   - Création des tables : `products`, `users`, `orders`, `loyalty_points`.
   - Migration des produits "mockés" vers la base de données.
-- [ ] **Authentification Utilisateur (Client & Admin)**
-  - Inscription et connexion par email/mot de passe ou réseaux sociaux.
-  - Sauvegarde du panier et des favoris liés à la session utilisateur.
-  - Accès sécurisé au tableau de bord `/admin` (RBAC).
+- [x] **Authentification Utilisateur (Client & Admin)**
+  - [x] Inscription et connexion par email/mot de passe.
+  - [x] Accès sécurisé au tableau de bord `/admin` protégé (RBAC).
+  - [ ] Sauvegarde du panier et des favoris liés à la session utilisateur.
 - [ ] **Paiement et Intégration Stripe**
   - Ajout de Stripe Elements pour finaliser le checkout en ligne.
   - Génération de reçus dynamiques.

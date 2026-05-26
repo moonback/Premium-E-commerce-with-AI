@@ -13,3 +13,10 @@ export type CartItem = {
   product: Product;
   quantity: number;
 };
+
+export type User = {
+  id: string;
+  email: string;
+  role: 'admin' | 'customer';
+};
+

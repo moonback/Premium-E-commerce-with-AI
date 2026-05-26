@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import StoreFront from './pages/StoreFront';
 import POS from './pages/POS';
 import Admin from './pages/Admin';
 import StoreScreen from './pages/StoreScreen';
 import VoiceAssistant from './components/VoiceAssistant';
+import AuthModal from './components/AuthModal';
+import ProtectedRoute from './components/ProtectedRoute';
 import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
+import { useStore } from './store';
 
 function EnvironmentSwitcher() {
   const location = useLocation();
@@ -46,19 +49,33 @@ function EnvironmentSwitcher() {
 }
 
 export default function App() {
+  const initSession = useStore((state) => state.initSession);
+
+  useEffect(() => {
+    initSession();
+  }, [initSession]);
+
   return (
     <BrowserRouter>
       <div className="bg-bg min-h-screen font-sans text-ink selection:bg-accent/20">
         <Routes>
           <Route path="/" element={<StoreFront />} />
           <Route path="/pos" element={<POS />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute role="admin">
+                <Admin />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/screen" element={<StoreScreen />} />
         </Routes>
         
-        {/* Environment Tools */}
+        {/* Environment Tools & Modals */}
         <EnvironmentSwitcher />
         <VoiceAssistant />
+        <AuthModal />
       </div>
     </BrowserRouter>
   );

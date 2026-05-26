@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Product, CartItem } from './types';
+import { Product, CartItem, User } from './types';
+import { supabase } from './lib/supabase';
 
 // Mock DB
 export const MOCK_PRODUCTS: Product[] = [
@@ -51,19 +52,38 @@ interface AppState {
   favorites: string[];
   loyaltyPoints: number;
   searchQuery: string;
+  
+  // Auth State
+  user: User | null;
+  isAuthModalOpen: boolean;
+  
+  // Actions
+  setAuthModalOpen: (isOpen: boolean) => void;
+  setUser: (user: User | null) => void;
+  
   setSearchQuery: (q: string) => void;
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
   checkout: () => void;
+  
+  // Initialization
+  initSession: () => void;
 }
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   products: MOCK_PRODUCTS,
   cart: [],
   favorites: [],
   loyaltyPoints: 1250,
   searchQuery: "",
+  
+  user: null,
+  isAuthModalOpen: false,
+
+  setAuthModalOpen: (isOpen) => set({ isAuthModalOpen: isOpen }),
+  setUser: (user) => set({ user }),
+
   setSearchQuery: (q) => set({ searchQuery: q }),
   addToCart: (product, quantity = 1) =>
     set((state) => {
@@ -90,4 +110,23 @@ export const useStore = create<AppState>((set) => ({
         : [...state.favorites, productId],
     })),
   checkout: () => set({ cart: [], loyaltyPoints: useStore.getState().loyaltyPoints + Math.floor(useStore.getState().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0) / 10) }),
+
+  initSession: async () => {
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      // In a real app, you would fetch role from a profiles table
+      const role = session.user.email?.includes('admin') ? 'admin' : 'customer';
+      set({ user: { id: session.user.id, email: session.user.email!, role } });
+    }
+
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const role = session.user.email?.includes('admin') ? 'admin' : 'customer';
+        set({ user: { id: session.user.id, email: session.user.email!, role } });
+      } else {
+        set({ user: null });
+      }
+    });
+  }
 }));
