@@ -13,6 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
 import { useStore } from './store';
 import Checkout from './pages/Checkout';
+import { useTenantBranding } from './white-label/useTenantBranding';
 
 function EnvironmentSwitcher() {
   const { user } = useStore();
@@ -55,6 +56,7 @@ function EnvironmentSwitcher() {
 }
 
 export default function App() {
+  useTenantBranding();
   const initSession = useStore((state) => state.initSession);
   const fetchProducts = useStore((state) => state.fetchProducts);
   const fetchCategories = useStore((state) => state.fetchCategories);
