@@ -100,26 +100,28 @@ const formStyle: React.CSSProperties = {
   maxWidth: "400px",
   margin: "0 auto",
   padding: "1rem",
-  background: "rgba(255,255,255,0.9)",
-  borderRadius: "8px",
+  background: "color-mix(in srgb, var(--color-bg) 86%, white)",
+  borderRadius: "var(--tenant-radius)",
   boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
 };
-const headingStyle: React.CSSProperties = { textAlign: "center", marginBottom: "1rem" };
+const headingStyle: React.CSSProperties = { textAlign: "center", marginBottom: "1rem", color: "var(--color-ink)" };
 const fieldStyle: React.CSSProperties = { marginBottom: "0.75rem" };
-const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.25rem", fontWeight: 600 };
+const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.25rem", fontWeight: 600, color: "var(--color-ink)" };
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.5rem",
-  border: "1px solid #ccc",
-  borderRadius: "4px"
+  border: "1px solid color-mix(in srgb, var(--color-ink) 18%, transparent)",
+  borderRadius: "calc(var(--tenant-radius) / 2)",
+  color: "var(--color-ink)",
+  background: "var(--color-bg)"
 };
 const buttonStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.75rem",
-  background: "#2563eb",
-  color: "#fff",
+  background: "var(--color-accent)",
+  color: "var(--color-bg)",
   border: "none",
-  borderRadius: "4px",
+  borderRadius: "calc(var(--tenant-radius) / 2)",
   cursor: "pointer",
   fontSize: "1rem"
 };

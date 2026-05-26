@@ -36,6 +36,6 @@
 - [x] Roadmap détaillée (`ROADMAP_DETAILED.md`).
 
 ## ⚠️ Partiellement implémenté
-- [ ] Engine white-label branché à une source de config dynamique (actuellement registre statique en code).
-- [ ] Theming complet de tous les composants (certaines surfaces legacy restent partiellement couplées).
+- [~] Engine white-label branché à une source de config dynamique (support `VITE_TENANT_CONFIG_URL` + cache localStorage ajouté, source Supabase/API dédiée à finaliser).
+- [~] Theming complet de tous les composants (migration étendue avec tokens tenant sur surfaces produit/panier/header + PaymentForm, mais d'autres composants legacy restent à migrer).
 - [ ] Couverture de test enterprise (actuellement smoke tests ciblés tenant).

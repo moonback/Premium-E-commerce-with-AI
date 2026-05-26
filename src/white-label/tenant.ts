@@ -1,26 +1,35 @@
 import { DEFAULT_TENANT, TENANT_REGISTRY } from './config';
 import type { TenantBranding } from './types';
 
-export function resolveTenantBranding(hostname: string): TenantBranding {
+export function resolveTenantBranding(
+  hostname: string,
+  registry: Record<string, TenantBranding> = TENANT_REGISTRY
+): TenantBranding {
   const normalizedHost = hostname.toLowerCase().split(':')[0];
-  return TENANT_REGISTRY[normalizedHost] ?? DEFAULT_TENANT;
+  return registry[normalizedHost] ?? DEFAULT_TENANT;
 }
 
 export function getCurrentTenantBranding(): TenantBranding {
+  const globalBranding = (globalThis as { __TENANT_BRANDING__?: TenantBranding }).__TENANT_BRANDING__;
+  if (globalBranding) return globalBranding;
   if (typeof window === 'undefined') return DEFAULT_TENANT;
   return resolveTenantBrandingFromLocation(window.location.hostname, window.location.search);
 }
 
-export function resolveTenantBrandingFromLocation(hostname: string, search: string): TenantBranding {
+export function resolveTenantBrandingFromLocation(
+  hostname: string,
+  search: string,
+  registry: Record<string, TenantBranding> = TENANT_REGISTRY
+): TenantBranding {
   const params = new URLSearchParams(search);
   const tenantPreview = params.get('tenant');
   if (tenantPreview) {
     const normalizedPreview = tenantPreview.toLowerCase().split(':')[0];
-    if (TENANT_REGISTRY[normalizedPreview]) {
-      return TENANT_REGISTRY[normalizedPreview];
+    if (registry[normalizedPreview]) {
+      return registry[normalizedPreview];
     }
   }
-  return resolveTenantBranding(hostname);
+  return resolveTenantBranding(hostname, registry);
 }
 
 export function applyTenantTheme(theme: TenantBranding['theme']) {
