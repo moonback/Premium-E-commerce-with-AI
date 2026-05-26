@@ -31,13 +31,13 @@ export default function Header() {
               {isMobileMenuOpen ? <X className="w-5 h-5"/> : <Menu className="w-5 h-5" />}
             </button>
             <Link to="/" className="text-2xl font-bold tracking-tighter font-serif italic text-ink">
-              Véridian
+              Boutique
             </Link>
             
             <nav className="hidden md:flex gap-6 text-xs uppercase tracking-widest font-bold opacity-70">
-              <Link to="/" className="hover:opacity-100 transition-opacity">Menu</Link>
-              <Link to="/" className="hover:opacity-100 transition-opacity">Saveurs</Link>
-              <Link to="/" className="hover:opacity-100 transition-opacity">Héritage</Link>
+              <Link to="/" className="hover:opacity-100 transition-opacity">Catalogue</Link>
+              <Link to="/" className="hover:opacity-100 transition-opacity">Nouveautés</Link>
+              <Link to="/" className="hover:opacity-100 transition-opacity">À Propos</Link>
             </nav>
           </div>
 
@@ -46,7 +46,7 @@ export default function Header() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
               <input 
                 type="text"
-                placeholder="Rechercher (ex: praliné)..."
+                placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 pl-10 pr-4 py-2 bg-transparent border border-ink/10 rounded-none text-xs focus:bg-ink/5 focus:border-ink/30 focus:ring-0 transition-all outline-none uppercase tracking-widest font-bold placeholder:text-ink/30"
@@ -127,7 +127,7 @@ export default function Header() {
             </div>
             
             <nav className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-ink/70">
-              <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>La Carte</Link>
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>Catalogue</Link>
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>Mon Compte</Link>
               {user && (
                   <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="text-left text-red-600">Déconnexion</button>

@@ -8,43 +8,43 @@ import toast from 'react-hot-toast';
 export const SEED_PRODUCTS: Product[] = [
   {
     id: "prod_1",
-    name: "La Noisette Fraîche",
-    description: "Un trompe-l'œil parfait d'une noisette géante. Coque en chocolat croquant, praliné coulant et mousse légère.",
-    price: 12.0,
-    image: "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e", // dessert
-    category: "Noix & Graines",
-    effects: ["Praliné", "Croquant", "Gourmand"],
-    stock: 24,
+    name: "T-Shirt Minimaliste",
+    description: "Un t-shirt en coton bio avec une coupe parfaite. Conçu pour le confort au quotidien.",
+    price: 35.0,
+    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab", 
+    category: "Vêtements",
+    effects: ["Coton bio", "Coupe droite", "Confortable"],
+    stock: 120,
   },
   {
     id: "prod_2",
-    name: "Le Citron Jaune",
-    description: "Une écorce en chocolat blanc, insert confit de citron jaune et yuzu, ganache montée acidulée.",
-    price: 14.0,
-    image: "https://images.unsplash.com/photo-1519869325930-281384150729", // lemon dessert
-    category: "Fruits",
-    effects: ["Acidulé", "Frais", "Agrumes"],
-    stock: 12,
+    name: "Sacoche en Cuir",
+    description: "Sacoche artisanale en cuir véritable. Pratique et élégante pour vos déplacements.",
+    price: 110.0,
+    image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa", 
+    category: "Accessoires",
+    effects: ["Cuir", "Artisanal", "Durable"],
+    stock: 30,
   },
   {
     id: "prod_3",
-    name: "La Gousse de Vanille",
-    description: "L'illusion bluffante d'une gousse charnue. Pâte sablée, caramel tendre et ganache infiniment vanille.",
-    price: 15.0,
-    image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87", // pastry
-    category: "Gourmandise",
-    effects: ["Vanille", "Caramel", "Doux"],
-    stock: 5,
+    name: "Tasse en Céramique",
+    description: "Tasse façonnée à la main. Idéale pour le thé ou le café du matin.",
+    price: 18.0,
+    image: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d", 
+    category: "Maison",
+    effects: ["Céramique", "Fait main", "Minimaliste"],
+    stock: 50,
   },
   {
     id: "prod_4",
-    name: "Le Grain de Café",
-    description: "Un grain de café torréfié format dessert. Biscuit cuillère imbibé espresso, mousse café et cœur mascarpone.",
-    price: 13.0,
-    image: "https://images.unsplash.com/photo-1495147466023-e6a4b37bb96b", // coffee
-    category: "Gourmandise",
-    effects: ["Café", "Intense", "Fondant"],
-    stock: 45,
+    name: "Gourde Isotherme",
+    description: "Gourde en acier inoxydable. Garde vos boissons chaudes ou froides pendant des heures.",
+    price: 25.0,
+    image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8", 
+    category: "Accessoires",
+    effects: ["Inox", "Isotherme", "Écologique"],
+    stock: 85,
   }
 ];
 
@@ -240,6 +240,6 @@ export const useStore = create<AppState>()(
     }
   }
 }), {
-  name: 'veridian-session',
+  name: 'store-session',
   partialize: (state) => ({ cart: state.cart, favorites: state.favorites })
 }));

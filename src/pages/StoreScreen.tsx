@@ -18,7 +18,7 @@ export default function StoreScreen() {
   return (
     <div className="min-h-screen bg-ink text-bg overflow-hidden flex flex-col font-sans relative">
       <div className="absolute top-10 left-10 flex items-center gap-4 z-20">
-        <span className="font-bold text-3xl tracking-tighter font-serif italic text-white">Véridian</span>
+        <span className="font-bold text-3xl tracking-tighter font-serif italic text-white">Boutique</span>
       </div>
 
       <AnimatePresence mode="wait">

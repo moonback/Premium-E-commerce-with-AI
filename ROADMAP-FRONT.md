@@ -5,9 +5,9 @@ Ce document détaille les prochaines étapes de développement pour l'interface 
 ## 🟢 Phase 1 : Système de Design & UX Globale
 - [x] Implémentation du système de notifications (Toasts avec `react-hot-toast`).
 - [x] Menu de navigation Mobile (Menu Burger).
-- [x] **Skeletons Loaders** : Afficher des "fantômes" de chargement pendant la récupération des produits Supabase pour éviter les sauts d'interface.
-- [x] **Micro-Interactions** : Animations au survol plus poussées (effets magnétiques sur les boutons principaux, apparition en fondu des éléments au scroll avec `motion`).
-- [x] **Thème Sombre** : Mode "Nuit" automatique respectant la charte éditoriale (fond charcoal, texte crème).
+- [ ] **Skeletons Loaders** : Afficher des "fantômes" de chargement pendant la récupération des produits Supabase pour éviter les sauts d'interface.
+- [ ] **Micro-Interactions** : Animations au survol plus poussées (effets magnétiques sur les boutons principaux, apparition en fondu des éléments au scroll avec `motion`).
+- [ ] **Thème Sombre** : Mode "Nuit" automatique respectant la charte éditoriale (fond charcoal, texte crème).
 
 ## 🟡 Phase 2 : Vitrine (StoreFront) & Découverte
 - [x] Hero Banner avec image d'ambiance et typographie immersive.

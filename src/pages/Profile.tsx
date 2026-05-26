@@ -75,7 +75,7 @@ export default function Profile() {
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Star className="w-32 h-32" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-widest text-ink/40 mb-4 relative z-10">Programme Véridian Céleste</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-ink/40 mb-4 relative z-10">Programme de Fidélité</p>
               <div className="flex items-baseline gap-2 mb-2 relative z-10">
                 <span className="text-4xl font-serif">{loyaltyPoints.toLocaleString()}</span>
                 <span className="text-xs font-bold uppercase tracking-widest opacity-50">Points</span>
@@ -102,7 +102,7 @@ export default function Profile() {
                   <Package className="w-8 h-8 text-ink/20 mb-4" />
                   <p className="text-sm uppercase tracking-widest font-bold text-ink/40 mb-2">Aucune commande</p>
                   <p className="text-xs text-ink/60 italic max-w-sm">
-                    Vous n'avez pas encore passé de commande. Découvrez notre sélection de pâtisseries trompe-l'œil.
+                    Vous n'avez pas encore passé de commande. Découvrez notre sélection d'articles exclusifs.
                   </p>
                 </div>
               ) : (

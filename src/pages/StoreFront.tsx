@@ -5,12 +5,12 @@ import { motion } from 'motion/react';
 
 export default function StoreFront() {
   const { products, searchQuery, isLoadingProducts } = useStore();
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState('Tout');
 
-  const categories = ['All', 'Fruits', 'Gourmandise', 'Noix & Graines'];
+  const categories = ['Tout', 'Vêtements', 'Accessoires', 'Maison'];
 
   const filteredProducts = products.filter(p => 
-    (activeTab === 'All' || p.category === activeTab) &&
+    (activeTab === 'Tout' || p.category === activeTab) &&
     (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.effects.some(e => e.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
@@ -21,8 +21,8 @@ export default function StoreFront() {
            initial={{ scale: 1.1 }}
            animate={{ scale: 1 }}
            transition={{ duration: 10, ease: "easeOut" }}
-           src="https://images.unsplash.com/photo-1578985545062-69928b1d9587" 
-           alt="Pâtisserie artisanale" 
+           src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04" 
+           alt="Boutique artisanale" 
            className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay"
         />
         <motion.div 
@@ -31,12 +31,12 @@ export default function StoreFront() {
           transition={{ duration: 1, delay: 0.2 }}
           className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center"
         >
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/70 mb-6">Maison de Haute Pâtisserie</span>
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/70 mb-6">Maison de Qualité</span>
           <h1 className="text-6xl md:text-8xl font-light font-serif text-white mb-6 leading-none">
-            L'Illusion <br/><span className="italic">Gourmande</span>
+            La Collection <br/><span className="italic">Essentielle</span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl font-light">
-            Découvrez nos créations trompe-l'œil artisanales. L'exquise fusion du visuel et du goût.
+            Découvrez notre sélection de produits intemporels. L'alliance parfaite entre esthétique et utilité.
           </p>
         </motion.div>
       </div>
@@ -87,7 +87,7 @@ export default function StoreFront() {
         
         {!isLoadingProducts && filteredProducts.length === 0 && (
            <div className="text-center py-20">
-              <p className="text-ink/50 italic text-xl">Aucune création ne correspond à votre recherche...</p>
+              <p className="text-ink/50 italic text-xl">Aucun article ne correspond à votre recherche...</p>
            </div>
         )}
       </main>

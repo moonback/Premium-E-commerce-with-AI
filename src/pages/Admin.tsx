@@ -61,7 +61,7 @@ export default function Admin() {
       {/* Sidebar */}
       <div className="w-64 bg-transparent border-r border-ink/10 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-12">
-          <span className="font-bold text-2xl font-serif italic text-ink tracking-tighter">Véridian Admin</span>
+          <span className="font-bold text-2xl font-serif italic text-ink tracking-tighter">Admin Boutique</span>
         </div>
 
         <nav className="flex flex-col gap-2">

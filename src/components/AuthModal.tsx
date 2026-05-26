@@ -77,7 +77,7 @@ export default function AuthModal() {
             {isLogin ? 'Connexion' : 'Inscription'}
           </h2>
           <p className="text-ink/60 text-xs uppercase tracking-widest font-bold mb-8">
-            Accédez à votre compte Véridian
+            Accédez à votre compte
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
