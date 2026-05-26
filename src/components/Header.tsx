@@ -1,18 +1,21 @@
 import React from 'react';
 import { useStore } from '../store';
-import { ShoppingBag, Search, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { ShoppingBag, Search, User, LogOut, LayoutDashboard, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 export default function Header() {
   const { cart, user, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const handleLogout = async () => {
     if (supabase) {
       await supabase.auth.signOut();
     }
     setUser(null);
+    toast.success("Vous avez été déconnecté");
     navigate('/');
   };
 
@@ -20,7 +23,13 @@ export default function Header() {
     <header className="sticky top-0 z-40 w-full bg-bg/80 backdrop-blur-md border-b border-ink/10 flex flex-col">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex justify-between items-center h-20">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 lg:gap-8">
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden text-ink/60 hover:text-ink p-2 -ml-2"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5"/> : <Menu className="w-5 h-5" />}
+            </button>
             <Link to="/" className="text-2xl font-bold tracking-tighter font-serif italic text-ink">
               Véridian
             </Link>
@@ -102,6 +111,30 @@ export default function Header() {
           </div>
         </div>
       </div>
+      
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-20 left-0 w-full bg-bg border-b border-ink/10 shadow-xl p-4 flex flex-col gap-4">
+           <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
+              <input 
+                type="text"
+                placeholder="Rechercher..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-soft-green border border-ink/10 rounded-none text-xs focus:bg-white focus:border-ink/30 focus:ring-0 transition-all outline-none uppercase tracking-widest font-bold placeholder:text-ink/30"
+              />
+            </div>
+            
+            <nav className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-ink/70">
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>La Carte</Link>
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>Mon Compte</Link>
+              {user && (
+                  <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="text-left text-red-600">Déconnexion</button>
+              )}
+            </nav>
+        </div>
+      )}
     </header>
   );
 }

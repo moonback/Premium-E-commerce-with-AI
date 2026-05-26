@@ -84,18 +84,26 @@ export default function CartDrawer() {
 
             {cart.length > 0 && (
               <div className="p-6 border-t border-ink/10 bg-soft-green/30">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4">
+                  <div className="h-1 w-full bg-ink/10 rounded-full overflow-hidden mb-2">
+                     <div className="h-full bg-accent transition-all" style={{ width: `${Math.min((total / 50) * 100, 100)}%` }} />
+                  </div>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-ink/50 text-center">
+                    {total >= 50 ? '🎉 Livraison gratuite débloquée' : `Ajoutez ${(50 - total).toFixed(2)}€ pour la livraison gratuite`}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between mb-4 mt-6">
                   <span className="text-ink/60 text-sm uppercase tracking-widest font-bold">Subtotal</span>
-                  <span className="font-semibold">{total.toFixed(2)}€</span>
+                  <span className="font-semibold text-xl font-serif">{total.toFixed(2)}€</span>
                 </div>
                 <button 
                   onClick={() => {
                     checkout();
-                    onClose();
+                    setCartOpen(false);
                   }}
                   className="w-full py-4 bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors border border-ink"
                 >
-                  Checkout
+                  Checkout - {total.toFixed(2)}€
                 </button>
               </div>
             )}

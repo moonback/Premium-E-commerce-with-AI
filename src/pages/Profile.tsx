@@ -1,12 +1,38 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
-import { User as UserIcon, Package, Star, LogOut } from 'lucide-react';
+import { User as UserIcon, Package, Star, LogOut, CheckCircle, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 export default function Profile() {
   const { user, setUser, loyaltyPoints } = useStore();
   const navigate = useNavigate();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user && supabase) {
+      const fetchOrders = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+          if (!error && data) {
+            setOrders(data);
+          }
+        } catch (err) {
+            console.error("Failed to load orders");
+        } finally {
+            setLoading(false);
+        }
+      };
+      fetchOrders();
+    } else {
+        setLoading(false);
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     if (supabase) {
@@ -65,13 +91,42 @@ export default function Profile() {
                 Historique des commandes
               </h2>
               
-              <div className="flex flex-col items-center justify-center text-center h-64 border-2 border-dashed border-ink/10">
-                <Package className="w-8 h-8 text-ink/20 mb-4" />
-                <p className="text-sm uppercase tracking-widest font-bold text-ink/40 mb-2">Aucune commande</p>
-                <p className="text-xs text-ink/60 italic max-w-sm">
-                  Vous n'avez pas encore passé de commande. Découvrez notre sélection de pâtisseries trompe-l'œil.
-                </p>
-              </div>
+              {loading ? (
+                <div className="animate-pulse flex flex-col gap-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-24 bg-ink/5 w-full"></div>
+                  ))}
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center h-64 border-2 border-dashed border-ink/10">
+                  <Package className="w-8 h-8 text-ink/20 mb-4" />
+                  <p className="text-sm uppercase tracking-widest font-bold text-ink/40 mb-2">Aucune commande</p>
+                  <p className="text-xs text-ink/60 italic max-w-sm">
+                    Vous n'avez pas encore passé de commande. Découvrez notre sélection de pâtisseries trompe-l'œil.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {orders.map(order => (
+                    <div key={order.id} className="border border-ink/10 p-6 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:border-ink/20 transition-colors">
+                       <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-xs font-bold uppercase tracking-widest">Commande #{order.id.slice(0,8)}</span>
+                            {order.status === 'Terminée' ? (
+                               <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 bg-ink"><CheckCircle className="w-3 h-3"/> Terminée</span>
+                            ) : (
+                               <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green"><Clock className="w-3 h-3"/> En préparation</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-ink/60 italic">Passée le {new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
+                       </div>
+                       <div className="text-right">
+                          <p className="text-xl font-serif font-bold">{order.total.toFixed(2)}€</p>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

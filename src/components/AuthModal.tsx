@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { supabase } from '../lib/supabase';
 import { X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import toast from 'react-hot-toast';
 
 export default function AuthModal() {
   const { isAuthModalOpen, setAuthModalOpen } = useStore();
@@ -23,6 +24,7 @@ export default function AuthModal() {
       } else {
         useStore.getState().setUser({ id: '2', email, role: 'customer' });
       }
+      toast.success("Connexion locale simulée");
       setAuthModalOpen(false);
       return;
     }
@@ -33,13 +35,16 @@ export default function AuthModal() {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        toast.success("Connexion réussie");
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        toast.success("Compte créé avec succès");
       }
       setAuthModalOpen(false);
     } catch (err: any) {
       setError(err.message || 'Authentication error');
+      toast.error(err.message || "Erreur d'authentification");
     } finally {
       setIsLoading(false);
     }

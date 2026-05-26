@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Product, CartItem, User } from './types';
 import { supabase } from './lib/supabase';
+import toast from 'react-hot-toast';
 
 // Initial Seed DB for testing/syncing
 export const SEED_PRODUCTS: Product[] = [
@@ -95,7 +96,8 @@ export const useStore = create<AppState>()(
   setUser: (user) => set({ user }),
 
   setSearchQuery: (q) => set({ searchQuery: q }),
-  addToCart: (product, quantity = 1) =>
+  addToCart: (product, quantity = 1) => {
+    toast.success(`${quantity}x ${product.name} ajouté au panier`);
     set((state) => {
       const existing = state.cart.find((c) => c.product.id === product.id);
       if (existing) {
@@ -108,7 +110,8 @@ export const useStore = create<AppState>()(
         };
       }
       return { cart: [...state.cart, { product, quantity }] };
-    }),
+    });
+  },
   removeFromCart: (productId) =>
     set((state) => ({
       cart: state.cart.filter((c) => c.product.id !== productId),
@@ -119,7 +122,43 @@ export const useStore = create<AppState>()(
         ? state.favorites.filter((id) => id !== productId)
         : [...state.favorites, productId],
     })),
-  checkout: () => set({ cart: [], loyaltyPoints: useStore.getState().loyaltyPoints + Math.floor(useStore.getState().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0) / 10) }),
+  checkout: async () => {
+    const state = get();
+    if (state.cart.length === 0) return;
+    const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    const pointsEarned = Math.floor(total / 10);
+    
+    if (supabase && state.user) {
+      try {
+        const { data: order, error } = await supabase.from('orders').insert([{
+          user_id: state.user.id,
+          total: total,
+          status: 'En préparation'
+        }]).select().single();
+        
+        if (error) throw error;
+        
+        const orderItems = state.cart.map(item => ({
+          order_id: order.id,
+          product_id: item.product.id,
+          quantity: item.quantity,
+          price: item.product.price
+        }));
+        
+        await supabase.from('order_items').insert(orderItems);
+        toast.success(`Commande validée ! +${pointsEarned} points`);
+      } catch (e: any) {
+         toast.error("Erreur, commande hors-ligne simulée : " + e.message);
+      }
+    } else {
+       toast.success(`Commande locale validée !`);
+    }
+
+    set((state) => ({ 
+      cart: [], 
+      loyaltyPoints: state.loyaltyPoints + pointsEarned
+    }));
+  },
 
   initSession: async () => {
     if (!supabase) return;

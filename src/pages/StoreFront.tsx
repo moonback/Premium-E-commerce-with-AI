@@ -15,17 +15,25 @@ export default function StoreFront() {
 
   return (
     <div className="bg-bg flex-1">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="max-w-3xl mb-12">
-          <h1 className="text-5xl md:text-6xl font-light font-serif text-ink mb-4 leading-none">
+      <div className="relative w-full h-[60vh] md:h-[70vh] bg-ink flex items-center justify-center overflow-hidden">
+        <img 
+           src="https://images.unsplash.com/photo-1578985545062-69928b1d9587" 
+           alt="Pâtisserie artisanale" 
+           className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay"
+        />
+        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/70 mb-6">Maison de Haute Pâtisserie</span>
+          <h1 className="text-6xl md:text-8xl font-light font-serif text-white mb-6 leading-none">
             L'Illusion <br/><span className="italic">Gourmande</span>
           </h1>
-          <p className="text-lg text-ink/60">
-            Pâtisseries trompe-l'œil artisanales. Découvrez l'exquise fusion du visuel et du goût.
+          <p className="text-lg md:text-xl text-white/80 max-w-2xl font-light">
+            Découvrez nos créations trompe-l'œil artisanales. L'exquise fusion du visuel et du goût.
           </p>
         </div>
+      </div>
 
-        <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="flex gap-4 mb-12 overflow-x-auto pb-2 scrollbar-hide justify-center">
           {categories.map(cat => (
             <button
               key={cat}
