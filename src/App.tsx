@@ -15,7 +15,9 @@ import { useStore } from './store';
 import Checkout from './pages/Checkout';
 
 function EnvironmentSwitcher() {
+  const { user } = useStore();
   const location = useLocation();
+  if (!user || user.role !== 'admin') return null; // Hide for non-admins
   if (location.pathname === '/screen') return null; // Don't show switcher on digital signage
 
   return (
