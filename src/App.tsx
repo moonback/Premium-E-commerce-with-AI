@@ -50,10 +50,12 @@ function EnvironmentSwitcher() {
 
 export default function App() {
   const initSession = useStore((state) => state.initSession);
+  const fetchProducts = useStore((state) => state.fetchProducts);
 
   useEffect(() => {
     initSession();
-  }, [initSession]);
+    fetchProducts();
+  }, [initSession, fetchProducts]);
 
   return (
     <BrowserRouter>

@@ -1,7 +1,10 @@
 import React from 'react';
-import { Package, Users, ShoppingCart, BarChart3, Settings } from 'lucide-react';
+import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup } from 'lucide-react';
+import { useStore } from '../store';
 
 export default function Admin() {
+  const syncCatalogToDb = useStore((state) => state.syncCatalogToDb);
+
   const stats = [
     { label: "Today's Sales", value: "$4,250.00", change: "+12.5%" },
     { label: "Active Orders", value: "34", change: "-2.1%" },
@@ -40,9 +43,18 @@ export default function Admin() {
 
       {/* Main Content */}
       <div className="flex-1 p-10 overflow-y-auto">
-        <header className="mb-10">
-          <h1 className="text-4xl font-light font-serif tracking-tight mb-2">Overview</h1>
-          <p className="text-ink/60">Manage your store, view metrics, and adjust settings.</p>
+        <header className="mb-10 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-light font-serif tracking-tight mb-2">Overview</h1>
+            <p className="text-ink/60">Manage your store, view metrics, and adjust settings.</p>
+          </div>
+          <button 
+            onClick={syncCatalogToDb}
+            className="px-6 py-4 bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors flex items-center gap-2"
+          >
+            <DatabaseBackup className="w-4 h-4" />
+            Synchroniser Catalogue
+          </button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">

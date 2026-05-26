@@ -13,9 +13,9 @@ Cette roadmap détaille les prochaines étapes de développement pour transforme
 ## 🟡 Phase 2 : Persistance & Authentification (En cours / Prochaines étapes)
 L'objectif de cette phase est de remplacer les données statiques (Mocks) par une architecture Cloud.
 
-- [ ] **Base de données Cloud (Supabase/PostgreSQL)**
-  - Création des tables : `products`, `users`, `orders`, `loyalty_points`.
-  - Migration des produits "mockés" vers la base de données.
+- [x] **Base de données Cloud (Supabase/PostgreSQL)**
+  - [x] Création des tables : `products`, `users`, `orders`, `loyalty_points`.
+  - [x] Migration des produits "mockés" vers la base de données.
 - [x] **Authentification Utilisateur (Client & Admin)**
   - [x] Inscription et connexion par email/mot de passe.
   - [x] Accès sécurisé au tableau de bord `/admin` protégé (RBAC).

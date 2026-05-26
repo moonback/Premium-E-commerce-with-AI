@@ -69,6 +69,8 @@ interface AppState {
   
   // Initialization
   initSession: () => void;
+  fetchProducts: () => Promise<void>;
+  syncCatalogToDb: () => Promise<void>;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -128,5 +130,34 @@ export const useStore = create<AppState>((set, get) => ({
         set({ user: null });
       }
     });
+  },
+
+  fetchProducts: async () => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('products').select('*');
+      if (error) throw error;
+      if (data && data.length > 0) {
+        set({ products: data as Product[] });
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    }
+  },
+
+  syncCatalogToDb: async () => {
+    if (!supabase) {
+      alert("Supabase non configuré.");
+      return;
+    }
+    try {
+      const { error } = await supabase.from('products').upsert(MOCK_PRODUCTS);
+      if (error) throw error;
+      alert("Catalogue synchronisé avec succès !");
+      get().fetchProducts();
+    } catch (err: any) {
+      console.error("Error syncing products:", err);
+      alert("Erreur de synchronisation : " + err.message);
+    }
   }
 }));
