@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     role public.user_role NOT NULL DEFAULT 'customer'::user_role,
     address text DEFAULT '' NOT NULL,
     phone text DEFAULT '' NOT NULL,
+    address_line1 text DEFAULT '' NOT NULL,
+    address_line2 text DEFAULT '' NOT NULL,
+    city text DEFAULT '' NOT NULL,
+    postal_code text DEFAULT '' NOT NULL,
+    country text DEFAULT '' NOT NULL,
     loyalty_points integer NOT NULL DEFAULT 0,
     created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
     constraint profiles_pkey primary key (id),
@@ -113,11 +118,16 @@ CREATE POLICY "Only admins can update products" ON products FOR UPDATE USING (
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, role, address, phone)
+  INSERT INTO public.profiles (id, email, role, address, phone, address_line1, address_line2, city, postal_code, country)
   VALUES (
-    new.id, 
-    new.email, 
+    new.id,
+    new.email,
     CASE WHEN new.email LIKE '%admin%' THEN 'admin'::user_role ELSE 'customer'::user_role END,
+    '',
+    '',
+    '',
+    '',
+    '',
     '',
     ''
   );
