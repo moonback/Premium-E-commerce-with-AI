@@ -72,6 +72,7 @@ interface AppState {
   
   // Initialization
   initSession: () => void;
+  fetchUserProfile: (userId: string, email: string) => Promise<void>;
   fetchProducts: () => Promise<void>;
   syncCatalogToDb: () => Promise<void>;
 }
@@ -124,19 +125,43 @@ export const useStore = create<AppState>()(
     if (!supabase) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      // In a real app, you would fetch role from a profiles table
-      const role = session.user.email?.includes('admin') ? 'admin' : 'customer';
-      set({ user: { id: session.user.id, email: session.user.email!, role } });
+      get().fetchUserProfile(session.user.id, session.user.email!);
     }
 
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const role = session.user.email?.includes('admin') ? 'admin' : 'customer';
-        set({ user: { id: session.user.id, email: session.user.email!, role } });
+        get().fetchUserProfile(session.user.id, session.user.email!);
       } else {
         set({ user: null });
       }
     });
+  },
+
+  fetchUserProfile: async (userId: string, email: string) => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      
+      if (error && error.code === 'PGRST116') {
+         // Profile not found, let's create it as a fallback in case the DB trigger didn't run
+         const role = email.includes('admin') ? 'admin' : 'customer';
+         const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([{ id: userId, email, role }]).select().single();
+         if (!insertError && newProfile) {
+            set({ user: { id: userId, email, role: newProfile.role } });
+            return;
+         }
+      }
+      
+      if (data) {
+        set({ user: { id: userId, email, role: data.role } });
+      } else {
+        // Ultimate fallback
+        set({ user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' } });
+      }
+    } catch (e) {
+      console.error("Error fetching/creating profile:", e);
+      set({ user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' } });
+    }
   },
 
   fetchProducts: async () => {
