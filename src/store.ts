@@ -57,9 +57,11 @@ interface AppState {
   // Auth State
   user: User | null;
   isAuthModalOpen: boolean;
+  isCartOpen: boolean;
   
   // Actions
   setAuthModalOpen: (isOpen: boolean) => void;
+  setCartOpen: (isOpen: boolean) => void;
   setUser: (user: User | null) => void;
   
   setSearchQuery: (q: string) => void;
@@ -85,8 +87,10 @@ export const useStore = create<AppState>()(
   
   user: null,
   isAuthModalOpen: false,
+  isCartOpen: false,
 
   setAuthModalOpen: (isOpen) => set({ isAuthModalOpen: isOpen }),
+  setCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
   setUser: (user) => set({ user }),
 
   setSearchQuery: (q) => set({ searchQuery: q }),

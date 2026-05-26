@@ -3,20 +3,20 @@ import { useStore } from '../store';
 import { X, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { cart, addToCart, removeFromCart, checkout } = useStore();
+export default function CartDrawer() {
+  const { cart, addToCart, removeFromCart, checkout, isCartOpen, setCartOpen } = useStore();
   
   const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isCartOpen && (
         <>
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={() => setCartOpen(false)}
             className="fixed inset-0 bg-ink/20 backdrop-blur-sm z-50"
           />
           <motion.div 
@@ -28,7 +28,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClo
           >
             <div className="flex items-center justify-between p-6 border-b border-ink/10">
               <h2 className="text-xl font-serif tracking-tight">Your Cart</h2>
-              <button onClick={onClose} className="p-2 hover:bg-soft-green rounded-full transition-colors text-ink/60 hover:text-ink">
+              <button onClick={() => setCartOpen(false)} className="p-2 hover:bg-soft-green rounded-full transition-colors text-ink/60 hover:text-ink">
                 <X className="w-5 h-5" />
               </button>
             </div>
