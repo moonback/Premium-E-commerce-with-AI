@@ -3,8 +3,8 @@ import { persist } from 'zustand/middleware';
 import { Product, CartItem, User } from './types';
 import { supabase } from './lib/supabase';
 
-// Mock DB
-export const MOCK_PRODUCTS: Product[] = [
+// Initial Seed DB for testing/syncing
+export const SEED_PRODUCTS: Product[] = [
   {
     id: "prod_1",
     name: "La Noisette Fraîche",
@@ -79,7 +79,7 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-  products: MOCK_PRODUCTS,
+  products: [],
   cart: [],
   favorites: [],
   loyaltyPoints: 1250,
@@ -158,7 +158,7 @@ export const useStore = create<AppState>()(
       return;
     }
     try {
-      const { error } = await supabase.from('products').upsert(MOCK_PRODUCTS);
+      const { error } = await supabase.from('products').upsert(SEED_PRODUCTS);
       if (error) throw error;
       alert("Catalogue synchronisé avec succès !");
       get().fetchProducts();

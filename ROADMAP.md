@@ -5,7 +5,8 @@ Cette roadmap détaille les prochaines étapes de développement pour transforme
 ## 🟢 Phase 1 : Fondation & Esthétique (Terminée)
 - [x] Structure Multi-Environnements (Store, POS, Admin, Screen).
 - [x] Design "Editorial Aesthetic" (Polices Playfair/Inter, palette de couleurs premium).
-- [x] Intégration du catalogue "Trompe-l'œil" (Mock DB).
+- [x] Refactoring Modulaire (Composants Maintenables) : Header global, Footer, StoreLayout.
+- [x] Navigation Produit : Création de la page Produit Détaillée (`/product/:id`).
 - [x] Panier d'achat global géré avec Zustand.
 - [x] **Ava** : Assistant vocal IA bidirectionnel implémenté avec Gemini Live API via WebSockets.
 - [x] Configuration serveur Express Full-stack avec SSR/Serveur statique Vite combiné.

@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { ShoppingBag, Search, User, Star, MapPin } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import CartDrawer from '../components/CartDrawer';
 
 export default function StoreFront() {
-  const { products, searchQuery, setSearchQuery, user, setAuthModalOpen } = useStore();
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { products, searchQuery } = useStore();
   const [activeTab, setActiveTab] = useState('All');
 
   const categories = ['All', 'Fruits', 'Gourmandise', 'Noix & Graines'];
@@ -17,55 +14,7 @@ export default function StoreFront() {
   );
 
   return (
-    <div className="min-h-screen bg-bg">
-      <header className="sticky top-0 z-40 w-full bg-bg/80 backdrop-blur-md border-b border-ink/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-4">
-              <span className="text-2xl font-bold tracking-tighter font-serif italic text-ink">Véridian</span>
-            </div>
-            
-            <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
-                <input 
-                  type="text"
-                  placeholder="Rechercher par saveur, fruit ou texture..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-soft-green border border-ink/10 rounded-none text-sm focus:bg-white focus:border-ink/30 focus:ring-0 transition-all outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <button 
-                onClick={() => user ? useStore.getState().setUser(null) : setAuthModalOpen(true)}
-                className="text-ink/60 hover:text-ink transition-colors flex items-center gap-2"
-                title={user ? "Se déconnecter" : "Se connecter"}
-              >
-                {user ? (
-                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-1 bg-ink text-white rounded">
-                    {user.email.split('@')[0]}
-                  </span>
-                ) : (
-                  <User className="w-5 h-5" />
-                )}
-              </button>
-              <button 
-                onClick={() => setIsCartOpen(true)}
-                className="text-ink/60 hover:text-ink transition-colors relative"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-white rounded-full text-[10px] flex items-center justify-center font-bold">
-                  {useStore(state => state.cart.length)}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-bg flex-1">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-3xl mb-12">
           <h1 className="text-5xl md:text-6xl font-light font-serif text-ink mb-4 leading-none">
@@ -98,8 +47,6 @@ export default function StoreFront() {
           ))}
         </div>
       </main>
-
-      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import StoreLayout from './components/StoreLayout';
 import StoreFront from './pages/StoreFront';
+import ProductDetail from './pages/ProductDetail';
 import POS from './pages/POS';
 import Admin from './pages/Admin';
 import StoreScreen from './pages/StoreScreen';
@@ -61,7 +63,11 @@ export default function App() {
     <BrowserRouter>
       <div className="bg-bg min-h-screen font-sans text-ink selection:bg-accent/20">
         <Routes>
-          <Route path="/" element={<StoreFront />} />
+          <Route element={<StoreLayout />}>
+            <Route path="/" element={<StoreFront />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+          </Route>
+          
           <Route path="/pos" element={<POS />} />
           <Route 
             path="/admin" 
