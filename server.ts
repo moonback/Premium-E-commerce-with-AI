@@ -3,7 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer } from "http";
-import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
+import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 
 async function startServer() {
   const app = express();
@@ -57,13 +57,13 @@ async function startServer() {
               name: "addToCart",
               description: "Ajoute un produit au panier du client ou propose un achat.",
               parameters: {
-                type: "OBJECT",
+                type: Type.OBJECT,
                 properties: {
                   productId: {
-                    type: "STRING", 
+                    type: Type.STRING, 
                     description: "L'identifiant exact de la pâtisserie choisie. Valeurs possibles: prod_1 (La Noisette Fraîche), prod_2 (Le Citron Jaune), prod_3 (La Gousse de Vanille), prod_4 (Le Grain de Café)."
                   },
-                  quantity: { type: "INTEGER", description: "La quantité souhaitée par le client" }
+                  quantity: { type: Type.INTEGER, description: "La quantité souhaitée par le client" }
                 },
                 required: ["productId", "quantity"]
               }
@@ -77,16 +77,16 @@ async function startServer() {
         try {
           const parsed = JSON.parse(data.toString());
           if (parsed.audio) {
-            session.sendRealtimeInput([
-              {
+            session.sendRealtimeInput({
+              audio: {
                 mimeType: "audio/pcm;rate=16000",
                 data: parsed.audio,
-              },
-            ]);
+              }
+            });
           } else if (parsed.text) {
-             session.sendRealtimeInput([{text: parsed.text}]);
+             session.sendRealtimeInput({ text: parsed.text });
           } else if (parsed.functionResponse) {
-             session.sendRealtimeInput([{ functionResponse: parsed.functionResponse }]);
+             session.sendToolResponse({ functionResponses: [parsed.functionResponse] });
           }
         } catch (e) {
           console.error("Error processing client message", e);

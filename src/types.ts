@@ -1,3 +1,10 @@
+export type Category = {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  level: number;
+};
+
 export type Product = {
   id: string;
   name: string;

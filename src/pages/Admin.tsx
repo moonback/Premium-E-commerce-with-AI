@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard } from 'lucide-react';
 import { useStore } from '../store';
 import { Product } from '../types';
 import toast from 'react-hot-toast';
@@ -8,10 +8,15 @@ import { supabase } from '../lib/supabase';
 export default function Admin() {
   const syncCatalogToDb = useStore((state) => state.syncCatalogToDb);
   const products = useStore((state) => state.products);
+  const categories = useStore((state) => state.categories);
   const fetchProducts = useStore((state) => state.fetchProducts);
   const [activeTab, setActiveTab] = useState('Overview');
   const [isEditing, setIsEditing] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+  
+  // Category Form
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatParent, setNewCatParent] = useState('');
 
   const stats = [
     { label: "Ventes du Jour", value: "0.00€", change: "0%" },
@@ -43,6 +48,31 @@ export default function Admin() {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !supabase) return;
+
+    try {
+      toast.loading("Upload de l'image...", { id: "upload" });
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const { error: uploadError, data } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      setEditingProduct({ ...editingProduct, image: publicUrl });
+      toast.success("Image uploadée", { id: "upload" });
+    } catch (err: any) {
+      toast.error(err.message || "Erreur upload", { id: "upload" });
+    }
+  };
+
   const handleDeleteProduct = async (id: string) => {
      if (!window.confirm("Supprimer ce produit ?")) return;
      if (!supabase) return;
@@ -54,6 +84,30 @@ export default function Admin() {
      } catch (err: any) {
        toast.error(err.message);
      }
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase) return toast.error("Supabase requis");
+    try {
+      const parent = categories.find(c => c.id === newCatParent);
+      const level = parent ? parent.level + 1 : 1;
+      if (level > 3) return toast.error("Maximum 3 niveaux de catégories");
+      
+      const { error } = await supabase.from('categories').insert([{
+         id: `cat_${Date.now()}`,
+         name: newCatName,
+         parent_id: newCatParent || null,
+         level
+      }]);
+      if (error) throw error;
+      toast.success("Catégorie ajoutée");
+      setNewCatName('');
+      setNewCatParent('');
+      useStore.getState().fetchCategories();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   return (
@@ -68,6 +122,7 @@ export default function Admin() {
           {[ 
             { icon: BarChart3, label: "Overview" },
             { icon: Package, label: "Products" },
+            { icon: LayoutDashboard, label: "Categories" },
             { icon: ShoppingCart, label: "Orders" },
           ].map((item, i) => (
             <button 
@@ -190,6 +245,19 @@ export default function Admin() {
                 <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Catégorie</label>
                  <select required value={editingProduct.category || ''} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent uppercase text-xs">
                    <option value="">Sélectionner</option>
+                   {categories.filter(c => c.level === 1).map(c1 => (
+                     <optgroup key={c1.id} label={c1.name}>
+                       {categories.filter(c => c.parent_id === c1.id).map(c2 => (
+                         <React.Fragment key={c2.id}>
+                           <option value={c2.name}>{c2.name}</option>
+                           {categories.filter(c => c.parent_id === c2.id).map(c3 => (
+                             <option key={c3.id} value={c3.name}>-- {c3.name}</option>
+                           ))}
+                         </React.Fragment>
+                       ))}
+                     </optgroup>
+                   ))}
+                   {/* Fallback old categories */}
                    <option value="Fruits">Fruits</option>
                    <option value="Gourmandise">Gourmandise</option>
                    <option value="Noix & Graines">Noix & Graines</option>
@@ -200,8 +268,19 @@ export default function Admin() {
                 <textarea required value={editingProduct.description || ''} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent italic" />
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Image URL</label>
-                <input required type="text" value={editingProduct.image || ''} onChange={e => setEditingProduct({...editingProduct, image: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
+                <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Image Produit</label>
+                <div className="flex gap-4 items-end">
+                   <div className="flex-1">
+                     <input required type="text" placeholder="URL ou upload..." value={editingProduct.image || ''} onChange={e => setEditingProduct({...editingProduct, image: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
+                   </div>
+                   <label className="cursor-pointer px-4 py-2 border border-ink/20 hover:bg-ink/5 transition-colors text-xs font-bold uppercase tracking-widest flex-shrink-0">
+                     Upload
+                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                   </label>
+                </div>
+                {editingProduct.image && (
+                   <img src={editingProduct.image} alt="Preview" className="w-20 h-20 object-cover mt-4 border border-ink/10" />
+                )}
               </div>
               <div>
                 <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Effets (séparés par virgule)</label>
@@ -212,6 +291,59 @@ export default function Admin() {
                 <button type="submit" className="px-6 py-4 bg-ink text-white hover:bg-ink/90 transition-colors">Enregistrer</button>
               </div>
             </form>
+          </div>
+        )}
+        {activeTab === 'Categories' && (
+          <div className="bg-transparent border border-ink/10 p-8 max-w-2xl">
+            <h2 className="text-2xl font-serif mb-6">Gestion des Catégories (3 Niveaux)</h2>
+            <div className="space-y-4 text-sm mb-8">
+              <p className="text-ink/60">Gérez l'arborescence des catégories de votre boutique de manière indépendante.</p>
+              
+              <ul className="space-y-2 mt-4 font-mono text-xs">
+                {categories.filter(c => c.level === 1).map(c1 => (
+                   <li key={c1.id}>
+                     <div className="font-bold border-b border-ink/10 pb-1 mb-1">{c1.name} (Niv 1)</div>
+                     <ul className="pl-4 space-y-1 mt-1">
+                       {categories.filter(c => c.parent_id === c1.id).map(c2 => (
+                         <li key={c2.id}>
+                           L {c2.name} (Niv 2)
+                           <ul className="pl-6 space-y-1 text-ink/60">
+                             {categories.filter(c => c.parent_id === c2.id).map(c3 => (
+                               <li key={c3.id}>-- {c3.name} (Niv 3)</li>
+                             ))}
+                           </ul>
+                         </li>
+                       ))}
+                     </ul>
+                   </li>
+                ))}
+              </ul>
+            </div>
+            
+            <div className="bg-soft-green/10 p-6 border border-ink/10 mt-8">
+              <h3 className="font-bold text-sm uppercase tracking-widest mb-4">Ajouter une Catégorie</h3>
+              <form onSubmit={handleSaveCategory} className="space-y-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Nom</label>
+                  <input required type="text" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Catégorie Parente (Optionnel)</label>
+                  <select value={newCatParent} onChange={e => setNewCatParent(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent uppercase text-xs">
+                    <option value="">Aucune (Niveau 1)</option>
+                    {categories.filter(c => c.level < 3).map(c => (
+                      <option key={c.id} value={c.id}>{c.name} (Niveau {c.level})</option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit" className="px-6 py-3 bg-ink text-white hover:bg-ink/90 transition-colors text-xs font-bold uppercase tracking-widest w-full">Ajouter</button>
+              </form>
+            </div>
+
+            <div className="p-4 bg-soft-green/20 border border-ink/10 text-xs text-ink/70 mt-8">
+              <p className="font-bold mb-2">Note sur la base de données :</p>
+              <p>Ouvrez l'interface DB Supabase et créez une table <code>categories</code> avec <code>id</code> (text), <code>name</code> (text), <code>parent_id</code> (text nullable), <code>level</code> (int). Les catégories s'afficheront ici automatiquement.</p>
+            </div>
           </div>
         )}
       </div>

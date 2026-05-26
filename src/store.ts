@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product, CartItem, User } from './types';
+import { Product, CartItem, User, Category } from './types';
 import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -48,8 +48,9 @@ export const SEED_PRODUCTS: Product[] = [
   }
 ];
 
-interface AppState {
+export interface AppState {
   products: Product[];
+  categories: Category[];
   cart: CartItem[];
   favorites: string[];
   loyaltyPoints: number;
@@ -76,6 +77,7 @@ interface AppState {
   initSession: () => void;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
   fetchProducts: () => Promise<void>;
+  fetchCategories: () => Promise<void>;
   syncCatalogToDb: () => Promise<void>;
 }
 
@@ -83,6 +85,7 @@ export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
   products: [],
+  categories: [],
   cart: [],
   favorites: [],
   loyaltyPoints: 1250,
@@ -221,6 +224,34 @@ export const useStore = create<AppState>()(
       console.error("Error fetching products:", err);
     } finally {
       set({ isLoadingProducts: false });
+    }
+  },
+
+  fetchCategories: async () => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('categories').select('*');
+      if (error) throw error;
+      if (data && data.length > 0) {
+        set({ categories: data as Category[] });
+      } else {
+        // Fallback default
+        set({ categories: [
+          { id: 'cat_1', name: 'Vêtements', parent_id: null, level: 1 },
+          { id: 'cat_2', name: 'T-Shirts', parent_id: 'cat_1', level: 2 },
+          { id: 'cat_3', name: 'Accessoires', parent_id: null, level: 1 },
+          { id: 'cat_4', name: 'Maison', parent_id: null, level: 1 },
+        ] });
+      }
+    } catch (e) {
+      console.error(e);
+      // Fallback
+       set({ categories: [
+          { id: 'cat_1', name: 'Vêtements', parent_id: null, level: 1 },
+          { id: 'cat_2', name: 'T-Shirts', parent_id: 'cat_1', level: 2 },
+          { id: 'cat_3', name: 'Accessoires', parent_id: null, level: 1 },
+          { id: 'cat_4', name: 'Maison', parent_id: null, level: 1 },
+        ] });
     }
   },
 
