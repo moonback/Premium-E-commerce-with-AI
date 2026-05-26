@@ -183,7 +183,7 @@ export default function VoiceAssistant() {
                   <Loader2 className="w-3 h-3 animate-spin"/> Connexion...
                 </p>
               ) : isRecording ? (
-                <p className="text-ink/60 text-sm italic">Je vous écoute. Comment puis-je vous aider ?</p>
+                <p className="text-ink/60 text-sm italic">Je vous écoute. Cherchez-vous plutôt du fruité ou du chocolaté ?</p>
               ) : (
                 <p className="text-ink/60 text-sm italic">Appuyez pour parler à Ava.</p>
               )}

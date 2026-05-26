@@ -5,42 +5,42 @@ import { Product, CartItem } from './types';
 export const MOCK_PRODUCTS: Product[] = [
   {
     id: "prod_1",
-    name: "Premium Indica Blend",
-    description: "A deep, relaxing blend perfect for evening wind-down.",
-    price: 45.0,
-    image: "https://images.unsplash.com/photo-1603908861937-2fb0dbeb775e", // aesthetic herb/plant
-    category: "Flower",
-    effects: ["Relaxing", "Sleep", "Pain Relief"],
+    name: "La Noisette Fraîche",
+    description: "Un trompe-l'œil parfait d'une noisette géante. Coque en chocolat croquant, praliné coulant et mousse légère.",
+    price: 12.0,
+    image: "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e", // dessert
+    category: "Noix & Graines",
+    effects: ["Praliné", "Croquant", "Gourmand"],
     stock: 24,
   },
   {
     id: "prod_2",
-    name: "Sativa Citrus Spark",
-    description: "An uplifting, energetic strain with bright citrus notes.",
-    price: 50.0,
-    image: "https://images.unsplash.com/photo-1595431623910-b977bc6fdfad",
-    category: "Flower",
-    effects: ["Energy", "Focus", "Creative"],
+    name: "Le Citron Jaune",
+    description: "Une écorce en chocolat blanc, insert confit de citron jaune et yuzu, ganache montée acidulée.",
+    price: 14.0,
+    image: "https://images.unsplash.com/photo-1519869325930-281384150729", // lemon dessert
+    category: "Fruits",
+    effects: ["Acidulé", "Frais", "Agrumes"],
     stock: 12,
   },
   {
     id: "prod_3",
-    name: "CBD Sleep Tincture",
-    description: "Fast-acting broad spectrum drops for deep rest.",
-    price: 65.0,
-    image: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be",
-    category: "Tinctures",
-    effects: ["Sleep", "Calm"],
+    name: "La Gousse de Vanille",
+    description: "L'illusion bluffante d'une gousse charnue. Pâte sablée, caramel tendre et ganache infiniment vanille.",
+    price: 15.0,
+    image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87", // pastry
+    category: "Gourmandise",
+    effects: ["Vanille", "Caramel", "Doux"],
     stock: 5,
   },
   {
     id: "prod_4",
-    name: "Hybrid Balance Gummies",
-    description: "Perfectly balanced effects in a delicious mango treat.",
-    price: 30.0,
-    image: "https://images.unsplash.com/photo-1600350711904-4c45b85a1a1f",
-    category: "Edibles",
-    effects: ["Happy", "Relaxing", "Social"],
+    name: "Le Grain de Café",
+    description: "Un grain de café torréfié format dessert. Biscuit cuillère imbibé espresso, mousse café et cœur mascarpone.",
+    price: 13.0,
+    image: "https://images.unsplash.com/photo-1495147466023-e6a4b37bb96b", // coffee
+    category: "Gourmandise",
+    effects: ["Café", "Intense", "Fondant"],
     stock: 45,
   }
 ];

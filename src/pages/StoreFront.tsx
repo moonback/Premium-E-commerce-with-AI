@@ -9,7 +9,7 @@ export default function StoreFront() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
 
-  const categories = ['All', 'Flower', 'Edibles', 'Tinctures'];
+  const categories = ['All', 'Fruits', 'Gourmandise', 'Noix & Graines'];
 
   const filteredProducts = products.filter(p => 
     (activeTab === 'All' || p.category === activeTab) &&
@@ -30,7 +30,7 @@ export default function StoreFront() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
                 <input 
                   type="text"
-                  placeholder="Search by name, category, or effect..."
+                  placeholder="Rechercher par saveur, fruit ou texture..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-soft-green border border-ink/10 rounded-none text-sm focus:bg-white focus:border-ink/30 focus:ring-0 transition-all outline-none"
@@ -59,10 +59,10 @@ export default function StoreFront() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-3xl mb-12">
           <h1 className="text-5xl md:text-6xl font-light font-serif text-ink mb-4 leading-none">
-            L'Essence <br/><span className="italic">Botanique</span>
+            L'Illusion <br/><span className="italic">Gourmande</span>
           </h1>
           <p className="text-lg text-ink/60">
-            Une approche sémantique du bien-être. Trouvez le produit idéal par effet ressenti.
+            Pâtisseries trompe-l'œil artisanales. Découvrez l'exquise fusion du visuel et du goût.
           </p>
         </div>
 
