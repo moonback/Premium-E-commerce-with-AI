@@ -12,7 +12,7 @@ Ce document détaille l'évolution de l'infrastructure logicielle (Supabase, API
 ## 🟡 Phase 2 : Tableau de Bord Administrateur (CRUD)
 - [x] Layout Dashboard avec statistiques factices.
 - [x] Interface simple de gestion des Produits (Ajout, Modification, Suppression).
-- [ ] **Upload d'Images (UI)** : Intégration du composant uploader depuis l'Admin vers Supabase Storage.
+- [x] **Upload d'Images (UI)** : Intégration du composant uploader depuis l'Admin vers Supabase Storage.
 - [ ] **Gestion des Commandes (Kanban)** : Transformer la liste des commandes en un véritable outil de préparation en cuisine : "Nouvelle" -> "En Préparation" -> "Prête" -> "Livrée".
 - [ ] **Statistiques Réelles** : Connecter les 4 cartes du haut (Ventes du jour, Commandes actives, Total Clients) aux véritables agrégations de la table `orders`.
 - [ ] **Gestion des Stocks Automatisée** : Décrémentation automatique du stock produit lors d'une commande passée et terminée. Alertes de stock faible.

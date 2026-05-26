@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { Product } from '../types';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import KitchenOrders from '../components/KitchenOrders';
 
 export default function Admin() {
   const syncCatalogToDb = useStore((state) => state.syncCatalogToDb);
@@ -249,14 +250,11 @@ export default function Admin() {
               ))}
             </div>
             
-            <div className="bg-transparent border border-ink/10 overflow-hidden">
-              <div className="px-6 py-4 border-b border-ink/10 bg-soft-green/30">
-                <h2 className="font-serif">Recent Orders (Placeholder)</h2>
-              </div>
-              <div className="p-8 text-center text-ink/40 text-sm">
-                 Activer la fonctionnalité checkout dans le panier pour voir les vraies commandes.
-              </div>
-            </div>
+{activeTab === 'Orders' && (
+    <div className="bg-transparent border border-ink/10 overflow-hidden">
+      <KitchenOrders />
+    </div>
+  )}
           </>
         )}
 

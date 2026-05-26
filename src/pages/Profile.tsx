@@ -115,11 +115,27 @@ export default function Profile() {
                       <div>
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-xs font-bold uppercase tracking-widest">Commande #{order.id.slice(0, 8)}</span>
-                          {order.status === 'Terminée' ? (
-                            <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 bg-ink"><CheckCircle className="w-3 h-3" /> Terminée</span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green"><Clock className="w-3 h-3" /> En préparation</span>
-                          )}
+                          {order.status === 'Nouvelle' ? (
+                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
+                               <Clock className="w-3 h-3" /> Nouvelle
+                             </span>
+                           ) : order.status === 'En préparation' ? (
+                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
+                               <Clock className="w-3 h-3" /> En préparation
+                             </span>
+                           ) : order.status === 'Prête' ? (
+                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 border border-ink/20 bg-ink">
+                               <CheckCircle className="w-3 h-3" /> Prête
+                             </span>
+                           ) : order.status === 'Livrée' ? (
+                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 border border-ink/20 bg-ink">
+                               <CheckCircle className="w-3 h-3" /> Livrée
+                             </span>
+                           ) : (
+                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
+                               <Clock className="w-3 h-3" /> {order.status}
+                             </span>
+                           )}
                         </div>
                         <p className="text-xs text-ink/60 italic">Passée le {new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
                       </div>

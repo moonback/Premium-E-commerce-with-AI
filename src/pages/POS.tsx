@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 import { Search, ShoppingCart, User, Plus, Minus, CreditCard, Banknote, ScanBarcode, ArrowRight } from 'lucide-react';
+import KitchenOrders from '../components/KitchenOrders';
 
 export default function POS() {
   const { products } = useStore();
-  const [posCart, setPosCart] = useState<{product: any, quantity: number}[]>([]);
+  const [posCart, setPosCart] = useState<{ product: any, quantity: number }[]>([]);
   const [search, setSearch] = useState('');
 
-  const filteredProducts = products.filter(p => 
+  const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -36,8 +37,8 @@ export default function POS() {
           <h1 className="text-xl font-serif tracking-tight text-ink">Point of Sale</h1>
           <div className="relative w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search products or scan barcode..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -52,7 +53,7 @@ export default function POS() {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {filteredProducts.map(product => (
-              <button 
+              <button
                 key={product.id}
                 onClick={() => addToCart(product)}
                 className="bg-white p-3 border border-ink/10 hover:border-ink transition-all text-left flex flex-col h-40"
@@ -68,7 +69,7 @@ export default function POS() {
         </div>
       </div>
 
-      {/* Right side: Current Order */}
+      {/* Right side: Current Order and Kitchen Orders */}
       <div className="w-[400px] bg-white border-l border-ink/10 flex flex-col h-screen shrink-0 z-10">
         <div className="px-6 py-4 border-b border-ink/10 bg-soft-green/30 flex items-center justify-between">
           <h2 className="font-serif flex items-center gap-2">
@@ -80,6 +81,7 @@ export default function POS() {
           </button>
         </div>
 
+        {/* POS Cart */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {posCart.length === 0 ? (
             <div className="h-full flex items-center justify-center text-ink/40 italic">
@@ -94,14 +96,14 @@ export default function POS() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-3 bg-white border border-ink/10 p-1">
-                    <button 
+                    <button
                       onClick={() => setPosCart(prev => prev.map(p => p.product.id === item.product.id ? { ...p, quantity: Math.max(0, p.quantity - 1) } : p).filter(p => p.quantity > 0))}
                       className="p-1 hover:bg-soft-green/50 text-ink/60 transition-colors"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
                     <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                    <button 
+                    <button
                       onClick={() => setPosCart(prev => prev.map(p => p.product.id === item.product.id ? { ...p, quantity: p.quantity + 1 } : p))}
                       className="p-1 hover:bg-soft-green/50 text-ink/60 transition-colors"
                     >
@@ -112,6 +114,12 @@ export default function POS() {
               </div>
             ))
           )}
+        </div>
+
+        {/* Orders */}
+        <div className="p-4 border-t border-ink/10 bg-soft-green/20">
+          <h3 className="text-lg font-serif mb-2">Commandes en cours</h3>
+          <KitchenOrders />
         </div>
 
         <div className="p-6 border-t border-ink/10 bg-soft-green/20">
@@ -129,7 +137,7 @@ export default function POS() {
               Card
             </button>
           </div>
-          <button 
+          <button
             disabled={posCart.length === 0}
             onClick={checkout}
             className="w-full py-4 bg-ink text-white font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-ink/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

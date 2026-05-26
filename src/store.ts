@@ -193,6 +193,17 @@ export const useStore = create<AppState>()(
             ? state.favorites.filter((id) => id !== productId)
             : [...state.favorites, productId],
         })),
+      // New helper to update order status
+      updateOrderStatus: async (orderId: string, status: 'Nouvelle' | 'En préparation' | 'Prête' | 'Livrée' | 'Terminée') => {
+        if (supabase && get().user) {
+          try {
+            await supabase.from('orders').update({ status }).eq('id', orderId);
+          } catch (e) {
+            console.error('Failed to update order status', e);
+          }
+        }
+      },
+
       checkout: async () => {
         const state = get();
         if (state.cart.length === 0) return;
@@ -201,12 +212,19 @@ export const useStore = create<AppState>()(
 
         if (supabase && state.user) {
           try {
-            const { data: order, error } = await supabase.from('orders').insert([{ user_id: state.user.id, total, status: 'pending' }]).select().single();
+            const { data: order, error } = await supabase
+              .from('orders')
+              .insert([
+                { user_id: state.user.id, total, status: 'Nouvelle' }
+              ])
+              .select()
+              .single();
             if (error) throw error;
             const { clientInfo } = state.checkoutInfo;
             // Persist client address and phone into user profile if available
             if (state.user) {
-              await supabase.from('profiles')
+              await supabase
+                .from('profiles')
                 .update({
                   address: clientInfo.address || '',
                   phone: clientInfo.phone || '',
@@ -218,14 +236,16 @@ export const useStore = create<AppState>()(
                 })
                 .eq('id', state.user.id);
               // Update local user state
-              set({ user: { ...state.user, address: clientInfo.address || '', phone: clientInfo.phone || '' } });
+              set({
+                user: { ...state.user, address: clientInfo.address || '', phone: clientInfo.phone || '' }
+              });
             }
             toast.success(`Commande validée ! +${pointsEarned} points`);
           } catch (e: any) {
-            toast.error("Erreur, commande hors-ligne simulée : " + e.message);
+            toast.error('Erreur, commande hors-ligne simulée : ' + e.message);
           }
         } else {
-          toast.success(`Commande locale validée !`);
+          toast.success('Commande locale validée !');
         }
         set(state => ({
           cart: [],
