@@ -15,8 +15,9 @@ export default function Admin() {
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
   
   // Category Form
-  const [newCatName, setNewCatName] = useState('');
-  const [newCatParent, setNewCatParent] = useState('');
+  const [catFormName, setCatFormName] = useState('');
+  const [catFormParent, setCatFormParent] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   const stats = [
     { label: "Ventes du Jour", value: "0.00€", change: "0%" },
@@ -90,24 +91,74 @@ export default function Admin() {
     e.preventDefault();
     if (!supabase) return toast.error("Supabase requis");
     try {
-      const parent = categories.find(c => c.id === newCatParent);
-      const level = parent ? parent.level + 1 : 1;
-      if (level > 3) return toast.error("Maximum 3 niveaux de catégories");
+      const parent = categories.find(c => c.id === catFormParent);
+      const newLevel = parent ? parent.level + 1 : 1;
       
-      const { error } = await supabase.from('categories').insert([{
-         id: `cat_${Date.now()}`,
-         name: newCatName,
-         parent_id: newCatParent || null,
-         level
-      }]);
-      if (error) throw error;
-      toast.success("Catégorie ajoutée");
-      setNewCatName('');
-      setNewCatParent('');
+      if (editingCategoryId) {
+         if (catFormParent === editingCategoryId) return toast.error("Une catégorie ne peut être son propre parent.");
+         
+         const children = categories.filter(c => c.parent_id === editingCategoryId);
+         const grandchildren = categories.filter(c => children.some(child => child.id === c.parent_id));
+         
+         if (children.some(c => c.id === catFormParent) || grandchildren.some(c => c.id === catFormParent)) {
+             return toast.error("Impossible de déplacer dans l'une de ses sous-catégories.");
+         }
+         
+         const maxDepthAdded = grandchildren.length > 0 ? 2 : (children.length > 0 ? 1 : 0);
+         if (newLevel + maxDepthAdded > 3) {
+             return toast.error("Action impossible : le déplacement ferait dépasser la limite de 3 niveaux.");
+         }
+         
+         const { error } = await supabase.from('categories').update({
+             name: catFormName,
+             parent_id: catFormParent || null,
+             level: newLevel
+         }).eq('id', editingCategoryId);
+         
+         if (error) throw error;
+         
+         const oldCategory = categories.find(c => c.id === editingCategoryId);
+         if (oldCategory && oldCategory.level !== newLevel) {
+            const levelDiff = newLevel - oldCategory.level;
+            for (const child of children) {
+               await supabase.from('categories').update({ level: child.level + levelDiff }).eq('id', child.id);
+            }
+            for (const gc of grandchildren) {
+               await supabase.from('categories').update({ level: gc.level + levelDiff }).eq('id', gc.id);
+            }
+         }
+         toast.success("Catégorie modifiée");
+      } else {
+         if (newLevel > 3) return toast.error("Maximum 3 niveaux de catégories");
+         const { error } = await supabase.from('categories').insert([{
+            id: `cat_${Date.now()}`,
+            name: catFormName,
+            parent_id: catFormParent || null,
+            level: newLevel
+         }]);
+         if (error) throw error;
+         toast.success("Catégorie ajoutée");
+      }
+      
+      setCatFormName('');
+      setCatFormParent('');
+      setEditingCategoryId(null);
       useStore.getState().fetchCategories();
     } catch (err: any) {
       toast.error(err.message);
     }
+  };
+
+  const handleEditCategoryClick = (cat: any) => {
+    setEditingCategoryId(cat.id);
+    setCatFormName(cat.name);
+    setCatFormParent(cat.parent_id || '');
+  };
+
+  const handleCancelCategoryEdit = () => {
+    setCatFormName('');
+    setCatFormParent('');
+    setEditingCategoryId(null);
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -313,20 +364,29 @@ export default function Admin() {
                    <li key={c1.id}>
                      <div className="font-bold border-b border-ink/10 pb-1 mb-1 flex justify-between items-center">
                        <span>{c1.name} (Niv 1)</span>
-                       <button onClick={() => handleDeleteCategory(c1.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                       <div className="flex gap-1">
+                         <button onClick={() => handleEditCategoryClick(c1)} className="text-ink/60 hover:text-ink hover:bg-ink/5 p-1"><Edit2 className="w-3 h-3"/></button>
+                         <button onClick={() => handleDeleteCategory(c1.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                       </div>
                      </div>
                      <ul className="pl-4 space-y-1 mt-1">
                        {categories.filter(c => c.parent_id === c1.id).map(c2 => (
                          <li key={c2.id}>
                            <div className="flex justify-between items-center">
                              <span>L {c2.name} (Niv 2)</span>
-                             <button onClick={() => handleDeleteCategory(c2.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                             <div className="flex gap-1">
+                               <button onClick={() => handleEditCategoryClick(c2)} className="text-ink/60 hover:text-ink hover:bg-ink/5 p-1"><Edit2 className="w-3 h-3"/></button>
+                               <button onClick={() => handleDeleteCategory(c2.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                             </div>
                            </div>
                            <ul className="pl-6 space-y-1 text-ink/60">
                              {categories.filter(c => c.parent_id === c2.id).map(c3 => (
                                <li key={c3.id} className="flex justify-between items-center">
                                  <span>-- {c3.name} (Niv 3)</span>
-                                 <button onClick={() => handleDeleteCategory(c3.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                                 <div className="flex gap-1">
+                                   <button onClick={() => handleEditCategoryClick(c3)} className="text-ink/60 hover:text-ink hover:bg-ink/5 p-1"><Edit2 className="w-3 h-3"/></button>
+                                   <button onClick={() => handleDeleteCategory(c3.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
+                                 </div>
                                </li>
                              ))}
                            </ul>
@@ -339,22 +399,31 @@ export default function Admin() {
             </div>
             
             <div className="bg-soft-green/10 p-6 border border-ink/10 mt-8">
-              <h3 className="font-bold text-sm uppercase tracking-widest mb-4">Ajouter une Catégorie</h3>
+              <h3 className="font-bold text-sm uppercase tracking-widest mb-4">
+                {editingCategoryId ? 'Modifier la Catégorie' : 'Ajouter une Catégorie'}
+              </h3>
               <form onSubmit={handleSaveCategory} className="space-y-4">
                 <div>
                   <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Nom</label>
-                  <input required type="text" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
+                  <input required type="text" value={catFormName} onChange={e => setCatFormName(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Catégorie Parente (Optionnel)</label>
-                  <select value={newCatParent} onChange={e => setNewCatParent(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent uppercase text-xs">
+                  <select value={catFormParent} onChange={e => setCatFormParent(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent uppercase text-xs">
                     <option value="">Aucune (Niveau 1)</option>
                     {categories.filter(c => c.level < 3).map(c => (
-                      <option key={c.id} value={c.id}>{c.name} (Niveau {c.level})</option>
+                      <option key={c.id} value={c.id} disabled={editingCategoryId === c.id}>{c.name} (Niveau {c.level})</option>
                     ))}
                   </select>
                 </div>
-                <button type="submit" className="px-6 py-3 bg-ink text-white hover:bg-ink/90 transition-colors text-xs font-bold uppercase tracking-widest w-full">Ajouter</button>
+                <div className="flex gap-2">
+                   {editingCategoryId && (
+                     <button type="button" onClick={handleCancelCategoryEdit} className="px-6 py-3 border border-ink text-ink hover:bg-ink hover:text-white transition-colors text-xs font-bold uppercase tracking-widest w-full">Annuler</button>
+                   )}
+                   <button type="submit" className="px-6 py-3 bg-ink text-white hover:bg-ink/90 transition-colors text-xs font-bold uppercase tracking-widest w-full">
+                     {editingCategoryId ? 'Enregistrer' : 'Ajouter'}
+                   </button>
+                </div>
               </form>
             </div>
 
