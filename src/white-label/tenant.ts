@@ -6,6 +6,11 @@ export function resolveTenantBranding(hostname: string): TenantBranding {
   return TENANT_REGISTRY[normalizedHost] ?? DEFAULT_TENANT;
 }
 
+export function getCurrentTenantBranding(): TenantBranding {
+  if (typeof window === 'undefined') return DEFAULT_TENANT;
+  return resolveTenantBranding(window.location.hostname);
+}
+
 export function applyTenantTheme(theme: TenantBranding['theme']) {
   const root = document.documentElement;
   // White-label tokens

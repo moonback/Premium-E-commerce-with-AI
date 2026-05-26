@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import { applyTenantTheme, resolveTenantBranding } from './tenant';
 import { DEFAULT_TENANT } from './config';
+import type { TenantBranding } from './types';
 
-export function useTenantBranding() {
-  const branding = useMemo(() => {
+export function useTenantBranding(): TenantBranding {
+  const branding = useMemo<TenantBranding>(() => {
     if (typeof window === 'undefined') return DEFAULT_TENANT;
     return resolveTenantBranding(window.location.hostname);
   }, []);

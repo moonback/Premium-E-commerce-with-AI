@@ -4,9 +4,11 @@ import { ShoppingBag, Search, User, LogOut, LayoutDashboard, Menu, X } from 'luc
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { getCurrentTenantBranding } from '../white-label/tenant';
 
 export default function Header() {
   const { cart, user, loyaltyPoints, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
+  const branding = getCurrentTenantBranding();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -30,8 +32,9 @@ export default function Header() {
             >
               {isMobileMenuOpen ? <X className="w-5 h-5"/> : <Menu className="w-5 h-5" />}
             </button>
-            <Link to="/" className="text-2xl font-bold tracking-tighter font-serif italic text-ink">
-              Boutique
+            <Link to="/" className="text-2xl font-bold tracking-tighter font-serif italic text-ink flex items-center gap-2">
+              <img src={branding.logoUrl} alt={`${branding.brandName} logo`} className="w-7 h-7 object-contain rounded-sm" />
+              <span>{branding.brandName}</span>
             </Link>
             
             <nav className="hidden md:flex gap-6 text-xs uppercase tracking-widest font-bold opacity-70">
