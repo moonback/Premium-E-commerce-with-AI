@@ -1,15 +1,48 @@
 // src/components/ClientDeliveryForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { motion } from 'motion/react';
 
 export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext: () => void; onBack: () => void; onValid?: (clientInfo: any, deliveryMethod: any) => void }) {
-  const { setClientInfo, setDeliveryMethod } = useStore();
-  const [clientInfo, setInfo] = useState({ name: '', email: '', phone: '', address: '', addressLine1: '', addressLine2: '', city: '', postalCode: '', country: '' });
+  const { setClientInfo, setDeliveryMethod, addresses, fetchAddresses, user } = useStore();
+
+  // Load saved addresses on mount
+  useEffect(() => { fetchAddresses(); }, []);
+
+  // Build initial state from the default address (if any)
+  const defaultAddr = addresses.find(a => a.is_default) ?? addresses[0];
+
+  const [clientInfo, setInfo] = useState({
+    name: '',
+    email: user?.email ?? '',
+    phone: user?.phone ?? '',
+    address: defaultAddr?.address_line1 ?? '',
+    addressLine1: defaultAddr?.address_line1 ?? '',
+    addressLine2: defaultAddr?.address_line2 ?? '',
+    city: defaultAddr?.city ?? '',
+    postalCode: defaultAddr?.postal_code ?? '',
+    country: defaultAddr?.country ?? '',
+  });
   const [deliveryMethod, setMethod] = useState<'clickCollect' | 'courier'>('courier');
   const [pickupLocation, setPickupLocation] = useState('');
   const [fee, setFee] = useState('0');
   const [timeSlot, setTimeSlot] = useState('');
+
+  // When addresses load, pre-fill if fields are still empty
+  useEffect(() => {
+    const def = addresses.find(a => a.is_default) ?? addresses[0];
+    if (def && !clientInfo.addressLine1) {
+      setInfo(prev => ({
+        ...prev,
+        address: def.address_line1,
+        addressLine1: def.address_line1,
+        addressLine2: def.address_line2 ?? '',
+        city: def.city,
+        postalCode: def.postal_code,
+        country: def.country,
+      }));
+    }
+  }, [addresses]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +72,41 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* ── Saved address quick-select ── */}
+        {addresses.length > 0 && (
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
+              Utiliser une adresse enregistrée
+            </label>
+            <select
+              className="w-full bg-transparent border-b border-ink/20 py-3 text-sm focus:outline-none focus:border-ink transition-colors text-ink"
+              onChange={e => {
+                const addr = addresses.find(a => a.id === e.target.value);
+                if (addr) {
+                  setInfo(prev => ({
+                    ...prev,
+                    address: addr.address_line1,
+                    addressLine1: addr.address_line1,
+                    addressLine2: addr.address_line2 ?? '',
+                    city: addr.city,
+                    postalCode: addr.postal_code,
+                    country: addr.country,
+                  }));
+                }
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>— Sélectionner —</option>
+              {addresses.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.label ? `${a.label} — ` : ''}{a.address_line1}, {a.city}
+                  {a.is_default ? ' ★' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Nom Complet</label>

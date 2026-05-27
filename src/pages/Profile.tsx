@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { User as UserIcon, Package, Star, LogOut, CheckCircle, Clock } from 'lucide-react';
 import ProfileInfo from '../components/ProfileInfo';
+import AddressBook from '../components/AddressBook';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -122,7 +123,8 @@ export default function Profile() {
           {/* Main Content Area */}
           <div className="col-span-2">
             <ProfileInfo />
-            <div className="p-8 border border-ink/10 bg-transparent min-h-[400px]">
+            <AddressBook />
+            <div className="p-8 border border-ink/10 bg-transparent min-h-[400px] mt-6">
               <h2 className="text-2xl font-serif mb-6 flex items-center gap-2">
                 Historique des commandes
               </h2>
