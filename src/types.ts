@@ -19,6 +19,7 @@ export type Product = {
   categories: string[];
   effects: string[];
   stock: number;
+  isNew?: boolean; // Indicates if the product is newly added
   specs: Spec[];
 };
 

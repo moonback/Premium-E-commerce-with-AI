@@ -14,10 +14,12 @@ export default function ProductCard({ product }: { product: Product }) {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -8 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="group flex flex-col justify-between bg-transparent p-6 border border-ink/5 relative hover:border-ink/20 hover:shadow-2xl transition-all duration-300"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.95 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="group relative flex flex-col justify-between bg-transparent p-6 border border-ink/5 rounded-lg overflow-hidden hover:border-ink/20 hover:shadow-2xl transition-all duration-300"
     >
+      <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       <div className="absolute top-4 left-4 text-[10px] font-bold uppercase opacity-30 z-10 transition-opacity group-hover:opacity-100">N°{product.id.replace('prod_', '').padStart(3, '0')}</div>
       <Link to={`/product/${product.id}`} className="relative aspect-[4/5] overflow-hidden bg-soft-green rounded-t-full mb-6 block">
         <img 
@@ -48,6 +50,12 @@ export default function ProductCard({ product }: { product: Product }) {
               {effect}
             </span>
           ))}
+          {product.isNew && (
+            <span className="absolute top-2 left-2 bg-ink text-bg px-2 py-0.5 text-xs font-bold rounded">Nouveau</span>
+          )}
+          {product.stock === 0 && (
+            <span className="absolute top-2 right-2 bg-red-600 text-white px-2 py-0.5 text-xs font-bold rounded">Rupture</span>
+          )}
         </div>
 
         <motion.button 
