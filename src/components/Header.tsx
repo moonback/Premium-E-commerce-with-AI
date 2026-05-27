@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { ShoppingBag, Search, User, LogOut, LayoutDashboard, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -9,6 +9,19 @@ export default function Header() {
   const { cart, user, loyaltyPoints, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.header-dropdown')) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     if (supabase) {
@@ -60,9 +73,15 @@ export default function Header() {
                </div>
             )}
 
-            <div className="relative group">
+            <div className="relative header-dropdown">
               <button 
-                onClick={() => !user && setAuthModalOpen(true)}
+                onClick={() => {
+                  if (!user) {
+                    setAuthModalOpen(true);
+                  } else {
+                    setIsDropdownOpen(prev => !prev);
+                  }
+                }}
                 className="text-ink/60 hover:text-ink transition-colors flex items-center gap-2 py-2"
                 title={user ? "Mon compte" : "Se connecter"}
               >
@@ -76,8 +95,8 @@ export default function Header() {
               </button>
 
               {/* User Dropdown */}
-              {user && (
-                <div className="absolute top-full right-0 pt-2 hidden group-hover:block z-50">
+              {user && isDropdownOpen && (
+                <div className="absolute top-full right-0 pt-2 z-50">
                   <div className="bg-bg border border-ink/10 shadow-xl p-2 w-48 text-xs font-bold uppercase tracking-widest flex flex-col gap-1">
                     <div className="px-3 py-2 opacity-50 mb-1 border-b border-ink/10">{user.email}</div>
                     
