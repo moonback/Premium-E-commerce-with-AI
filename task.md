@@ -18,11 +18,11 @@
 
 ### 2. ProductCard redesign premium
 **Fichiers :** `src/components/ProductCard.tsx`
-- [ ] Ajouter un overlay gradient au hover avec AnimatePresence
-- [ ] Implémenter un badge "Nouveau" / "Rupture de stock" conditionnel
-- [ ] Micro-animation scale (`whileHover={{ scale: 1.03 }}`) sur la carte
-- [ ] Animation "article ajouté" au clic sur le bouton panier (scale spring)
-- [ ] Afficher le nombre de stock restant si < 5
+- [x] Ajouter un overlay gradient au hover avec AnimatePresence
+- [x] Implémenter un badge "Nouveau" / "Rupture de stock" conditionnel
+- [x] Micro-animation scale (`whileHover={{ scale: 1.03 }}`) sur la carte
+- [x] Animation "article ajouté" au clic sur le bouton panier (scale spring)
+- [x] Afficher le nombre de stock restant si < 5
 
 ---
 
