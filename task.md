@@ -59,18 +59,18 @@
 
 ### 6. Skeleton loaders sur grille produits
 **Fichiers :** `src/pages/StoreFront.tsx` · `src/components/ProductCard.tsx`
-- [ ] Créer un composant `ProductCardSkeleton` (pulse animation CSS)
-- [ ] Afficher 8 skeletons quand `isLoadingProducts === true` dans le store
-- [ ] Ajouter skeleton sur la page ProductDetail pendant le fetch
-- [ ] Utiliser `animate-pulse` Tailwind ou keyframes CSS custom
+- [x] Créer un composant `ProductCardSkeleton` (pulse animation CSS)
+- [x] Afficher 8 skeletons quand `isLoadingProducts === true` dans le store
+- [x] Ajouter skeleton sur la page ProductDetail pendant le fetch
+- [x] Utiliser `animate-pulse` Tailwind ou keyframes CSS custom
 
 ---
 
 ### 7. Micro-animation panier (badge animé Header)
 **Fichiers :** `src/components/Header.tsx` · `src/components/ProductCard.tsx`
-- [ ] Animer le badge numérique du panier au changement (scale bounce)
-- [ ] Ajouter un effet "flying item" optionnel de la carte vers le panier
-- [ ] Utiliser `useEffect` + `motion.span` avec `key={cartCount}` pour re-trigger
+- [x] Animer le badge numérique du panier au changement (scale bounce)
+- [x] Ajouter un effet "flying item" optionnel de la carte vers le panier
+- [x] Utiliser `useEffect` + `motion.span` avec `key={cartCount}` pour re-trigger
 
 ---
 
@@ -85,10 +85,10 @@
 
 ### 9. Transitions de pages fluides
 **Fichiers :** `src/App.tsx` · `src/components/StoreLayout.tsx`
-- [ ] Wrapper les `<Routes>` avec `AnimatePresence mode="wait"`
-- [ ] Créer un composant `PageTransition` réutilisable (`opacity` + `y` slide)
-- [ ] Appliquer sur StoreFront → ProductDetail notamment
-- [ ] Durée courte (0.2s) pour ne pas ralentir la navigation
+- [x] Wrapper les `<Routes>` avec `AnimatePresence mode="wait"`
+- [x] Créer un composant `PageTransition` réutilisable (`opacity` + `y` slide)
+- [x] Appliquer sur StoreFront → ProductDetail notamment
+- [x] Durée courte (0.2s) pour ne pas ralentir la navigation
 
 ---
 

@@ -4,6 +4,7 @@ import { ShoppingBag, Search, User, LogOut, LayoutDashboard, Menu, X } from 'luc
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { motion } from 'motion/react';
 
 export default function Header() {
   const { cart, user, loyaltyPoints, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
@@ -118,15 +119,21 @@ export default function Header() {
               )}
             </div>
             
-            <button 
-              onClick={() => setCartOpen(true)}
-              className="text-ink/60 hover:text-ink transition-colors relative"
-            >
+              <motion.button data-cart-button="true"
+                onClick={() => setCartOpen(true)}
+                className="text-ink/60 hover:text-ink transition-colors relative"
+              >
               <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-bg rounded-full text-[10px] flex items-center justify-center font-bold">
+                <motion.span
+                  key={cart.length}
+                  initial={{ scale: 0.8, opacity: 0.5 }}
+                  animate={{ scale: [1, 1.2, 1], opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20, duration: 0.4 }}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-bg rounded-full text-[10px] flex items-center justify-center font-bold"
+                >
                 {cart.length}
-              </span>
-            </button>
+              </motion.span>
+            </motion.button>
           </div>
         </div>
       </div>

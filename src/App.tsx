@@ -1,24 +1,26 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import StoreLayout from './components/StoreLayout';
+import { AnimatePresence } from 'motion/react';
+import PageTransition from './components/PageTransition';
 import StoreFront from './pages/StoreFront';
 import ProductDetail from './pages/ProductDetail';
 import Profile from './pages/Profile';
 import POS from './pages/POS';
 import Admin from './pages/Admin';
 import StoreScreen from './pages/StoreScreen';
+import Checkout from './pages/Checkout';
 import VoiceAssistant from './components/VoiceAssistant';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
 import { useStore } from './store';
-import Checkout from './pages/Checkout';
 
 function EnvironmentSwitcher() {
   const { user } = useStore();
   const location = useLocation();
-  if (!user || user.role !== 'admin') return null; // Hide for non-admins
-  if (location.pathname === '/screen') return null; // Don't show switcher on digital signage
+  if (!user || user.role !== 'admin') return null;
+  if (location.pathname === '/screen') return null;
 
   return (
     <div className="fixed bottom-6 left-6 z-50 bg-white shadow-xl border border-ink/10 rounded-full flex p-1.5 gap-1 glass">
@@ -54,10 +56,11 @@ function EnvironmentSwitcher() {
   );
 }
 
-export default function App() {
-  const initSession = useStore((state) => state.initSession);
-  const fetchProducts = useStore((state) => state.fetchProducts);
-  const fetchCategories = useStore((state) => state.fetchCategories);
+function AppContent() {
+  const location = useLocation();
+  const initSession = useStore(state => state.initSession);
+  const fetchProducts = useStore(state => state.fetchProducts);
+  const fetchCategories = useStore(state => state.fetchCategories);
 
   useEffect(() => {
     initSession();
@@ -66,37 +69,27 @@ export default function App() {
   }, [initSession, fetchProducts, fetchCategories]);
 
   return (
-    <BrowserRouter>
-      <div className="bg-bg min-h-screen font-sans text-ink selection:bg-accent/20">
-        <Routes>
+    <div className="bg-bg min-h-screen font-sans text-ink selection:bg-accent/20">
+      <AnimatePresence mode="wait">
+        <Routes location={location}>
           <Route element={<StoreLayout />}>
-            <Route path="/" element={<StoreFront />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } />
+            <Route path="/" element={<PageTransition><StoreFront /></PageTransition>} />
+            <Route path="/product/:id" element={<PageTransition><ProductDetail /></PageTransition>} />
+            <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
+            <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />
           </Route>
-
-          <Route path="/pos" element={<POS />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute role="admin">
-                <Admin />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/screen" element={<StoreScreen />} />
+          <Route path="/pos" element={<PageTransition><POS /></PageTransition>} />
+          <Route path="/admin" element={<PageTransition><ProtectedRoute role="admin"><Admin /></ProtectedRoute></PageTransition>} />
+          <Route path="/screen" element={<PageTransition><StoreScreen /></PageTransition>} />
         </Routes>
-
-        {/* Environment Tools & Modals */}
-        <EnvironmentSwitcher />
-        <VoiceAssistant />
-        <AuthModal />
-      </div>
-    </BrowserRouter>
+      </AnimatePresence>
+      <EnvironmentSwitcher />
+      <VoiceAssistant />
+      <AuthModal />
+    </div>
   );
+}
+
+export default function App() {
+  return <AppContent />;
 }
