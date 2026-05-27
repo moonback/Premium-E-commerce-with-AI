@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { motion } from 'motion/react';
 
 export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext: () => void; onBack: () => void; onValid?: (clientInfo: any, deliveryMethod: any) => void }) {
-  const { setClientInfo, setDeliveryMethod, checkout } = useStore();
+  const { setClientInfo, setDeliveryMethod } = useStore();
   const [clientInfo, setInfo] = useState({ name: '', email: '', phone: '', address: '', addressLine1: '', addressLine2: '', city: '', postalCode: '', country: '' });
   const [deliveryMethod, setMethod] = useState<'clickCollect' | 'courier'>('courier');
   const [pickupLocation, setPickupLocation] = useState('');
@@ -15,126 +15,219 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext
     e.preventDefault();
     // Save client info
     setClientInfo(clientInfo);
-    // Save delivery method and extra fields as part of clientInfo for now
+    // Save delivery method and extra fields as part of clientInfo
     setDeliveryMethod(deliveryMethod);
-    // Persist extra fields in clientInfo (optional, can be stored in supabase later)
+    // Persist extra fields in clientInfo
     setClientInfo({ ...clientInfo, pickupLocation, fee, timeSlot });
     onValid?.(clientInfo, deliveryMethod);
     onNext();
   };
 
+  const inputClass = "w-full bg-transparent border-b border-ink/20 px-0 py-3 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic";
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <h2 className="text-2xl font-serif">Informations client & livraison</h2>
-      <form onSubmit={handleSubmit} className="grid gap-4">
-        <input
-          type="text"
-          placeholder="Nom"
-          value={clientInfo.name}
-          onChange={(e) => setInfo({ ...clientInfo, name: e.target.value })}
-          required
-          className="p-2 border rounded"
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={clientInfo.email}
-          onChange={(e) => setInfo({ ...clientInfo, email: e.target.value })}
-          required
-          className="p-2 border rounded"
-        />
-        <input
-          type="tel"
-          placeholder="Téléphone"
-          value={clientInfo.phone}
-          onChange={(e) => setInfo({ ...clientInfo, phone: e.target.value })}
-          className="p-2 border rounded"
-        />
-        <input
-          type="text"
-          placeholder="Adresse ligne 1"
-          value={clientInfo.addressLine1 || ''}
-          onChange={(e) => setInfo({ ...clientInfo, addressLine1: e.target.value })}
-          className="p-2 border rounded"
-        />
-        <input
-          type="text"
-          placeholder="Adresse ligne 2"
-          value={clientInfo.addressLine2 || ''}
-          onChange={(e) => setInfo({ ...clientInfo, addressLine2: e.target.value })}
-          className="p-2 border rounded"
-        />
-        <input
-          type="text"
-          placeholder="Ville"
-          value={clientInfo.city || ''}
-          onChange={(e) => setInfo({ ...clientInfo, city: e.target.value })}
-          className="p-2 border rounded"
-        />
-        <input
-          type="text"
-          placeholder="Code postal"
-          value={clientInfo.postalCode || ''}
-          onChange={(e) => setInfo({ ...clientInfo, postalCode: e.target.value })}
-          className="p-2 border rounded"
-        />
-        <input
-          type="text"
-          placeholder="Pays"
-          value={clientInfo.country || ''}
-          onChange={(e) => setInfo({ ...clientInfo, country: e.target.value })}
-          className="p-2 border rounded"
-        />
-        <label className="flex items-center">
-          <input
-            type="radio"
-            name="deliveryMethod"
-            value="courier"
-            checked={deliveryMethod === 'courier'}
-            onChange={() => setMethod('courier')}
-          />
-          <span className="ml-2">Coursier</span>
-        </label>
-        <label className="flex items-center">
-          <input
-            type="radio"
-            name="deliveryMethod"
-            value="clickCollect"
-            checked={deliveryMethod === 'clickCollect'}
-            onChange={() => setMethod('clickCollect')}
-          />
-          <span className="ml-2">Click & Collect</span>
-        </label>
-        {/* Extra fields for Click & Collect */}
-        {deliveryMethod === 'clickCollect' && (
-          <div className="grid gap-2">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      className="w-full max-w-xl mx-auto bg-bg border border-ink/10 shadow-2xl p-8 space-y-8"
+    >
+      <div>
+        <h2 className="text-3xl font-serif text-ink tracking-tight text-center">Informations de Livraison</h2>
+        <p className="text-ink/60 text-xs uppercase tracking-widest font-bold text-center mt-1">
+          Renseignez vos coordonnées de livraison
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Nom Complet</label>
             <input
               type="text"
-              placeholder="Lieu de retrait"
-              value={pickupLocation}
-              onChange={(e) => setPickupLocation(e.target.value)}
+              placeholder="Votre nom"
+              value={clientInfo.name}
+              onChange={(e) => setInfo({ ...clientInfo, name: e.target.value })}
               required
-              className="p-2 border rounded"
-            />
-            <input
-              type="number"
-              placeholder="Frais de retrait"
-              value={fee}
-              onChange={(e) => setFee(e.target.value)}
-              className="p-2 border rounded"
-            />
-            <input
-              type="text"
-              placeholder="Créneau horaire (ex: 14:00-16:00)"
-              value={timeSlot}
-              onChange={(e) => setTimeSlot(e.target.value)}
-              className="p-2 border rounded"
+              className={inputClass}
             />
           </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Email</label>
+            <input
+              type="email"
+              placeholder="votre@email.com"
+              value={clientInfo.email}
+              onChange={(e) => setInfo({ ...clientInfo, email: e.target.value })}
+              required
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Téléphone</label>
+            <input
+              type="tel"
+              placeholder="+33 6 00 00 00 00"
+              value={clientInfo.phone}
+              onChange={(e) => setInfo({ ...clientInfo, phone: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Adresse Ligne 1</label>
+            <input
+              type="text"
+              placeholder="12 rue de la Paix"
+              value={clientInfo.addressLine1 || ''}
+              onChange={(e) => setInfo({ ...clientInfo, addressLine1: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Adresse Ligne 2 (Optionnel)</label>
+            <input
+              type="text"
+              placeholder="Appartement, bâtiment..."
+              value={clientInfo.addressLine2 || ''}
+              onChange={(e) => setInfo({ ...clientInfo, addressLine2: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Ville</label>
+            <input
+              type="text"
+              placeholder="Paris"
+              value={clientInfo.city || ''}
+              onChange={(e) => setInfo({ ...clientInfo, city: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Code Postal</label>
+            <input
+              type="text"
+              placeholder="75001"
+              value={clientInfo.postalCode || ''}
+              onChange={(e) => setInfo({ ...clientInfo, postalCode: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Pays</label>
+            <input
+              type="text"
+              placeholder="France"
+              value={clientInfo.country || ''}
+              onChange={(e) => setInfo({ ...clientInfo, country: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-3">Mode de livraison</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setMethod('courier')}
+              className={`p-5 text-left border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+                deliveryMethod === 'courier'
+                  ? 'border-ink bg-soft-green/30'
+                  : 'border-ink/10 bg-transparent text-ink/60 hover:border-ink/30 hover:bg-ink/5'
+              }`}
+            >
+              <span className="text-xs font-bold uppercase tracking-widest block">Coursier</span>
+              <span className="text-[11px] text-ink/50 mt-2 block font-sans">Livraison à domicile rapide</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMethod('clickCollect')}
+              className={`p-5 text-left border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+                deliveryMethod === 'clickCollect'
+                  ? 'border-ink bg-soft-green/30'
+                  : 'border-ink/10 bg-transparent text-ink/60 hover:border-ink/30 hover:bg-ink/5'
+              }`}
+            >
+              <span className="text-xs font-bold uppercase tracking-widest block">Click & Collect</span>
+              <span className="text-[11px] text-ink/50 mt-2 block font-sans">Retrait gratuit en magasin</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Extra fields for Click & Collect */}
+        {deliveryMethod === 'clickCollect' && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }} 
+            animate={{ opacity: 1, height: 'auto' }} 
+            className="grid gap-6 pt-4 border-t border-ink/10"
+          >
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Lieu de Retrait</label>
+              <input
+                type="text"
+                placeholder="Ex: Boutique Paris Marais"
+                value={pickupLocation}
+                onChange={(e) => setPickupLocation(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Frais de Retrait (€)</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={fee}
+                  onChange={(e) => setFee(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Créneau Horaire</label>
+                <input
+                  type="text"
+                  placeholder="Ex: 14:00 - 16:00"
+                  value={timeSlot}
+                  onChange={(e) => setTimeSlot(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </motion.div>
         )}
-        <div className="flex justify-between mt-4">
-          <button type="button" onClick={onBack} className="px-4 py-2 bg-ink/10 text-ink rounded">Retour</button>
-          <button type="submit" className="px-4 py-2 bg-ink text-bg rounded">Continuer</button>
+
+        <div className="flex justify-between items-center pt-6 border-t border-ink/10">
+          <button 
+            type="button" 
+            onClick={onBack} 
+            className="px-6 py-4 border border-ink text-ink bg-transparent font-bold text-xs uppercase tracking-widest hover:bg-ink/5 transition-colors cursor-pointer"
+          >
+            ← Retour
+          </button>
+          
+          <button 
+            type="submit" 
+            className="px-6 py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors cursor-pointer"
+          >
+            Continuer
+          </button>
         </div>
       </form>
     </motion.div>

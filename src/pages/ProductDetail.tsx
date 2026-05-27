@@ -120,7 +120,7 @@ export default function ProductDetail() {
           >
 
 
-            <p className="text-xs font-bold uppercase tracking-widest text-ink/50 mb-4">{product.category}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-ink/50 mb-4">{(product.categories || []).join(', ')}</p>
             <h1 className="text-5xl md:text-6xl font-light font-serif leading-none mb-6 text-ink">{product.name}</h1>
 
             <p className="text-xl md:text-2xl text-ink/80 italic mb-8 border-l-2 border-ink/20 pl-6">

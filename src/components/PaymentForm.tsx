@@ -3,9 +3,10 @@ import React, { useState } from "react";
 // Props for the payment form – onSuccess is called after a successful (demo) submission.
 interface PaymentFormProps {
   onSuccess?: () => void;
+  onBack?: () => void;
 }
 
-const PaymentForm: React.FC<PaymentFormProps> = ({ onSuccess }) => {
+const PaymentForm: React.FC<PaymentFormProps> = ({ onSuccess, onBack }) => {
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
@@ -43,86 +44,93 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={formStyle}>
-      <h2 style={headingStyle}>Payment Details</h2>
-      {error && <p style={errorStyle}>{error}</p>}
-      <div style={fieldStyle}>
-        <label htmlFor="cardNumber" style={labelStyle}>Card Number</label>
-        <input
-          id="cardNumber"
-          type="text"
-          placeholder="1234 5678 9012 3456"
-          value={cardNumber}
-          onChange={(e) => setCardNumber(e.target.value.replace(/\s+/g, ""))}
-          style={inputStyle}
-        />
+    <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto bg-bg border border-ink/10 shadow-2xl p-8 space-y-6">
+      <h2 className="text-3xl font-serif text-ink tracking-tight text-center">Payment Details</h2>
+      <p className="text-ink/60 text-xs uppercase tracking-widest font-bold text-center -mt-4">
+        Espace de paiement sécurisé
+      </p>
+
+      {error && <p className="text-red-500 text-xs font-bold uppercase tracking-wide text-center">{error}</p>}
+
+      <div className="space-y-6">
+        <div>
+          <label htmlFor="cardNumber" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
+            Card Number
+          </label>
+          <input
+            id="cardNumber"
+            type="text"
+            placeholder="1234 5678 9012 3456"
+            value={cardNumber}
+            onChange={(e) => setCardNumber(e.target.value.replace(/\s+/g, ""))}
+            className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="expiry" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
+              Expiry (MM/YY)
+            </label>
+            <input
+              id="expiry"
+              type="text"
+              placeholder="04/26"
+              value={expiry}
+              onChange={(e) => setExpiry(e.target.value)}
+              className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="cvc" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
+              CVC
+            </label>
+            <input
+              id="cvc"
+              type="text"
+              placeholder="123"
+              value={cvc}
+              onChange={(e) => setCvc(e.target.value)}
+              className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="name" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
+            Name on Card
+          </label>
+          <input
+            id="name"
+            type="text"
+            placeholder="John Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
+          />
+        </div>
       </div>
-      <div style={fieldStyle}>
-        <label htmlFor="expiry" style={labelStyle}>Expiry (MM/YY)</label>
-        <input
-          id="expiry"
-          type="text"
-          placeholder="04/26"
-          value={expiry}
-          onChange={(e) => setExpiry(e.target.value)}
-          style={inputStyle}
-        />
+
+      <div className="pt-4 space-y-3">
+        <button
+          type="submit"
+          className="w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors cursor-pointer flex justify-center items-center gap-2"
+        >
+          Pay now
+        </button>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full py-4 border border-ink text-ink bg-transparent font-bold text-xs uppercase tracking-widest hover:bg-ink/5 transition-colors cursor-pointer flex justify-center items-center"
+          >
+            ← Retour
+          </button>
+        )}
       </div>
-      <div style={fieldStyle}>
-        <label htmlFor="cvc" style={labelStyle}>CVC</label>
-        <input
-          id="cvc"
-          type="text"
-          placeholder="123"
-          value={cvc}
-          onChange={(e) => setCvc(e.target.value)}
-          style={inputStyle}
-        />
-      </div>
-      <div style={fieldStyle}>
-        <label htmlFor="name" style={labelStyle}>Name on Card</label>
-        <input
-          id="name"
-          type="text"
-          placeholder="John Doe"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={inputStyle}
-        />
-      </div>
-      <button type="submit" style={buttonStyle}>Pay now</button>
     </form>
   );
 };
-
-// Inline style objects – replace with a CSS module or styled‑components for a polished UI.
-const formStyle: React.CSSProperties = {
-  maxWidth: "400px",
-  margin: "0 auto",
-  padding: "1rem",
-  background: "rgba(255,255,255,0.9)",
-  borderRadius: "8px",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-};
-const headingStyle: React.CSSProperties = { textAlign: "center", marginBottom: "1rem" };
-const fieldStyle: React.CSSProperties = { marginBottom: "0.75rem" };
-const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.25rem", fontWeight: 600 };
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "0.5rem",
-  border: "1px solid #ccc",
-  borderRadius: "4px"
-};
-const buttonStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "0.75rem",
-  background: "#2563eb",
-  color: "#fff",
-  border: "none",
-  borderRadius: "4px",
-  cursor: "pointer",
-  fontSize: "1rem"
-};
-const errorStyle: React.CSSProperties = { color: "#b91c1c", marginBottom: "0.5rem", textAlign: "center" };
 
 export default PaymentForm;

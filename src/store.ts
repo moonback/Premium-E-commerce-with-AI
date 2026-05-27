@@ -113,6 +113,7 @@ export interface AppState {
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
   checkout: () => Promise<void>;
+  updateOrderStatus: (orderId: string, status: string) => Promise<void>;
   initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
   fetchProducts: () => Promise<void>;
