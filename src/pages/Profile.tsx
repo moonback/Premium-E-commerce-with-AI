@@ -3,14 +3,27 @@ import { useStore } from '../store';
 import { User as UserIcon, Package, Star, LogOut, CheckCircle, Clock } from 'lucide-react';
 import ProfileInfo from '../components/ProfileInfo';
 import { supabase } from '../lib/supabase';
-
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 
 export default function Profile() {
   const { user, setUser, loyaltyPoints } = useStore();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const getTierInfo = (points: number) => {
+    if (points < 1000) {
+      return { current: 'Bronze', next: 'Silver', nextPoints: 1000, progress: (points / 1000) * 100 };
+    } else if (points < 2500) {
+      return { current: 'Silver', next: 'Gold', nextPoints: 2500, progress: ((points - 1000) / 1500) * 100 };
+    } else if (points < 5000) {
+      return { current: 'Gold', next: 'Platinum', nextPoints: 5000, progress: ((points - 2500) / 2500) * 100 };
+    } else {
+      return { current: 'Platinum', next: 'Elite', nextPoints: 10000, progress: Math.min(((points - 5000) / 5000) * 100, 100) };
+    }
+  };
+  const tier = getTierInfo(loyaltyPoints);
 
   useEffect(() => {
     if (user && supabase) {
@@ -60,14 +73,14 @@ export default function Profile() {
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-ink/40 mb-1">Connecté en tant que</p>
               <p className="text-lg font-serif mb-6">{user.email}</p>
-
+ 
               <div className="h-px w-full bg-ink/10 mb-6" />
-
+ 
               <div className="flex flex-col gap-3 text-xs uppercase tracking-widest font-bold">
                 <button className="flex items-center gap-3 text-ink hover:text-ink/60 transition-colors text-left" disabled>
                   <Package className="w-4 h-4" /> Mes Commandes
                 </button>
-                <button onClick={handleLogout} className="flex items-center gap-3 text-red-600 hover:text-red-400 transition-colors text-left mt-4 pt-4 border-t border-ink/10">
+                <button onClick={handleLogout} className="flex items-center gap-3 text-red-600 hover:text-red-400 transition-colors text-left mt-4 pt-4 border-t border-ink/10 cursor-pointer">
                   <LogOut className="w-4 h-4" /> Se déconnecter
                 </button>
               </div>
@@ -82,6 +95,26 @@ export default function Profile() {
                 <span className="text-4xl font-serif">{loyaltyPoints.toLocaleString()}</span>
                 <span className="text-xs font-bold uppercase tracking-widest opacity-50">Points</span>
               </div>
+              
+              {/* Animated progress gauge */}
+              <div className="mt-4 mb-4 relative z-10 space-y-2">
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                  <span>Palier {tier.current}</span>
+                  <span>Prochain : {tier.next}</span>
+                </div>
+                <div className="h-1.5 w-full bg-ink/10 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${tier.progress}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="h-full bg-accent rounded-full"
+                  />
+                </div>
+                <p className="text-[9px] text-ink/40 font-bold uppercase tracking-wider text-right">
+                  {loyaltyPoints} / {tier.nextPoints} PTS
+                </p>
+              </div>
+
               <p className="text-xs italic text-ink/60 relative z-10">100 points = 1€ de remise. Avantages exclusifs débloqués.</p>
             </div>
           </div>

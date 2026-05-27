@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../store';
 import { X, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,7 +8,27 @@ import { Link } from 'react-router-dom';
 export default function CartDrawer() {
   const { cart, addToCart, removeFromCart, checkout, isCartOpen, setCartOpen } = useStore();
 
+  const [promoCode, setPromoCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [appliedCode, setAppliedCode] = useState('');
+  const [promoError, setPromoError] = useState('');
+
+  const handleApplyPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (promoCode.toUpperCase() === 'VERIDIAN10') {
+      setDiscount(10);
+      setAppliedCode(promoCode.toUpperCase());
+      setPromoError('');
+    } else {
+      setPromoError('Code invalide');
+      setDiscount(0);
+      setAppliedCode('');
+    }
+  };
+
   const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const discountAmount = total * (discount / 100);
+  const finalTotal = total - discountAmount;
 
   return (
     <AnimatePresence>
@@ -85,25 +105,65 @@ export default function CartDrawer() {
             </div>
 
             {cart.length > 0 && (
-              <div className="p-6 border-t border-ink/10 bg-soft-green/30">
-                <div className="mb-4">
+              <div className="p-6 border-t border-ink/10 bg-soft-green/30 space-y-4">
+                <div>
                   <div className="h-1 w-full bg-ink/10 rounded-full overflow-hidden mb-2">
-                    <div className="h-full bg-accent transition-all" style={{ width: `${Math.min((total / 50) * 100, 100)}%` }} />
+                    <div className="h-full bg-accent transition-all" style={{ width: `${Math.min((finalTotal / 50) * 100, 100)}%` }} />
                   </div>
                   <p className="text-[10px] uppercase font-bold tracking-widest text-ink/50 text-center">
-                    {total >= 50 ? '🎉 Livraison gratuite débloquée' : `Ajoutez ${(50 - total).toFixed(2)}€ pour la livraison gratuite`}
+                    {finalTotal >= 50 ? '🎉 Livraison gratuite débloquée' : `Ajoutez ${(50 - finalTotal).toFixed(2)}€ pour la livraison gratuite`}
                   </p>
                 </div>
-                <div className="flex items-center justify-between mb-4 mt-6">
-                  <span className="text-ink/60 text-sm uppercase tracking-widest font-bold">Subtotal</span>
-                  <span className="font-semibold text-xl font-serif">{total.toFixed(2)}€</span>
+
+                {/* Promo Code Input */}
+                <div className="border-t border-b border-ink/10 py-4 space-y-2">
+                  <form onSubmit={handleApplyPromo} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Code promo (ex: VERIDIAN10)"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      className="flex-1 bg-transparent border-b border-ink/20 py-2 text-xs focus:outline-none focus:border-ink transition-all duration-200 placeholder:text-ink/30 italic uppercase"
+                    />
+                    <button type="submit" className="text-xs uppercase tracking-widest font-bold text-ink border border-ink/20 px-3 py-1 hover:border-ink hover:bg-ink/5 transition-colors cursor-pointer">
+                      Appliquer
+                    </button>
+                  </form>
+                  {appliedCode && (
+                    <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">
+                      ✓ Code {appliedCode} appliqué (-10%)
+                    </p>
+                  )}
+                  {promoError && (
+                    <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest">
+                      ✗ {promoError}
+                    </p>
+                  )}
                 </div>
+
+                <div className="space-y-1.5 py-2">
+                  <div className="flex items-center justify-between text-xs text-ink/60 uppercase tracking-widest font-bold">
+                    <span>Sous-total</span>
+                    <span>{total.toFixed(2)}€</span>
+                  </div>
+                  {discount > 0 && (
+                    <div className="flex items-center justify-between text-xs text-green-600 uppercase tracking-widest font-bold">
+                      <span>Remise (-10%)</span>
+                      <span>-{discountAmount.toFixed(2)}€</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-ink pt-2 border-t border-ink/5">
+                    <span className="text-sm uppercase tracking-widest font-bold">Total</span>
+                    <span className="font-semibold text-xl font-serif">{finalTotal.toFixed(2)}€</span>
+                  </div>
+                </div>
+
                 <Link
                   to="/checkout"
                   onClick={() => setCartOpen(false)}
                   className="block text-center w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors border border-ink"
                 >
-                  Checkout - {total.toFixed(2)}€
+                  Checkout - {finalTotal.toFixed(2)}€
                 </Link>
               </div>
             )}

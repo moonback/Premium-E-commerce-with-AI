@@ -21,11 +21,59 @@ export default function Admin() {
   const [catFormParent, setCatFormParent] = useState('');
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
+  const [todaySales, setTodaySales] = React.useState(0);
+  const [activeOrdersCount, setActiveOrdersCount] = React.useState(0);
+  const [totalCustomers, setTotalCustomers] = React.useState(0);
+
+  React.useEffect(() => {
+    if (supabase) {
+      const fetchStats = async () => {
+        try {
+          // Fetch all orders
+          const { data: allOrders, error: ordersError } = await supabase
+            .from('orders')
+            .select('*');
+
+          if (!ordersError && allOrders) {
+            // 1. Calculate today's sales
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const todayOrders = allOrders.filter(o => new Date(o.created_at) >= startOfToday);
+            const salesSum = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+            setTodaySales(salesSum);
+
+            // 2. Active orders count (status is not Livrée and not Terminée)
+            const active = allOrders.filter(o => !['Livrée', 'Terminée'].includes(o.status));
+            setActiveOrdersCount(active.length);
+          }
+
+          // 3. Fetch profiles count
+          const { count: profileCount, error: profileError } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true });
+
+          if (!profileError && profileCount !== null) {
+            setTotalCustomers(profileCount);
+          } else if (allOrders) {
+            const uniqueUsers = new Set(allOrders.map(o => o.user_id));
+            setTotalCustomers(uniqueUsers.size);
+          }
+        } catch (e) {
+          console.error("Error fetching stats:", e);
+        }
+      };
+
+      fetchStats();
+      const interval = setInterval(fetchStats, 10000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
   const stats = [
-    { label: "Ventes du Jour", value: "0.00€", change: "0%" },
-    { label: "Commandes Actives", value: "0", change: "0%" },
-    { label: "Total Clients", value: "0", change: "0%" },
-    { label: "Produits Catalogue", value: products.length.toString(), change: "Sync requis" }
+    { label: "Ventes du Jour", value: `${todaySales.toFixed(2)}€`, change: todaySales > 0 ? "Actif" : "0%" },
+    { label: "Commandes Actives", value: activeOrdersCount.toString(), change: activeOrdersCount > 0 ? "En cours" : "Aucune" },
+    { label: "Total Clients", value: totalCustomers.toString(), change: totalCustomers > 0 ? "Inscrits" : "0" },
+    { label: "Produits Catalogue", value: products.length.toString(), change: products.length > 0 ? "Synchronisé" : "Sync requis" }
   ];
 
   const handleSaveProduct = async (e: React.FormEvent) => {
