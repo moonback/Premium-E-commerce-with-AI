@@ -51,6 +51,7 @@ Une tâche est terminée uniquement si :
 - [x] Code splitting route-level ajouté avec `React.lazy`/`Suspense` pour réduire le bundle initial.
 - [x] Chunks vendor Vite séparés (`react`, `data`, `motion`, `icons`) pour limiter le poids du chunk principal.
 - [x] Migration Supabase additive `20260629_restrict_sensitive_commerce_tables.sql` pour créer/restreindre `payments`, `shipments`, `events`, `ai_conversations` et `audit_events` avec RLS propriétaire/admin.
+- [x] Audit RLS documenté dans `docs/SUPABASE_RLS_AUDIT.md` et contrôles automatisés ajoutés sur les migrations Supabase.
 
 ### Reste P0/P1 immédiat
 
@@ -126,11 +127,11 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Auditer toutes les migrations Supabase et `supabase/backup.sql`.
-- [ ] Identifier les policies dangereuses.
-  - [ ] Commandes lisibles/insérables/modifiables par tous.
-  - [ ] Profils lisibles publiquement.
-  - [ ] Accès non restreint aux données checkout.
+- [x] Auditer toutes les migrations Supabase et `supabase/backup.sql`.
+- [x] Identifier les policies dangereuses.
+  - [x] Commandes lisibles/insérables/modifiables par tous.
+  - [x] Profils lisibles publiquement.
+  - [x] Accès non restreint aux données checkout.
 - [x] Créer une migration corrective non destructive.
   - [x] Activer RLS sur toutes les tables sensibles.
   - [x] Ajouter `profiles_self_select` : utilisateur lui-même ou admin.
