@@ -1,11 +1,33 @@
 import React, { useState } from 'react';
 import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard } from 'lucide-react';
 import { useStore } from '../store';
-import { Product } from '../types';
+import { Category, Product, Spec } from '../types';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import AdminOrdersList from '../components/AdminOrdersList';
 import KitchenOrders from '../components/KitchenOrders';
+import { getErrorMessage } from '../lib/errors';
+
+type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
+  effects?: string[] | string;
+  specs?: Spec[] | string;
+  category?: string;
+};
+
+type ProductUpsertPayload = Product & { category?: string };
+
+const parseListField = (value: string[] | string | undefined): string[] => {
+  if (Array.isArray(value)) return value;
+  return value?.split(',').map(item => item.trim()).filter(Boolean) ?? [];
+};
+
+const parseSpecsField = (value: Spec[] | string | undefined): Spec[] => {
+  if (Array.isArray(value)) return value;
+  return value?.split(';;').map(item => {
+    const [title = '', content = ''] = item.split('::');
+    return { title: title.trim(), content: content.trim() };
+  }).filter(spec => spec.title || spec.content) ?? [];
+};
 
 export default function Admin() {
   const syncCatalogToDb = useStore((state) => state.syncCatalogToDb);
@@ -14,7 +36,7 @@ export default function Admin() {
   const fetchProducts = useStore((state) => state.fetchProducts);
   const [activeTab, setActiveTab] = useState('Overview');
   const [isEditing, setIsEditing] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+  const [editingProduct, setEditingProduct] = useState<EditableProduct>({});
   
   // Category Form
   const [catFormName, setCatFormName] = useState('');
@@ -88,12 +110,12 @@ export default function Admin() {
         name: editingProduct.name || "",
         price: Number(editingProduct.price) || 0,
         stock: Number(editingProduct.stock) || 0,
-        effects: Array.isArray(editingProduct.effects) ? editingProduct.effects : (editingProduct.effects as any)?.split(',').map((e:string) => e.trim()) || [],
-        specs: Array.isArray(editingProduct.specs) ? editingProduct.specs : (editingProduct.specs as any)?.split(';;').map((s:string) => {
-          const [title, content] = s.split('::');
-          return { title, content };
-        }) || [],
-      } as any;
+        image: editingProduct.image || '',
+        description: editingProduct.description || '',
+        categories: editingProduct.categories || [],
+        effects: parseListField(editingProduct.effects),
+        specs: parseSpecsField(editingProduct.specs),
+      } satisfies ProductUpsertPayload;
 
       // Remove legacy field if it still exists in state
       delete p.category;
@@ -103,8 +125,8 @@ export default function Admin() {
       toast.success("Produit sauvegardé");
       setIsEditing(false);
       fetchProducts();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -116,7 +138,7 @@ export default function Admin() {
       toast.loading("Upload de l'image...", { id: "upload" });
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(fileName, file);
 
@@ -128,8 +150,8 @@ export default function Admin() {
 
       setEditingProduct({ ...editingProduct, image: publicUrl });
       toast.success("Image uploadée", { id: "upload" });
-    } catch (err: any) {
-      toast.error(err.message || "Erreur upload", { id: "upload" });
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Erreur upload"), { id: "upload" });
     }
   };
 
@@ -141,8 +163,8 @@ export default function Admin() {
        if (error) throw error;
        toast.success("Produit supprimé");
        fetchProducts();
-     } catch (err: any) {
-       toast.error(err.message);
+     } catch (err) {
+       toast.error(getErrorMessage(err));
      }
   };
 
@@ -163,8 +185,8 @@ export default function Admin() {
         .getPublicUrl(fileName);
       setCatFormImageUrl(publicUrl);
       toast.success("Image uploadée", { id: "cat-upload" });
-    } catch (err: any) {
-      toast.error(err.message || "Erreur upload", { id: "cat-upload" });
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Erreur upload"), { id: "cat-upload" });
     } finally {
       setCatImageUploading(false);
     }
@@ -230,12 +252,12 @@ export default function Admin() {
       setCatFormImageUrl('');
       setEditingCategoryId(null);
       useStore.getState().fetchCategories();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
-  const handleEditCategoryClick = (cat: any) => {
+  const handleEditCategoryClick = (cat: Category) => {
     setEditingCategoryId(cat.id);
     setCatFormName(cat.name);
     setCatFormParent(cat.parent_id || '');
@@ -257,10 +279,15 @@ export default function Admin() {
       if (error) throw error;
       toast.success("Catégorie supprimée");
       useStore.getState().fetchCategories();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
+
+  const editingSpecs = Array.isArray(editingProduct.specs) ? editingProduct.specs : [];
+  const editingEffectsValue = Array.isArray(editingProduct.effects)
+    ? editingProduct.effects.join(', ')
+    : editingProduct.effects || '';
 
   return (
     <div className="min-h-screen bg-bg flex">
@@ -437,14 +464,14 @@ export default function Admin() {
               
               {/* Spécifications (Accordéons) */}
               <div className="mt-10 space-y-4">
-                  {((editingProduct.specs as any) || []).map((spec: any, idx: number) => (
+                  {editingSpecs.map((spec, idx) => (
                     <div key={idx} className="border border-ink/10 p-4 rounded">
                       <input
                         type="text"
                         placeholder="Titre"
                         value={spec.title || ''}
                         onChange={e => {
-                          const newSpecs = [...(editingProduct.specs as any)];
+                          const newSpecs = [...editingSpecs];
                           newSpecs[idx] = { ...newSpecs[idx], title: e.target.value };
                           setEditingProduct({ ...editingProduct, specs: newSpecs });
                         }}
@@ -454,7 +481,7 @@ export default function Admin() {
                         placeholder="Contenu"
                         value={spec.content || ''}
                         onChange={e => {
-                          const newSpecs = [...(editingProduct.specs as any)];
+                          const newSpecs = [...editingSpecs];
                           newSpecs[idx] = { ...newSpecs[idx], content: e.target.value };
                           setEditingProduct({ ...editingProduct, specs: newSpecs });
                         }}
@@ -463,7 +490,7 @@ export default function Admin() {
                       <button
                         type="button"
                         onClick={() => {
-                          const newSpecs = (editingProduct.specs as any).filter((_s: any, i: number) => i !== idx);
+                          const newSpecs = editingSpecs.filter((_s, i) => i !== idx);
                           setEditingProduct({ ...editingProduct, specs: newSpecs });
                         }}
                         className="mt-2 text-xs text-red-600 hover:underline"
@@ -475,7 +502,7 @@ export default function Admin() {
                   <button
                     type="button"
                     onClick={() => {
-                      const newSpecs = [...(editingProduct.specs as any), { title: '', content: '' }];
+                      const newSpecs = [...editingSpecs, { title: '', content: '' }];
                       setEditingProduct({ ...editingProduct, specs: newSpecs });
                     }}
                     className="px-4 py-2 border border-ink text-ink hover:bg-ink hover:text-white transition-colors"
@@ -505,7 +532,7 @@ export default function Admin() {
               </div>
               <div>
                 <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Effets (séparés par virgule)</label>
-                <input type="text" value={Array.isArray(editingProduct.effects) ? editingProduct.effects.join(', ') : editingProduct.effects || ''} onChange={e => setEditingProduct({...editingProduct, effects: e.target.value as any})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
+                <input type="text" value={editingEffectsValue} onChange={e => setEditingProduct({...editingProduct, effects: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
               </div>
               <div className="flex gap-4 mt-8 pt-4 border-t border-ink/10 text-xs font-bold uppercase tracking-widest">
                 <button type="button" onClick={() => setIsEditing(false)} className="px-6 py-4 border border-ink hover:bg-ink hover:text-white transition-colors">Annuler</button>

@@ -9,6 +9,7 @@ type Order = {
   user_id: string;
   total: number;
   status: string;
+  order_number?: string | null;
   created_at: string;
   profiles?: {
     email: string;
@@ -111,7 +112,7 @@ export default function AdminOrdersList() {
           {orders.map((order) => (
             <tr key={order.id} className="hover:bg-ink/5 transition-colors">
               <td className="px-6 py-4">
-                <div className="font-mono text-xs text-ink/60">{order.id.slice(0, 8)}...</div>
+                <div className="font-mono text-xs text-ink/60">#{order.order_number || `${order.id.slice(0, 8)}...`}</div>
                 <div className="text-xs">{format(new Date(order.created_at), 'dd/MM/yyyy HH:mm')}</div>
               </td>
               <td className="px-6 py-4">

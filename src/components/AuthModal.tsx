@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../lib/errors';
 
 export default function AuthModal() {
   const { isAuthModalOpen, setAuthModalOpen } = useStore();
@@ -18,12 +19,8 @@ export default function AuthModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) {
-      // Mock logic if no supabase env defined
-      if (email.includes('admin')) {
-        useStore.getState().setUser({ id: '1', email, role: 'admin' });
-      } else {
-        useStore.getState().setUser({ id: '2', email, role: 'customer' });
-      }
+      // Local fallback is intentionally customer-only. Elevated roles must come from Supabase profiles.
+      useStore.getState().setUser({ id: 'local-customer', email, role: 'customer' });
       toast.success("Connexion locale simulée");
       setAuthModalOpen(false);
       return;
@@ -42,9 +39,10 @@ export default function AuthModal() {
         toast.success("Compte créé avec succès");
       }
       setAuthModalOpen(false);
-    } catch (err: any) {
-      setError(err.message || 'Authentication error');
-      toast.error(err.message || "Erreur d'authentification");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, 'Authentication error');
+      setError(message);
+      toast.error(message || "Erreur d'authentification");
     } finally {
       setIsLoading(false);
     }

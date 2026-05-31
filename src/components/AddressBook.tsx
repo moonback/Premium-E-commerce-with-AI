@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { Address } from '../types';
 import { Edit2, Trash2, Star, MapPin, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import toast from 'react-hot-toast';
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,8 @@ const AddressModal: React.FC<ModalProps> = ({ isOpen, onClose, onSubmit, initial
 
   const handleSubmit = () => {
     if (!line1.trim() || !city.trim() || !postal.trim() || !country.trim()) {
-      return alert('Veuillez remplir tous les champs obligatoires (*).');
+      toast.error('Veuillez remplir tous les champs obligatoires (*).');
+      return;
     }
     onSubmit({
       label: label.trim(),

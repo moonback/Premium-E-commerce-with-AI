@@ -41,10 +41,36 @@ export type Address = {
   is_default: boolean;
 };
 
+
+export type CheckoutClientInfo = {
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  pickupLocation?: string;
+  fee?: string;
+  timeSlot?: string;
+};
+
+export type CheckoutDeliveryMethod = 'clickCollect' | 'courier';
+
+export type CheckoutInfo = {
+  clientInfo: CheckoutClientInfo;
+  deliveryMethod: CheckoutDeliveryMethod;
+  paymentStatus: 'idle' | 'processing' | 'succeeded' | 'failed';
+};
+
+export type UserRole = 'admin' | 'staff' | 'kiosk' | 'customer';
+
 export type User = {
   id: string;
   email: string;
-  role: 'admin' | 'customer';
+  role: UserRole;
   address?: string;
   phone?: string;
 };

@@ -2,17 +2,24 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { motion } from 'motion/react';
+import { CheckoutClientInfo, CheckoutDeliveryMethod } from '../types';
 
-export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext: () => void; onBack: () => void; onValid?: (clientInfo: any, deliveryMethod: any) => void }) {
+type ClientDeliveryFormProps = {
+  onNext: () => void;
+  onBack: () => void;
+  onValid?: (clientInfo: CheckoutClientInfo, deliveryMethod: CheckoutDeliveryMethod) => void;
+};
+
+export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDeliveryFormProps) {
   const { setClientInfo, setDeliveryMethod, addresses, fetchAddresses, user } = useStore();
 
   // Load saved addresses on mount
   useEffect(() => { fetchAddresses(); }, []);
 
-  // Build initial state from the default address (if any)
+  // Build initial state from the default address when present
   const defaultAddr = addresses.find(a => a.is_default) ?? addresses[0];
 
-  const [clientInfo, setInfo] = useState({
+  const [clientInfo, setInfo] = useState<CheckoutClientInfo>({
     name: '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
@@ -23,7 +30,7 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext
     postalCode: defaultAddr?.postal_code ?? '',
     country: defaultAddr?.country ?? '',
   });
-  const [deliveryMethod, setMethod] = useState<'clickCollect' | 'courier'>('courier');
+  const [deliveryMethod, setMethod] = useState<CheckoutDeliveryMethod>('courier');
   const [pickupLocation, setPickupLocation] = useState('');
   const [fee, setFee] = useState('0');
   const [timeSlot, setTimeSlot] = useState('');
@@ -46,13 +53,16 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: { onNext
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Save client info
-    setClientInfo(clientInfo);
-    // Save delivery method and extra fields as part of clientInfo
+    const enrichedClientInfo: CheckoutClientInfo = {
+      ...clientInfo,
+      pickupLocation,
+      fee,
+      timeSlot,
+    };
+
     setDeliveryMethod(deliveryMethod);
-    // Persist extra fields in clientInfo
-    setClientInfo({ ...clientInfo, pickupLocation, fee, timeSlot });
-    onValid?.(clientInfo, deliveryMethod);
+    setClientInfo(enrichedClientInfo);
+    onValid?.(enrichedClientInfo, deliveryMethod);
     onNext();
   };
 

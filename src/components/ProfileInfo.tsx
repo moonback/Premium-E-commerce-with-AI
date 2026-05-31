@@ -37,7 +37,7 @@ export default function ProfileInfo() {
         setCity(data?.city ?? '');
         setPostalCode(data?.postal_code ?? '');
         setCountry(data?.country ?? '');
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error('Failed to fetch profile', e);
         setError('Impossible de charger les informations du profil.');
       } finally {
@@ -59,7 +59,7 @@ export default function ProfileInfo() {
         .eq('id', user.id);
       if (updError) throw updError;
       // Optional: show success toast or UI feedback
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to update profile', e);
       setError("Impossible d'enregistrer les modifications.");
     } finally {

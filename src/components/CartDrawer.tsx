@@ -174,7 +174,7 @@ export default function CartDrawer() {
   );
 }
 
-function ShoppingBagIcon(props: any) {
+function ShoppingBagIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

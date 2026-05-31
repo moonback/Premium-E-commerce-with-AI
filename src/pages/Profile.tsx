@@ -4,13 +4,22 @@ import { User as UserIcon, Package, Star, LogOut, CheckCircle, Clock } from 'luc
 import ProfileInfo from '../components/ProfileInfo';
 import AddressBook from '../components/AddressBook';
 import { supabase } from '../lib/supabase';
+import { getErrorMessage } from '../lib/errors';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+
+type ProfileOrder = {
+  id: string;
+  status: string;
+  order_number?: string | null;
+  created_at: string;
+  total: number;
+};
 
 export default function Profile() {
   const { user, setUser, loyaltyPoints } = useStore();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<ProfileOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   const getTierInfo = (points: number) => {
@@ -26,6 +35,22 @@ export default function Profile() {
   };
   const tier = getTierInfo(loyaltyPoints);
 
+  const getOrderNextStep = (status: string) => {
+    switch (status) {
+      case 'Nouvelle':
+        return 'Commande reçue, préparation à venir.';
+      case 'En préparation':
+        return 'Notre équipe prépare votre commande.';
+      case 'Prête':
+        return 'Commande prête pour retrait ou expédition.';
+      case 'Livrée':
+      case 'Terminée':
+        return 'Commande finalisée. Merci pour votre confiance.';
+      default:
+        return 'Suivi en cours de mise à jour.';
+    }
+  };
+
   useEffect(() => {
     if (user && supabase) {
       const fetchOrders = async () => {
@@ -36,10 +61,10 @@ export default function Profile() {
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });
           if (!error && data) {
-            setOrders(data);
+            setOrders((data ?? []) as ProfileOrder[]);
           }
         } catch (err) {
-          console.error("Failed to load orders");
+          console.error('Failed to load orders', getErrorMessage(err));
         } finally {
           setLoading(false);
         }
@@ -149,7 +174,7 @@ export default function Profile() {
                     <div key={order.id} className="border border-ink/10 p-6 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:border-ink/20 transition-colors">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
-                          <span className="text-xs font-bold uppercase tracking-widest">Commande #{order.id.slice(0, 8)}</span>
+                          <span className="text-xs font-bold uppercase tracking-widest">Commande #{order.order_number || order.id.slice(0, 8)}</span>
                           {order.status === 'Nouvelle' ? (
                              <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
                                <Clock className="w-3 h-3" /> Nouvelle
@@ -173,6 +198,7 @@ export default function Profile() {
                            )}
                         </div>
                         <p className="text-xs text-ink/60 italic">Passée le {new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
+                        <p className="text-xs text-ink/50 mt-1">{getOrderNextStep(order.status)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-serif font-bold">{order.total.toFixed(2)}€</p>

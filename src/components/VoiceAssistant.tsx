@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useStore } from '../store';
 import { supabase } from '../lib/supabase';
+import { getErrorMessage } from '../lib/errors';
 
 export default function VoiceAssistant() {
+  const products = useStore(state => state.products);
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -30,17 +32,32 @@ export default function VoiceAssistant() {
         setIsConnecting(false);
         return;
       }
+      const catalogContext = products
+        .slice(0, 20)
+        .map(product => `${product.id}: ${product.name} (${product.price.toFixed(2)}€) - ${product.description}`)
+        .join(' | ');
       const tokenParam = session?.access_token ? `?token=${encodeURIComponent(session.access_token)}` : '';
       const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
       const wsUrl = `${wsProtocol}://${window.location.host}/live${tokenParam}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      const AudioContextCtor = window.AudioContext ||
+        (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) {
+        throw new Error('AudioContext non disponible dans ce navigateur');
+      }
+      const audioCtx = new AudioContextCtor({ sampleRate: 16000 });
       audioCtxRef.current = audioCtx;
       nextStartTimeRef.current = audioCtx.currentTime;
 
       ws.onopen = async () => {
+        if (catalogContext) {
+          ws.send(JSON.stringify({
+            text: `Contexte catalogue Véridian pour cette session. Recommande uniquement ces produits: ${catalogContext}`
+          }));
+        }
+
         setIsConnecting(false);
         setIsRecording(true);
         try {
@@ -117,8 +134,8 @@ export default function VoiceAssistant() {
         stopSession();
       }
 
-    } catch (err: any) {
-      setError(err.message || "Failed to start");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to start"));
       stopSession();
     }
   };

@@ -1,8 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product, CartItem, User, Category, Address } from './types';
+import { Product, CartItem, User, Category, Address, UserRole, CheckoutClientInfo, CheckoutDeliveryMethod, CheckoutInfo } from './types';
 import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
+import { createCheckoutOrder } from './services/checkoutService';
+import { getErrorMessage } from './lib/errors';
+
+const USER_ROLES: UserRole[] = ['admin', 'staff', 'kiosk', 'customer'];
+
+function normalizeUserRole(role: unknown): UserRole {
+  return typeof role === 'string' && USER_ROLES.includes(role as UserRole) ? (role as UserRole) : 'customer';
+}
 
 // Initial Seed DB for testing/syncing
 export const SEED_PRODUCTS: Product[] = [
@@ -65,33 +73,9 @@ export const SEED_PRODUCTS: Product[] = [
 ];
 
 export interface AppState {
-  checkoutInfo: {
-    clientInfo: {
-      name: string;
-      email: string;
-      phone?: string;
-      address?: string;
-      addressLine1?: string;
-      addressLine2?: string;
-      city?: string;
-      postalCode?: string;
-      country?: string;
-    };
-    deliveryMethod: 'clickCollect' | 'courier';
-    paymentStatus: 'idle' | 'processing' | 'succeeded' | 'failed';
-  };
-  setClientInfo: (info: {
-    name: string;
-    email: string;
-    phone?: string;
-    address?: string;
-    addressLine1?: string;
-    addressLine2?: string;
-    city?: string;
-    postalCode?: string;
-    country?: string;
-  }) => void;
-  setDeliveryMethod: (method: 'clickCollect' | 'courier') => void;
+  checkoutInfo: CheckoutInfo;
+  setClientInfo: (info: CheckoutClientInfo) => void;
+  setDeliveryMethod: (method: CheckoutDeliveryMethod) => void;
   setPaymentStatus: (status: 'idle' | 'processing' | 'succeeded' | 'failed') => void;
   resetCheckout: () => void;
   // store slices
@@ -104,8 +88,11 @@ export interface AppState {
   searchQuery: string;
   isLoadingProducts: boolean;
   user: User | null;
+  isSessionLoading: boolean;
   isAuthModalOpen: boolean;
   isCartOpen: boolean;
+  lastOrderId: string | null;
+  lastOrderNumber: string | null;
   setAuthModalOpen: (isOpen: boolean) => void;
   setCartOpen: (isOpen: boolean) => void;
   setUser: (user: User | null) => void;
@@ -113,7 +100,7 @@ export interface AppState {
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
-  checkout: () => Promise<void>;
+  checkout: () => Promise<string | null>;
   updateOrderStatus: (orderId: string, status: string) => Promise<void>;
   initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
@@ -145,8 +132,11 @@ export const useStore = create<AppState>()(
         paymentStatus: 'idle'
       },
       user: null,
+      isSessionLoading: Boolean(supabase),
       isAuthModalOpen: false,
       isCartOpen: false,
+      lastOrderId: null,
+      lastOrderNumber: null,
 
 
 
@@ -290,68 +280,79 @@ export const useStore = create<AppState>()(
 
       checkout: async () => {
         const state = get();
-        if (state.cart.length === 0) return;
+        if (state.cart.length === 0) return null;
         const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
         const pointsEarned = Math.floor(total / 10);
+        let completedOrderId: string | null = null;
+        let completedOrderNumber: string | null = null;
 
         if (supabase && state.user) {
           try {
-            const orderItems = state.cart.map((item) => ({
-              product_id: item.product.id,
-              quantity: item.quantity,
-            }));
-
-            const { error } = await supabase.rpc('create_order_with_items', {
-              p_items: orderItems,
-              p_status: 'Nouvelle',
+            const result = await createCheckoutOrder({
+              cart: state.cart,
+              checkoutInfo: state.checkoutInfo,
+              user: state.user,
             });
-            if (error) throw error;
+            completedOrderId = result.orderId;
+            completedOrderNumber = result.orderNumber;
 
-            const { clientInfo } = state.checkoutInfo;
-            // Persist client address and phone into user profile if available
-            if (state.user) {
-              await supabase
-                .from('profiles')
-                .update({
-                  address: clientInfo.address || '',
-                  phone: clientInfo.phone || '',
-                  address_line1: clientInfo.addressLine1 || '',
-                  address_line2: clientInfo.addressLine2 || '',
-                  city: clientInfo.city || '',
-                  postal_code: clientInfo.postalCode || '',
-                  country: clientInfo.country || ''
-                })
-                .eq('id', state.user.id);
-              // Update local user state
+            if (!result.profileSynced) {
+              toast.error('Commande validée, mais le profil n’a pas pu être mis à jour.');
+            } else {
               set({
-                user: { ...state.user, address: clientInfo.address || '', phone: clientInfo.phone || '' }
+                user: {
+                  ...state.user,
+                  address: state.checkoutInfo.clientInfo.address || '',
+                  phone: state.checkoutInfo.clientInfo.phone || '',
+                },
               });
             }
             toast.success(`Commande validée ! +${pointsEarned} points`);
-          } catch (e: any) {
-            toast.error('Erreur, commande hors-ligne simulée : ' + e.message);
+          } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : 'Erreur inconnue';
+            toast.error('Impossible de valider la commande : ' + message);
+            throw e;
           }
         } else {
           toast.success('Commande locale validée !');
         }
         set(state => ({
           cart: [],
-          loyaltyPoints: state.loyaltyPoints + pointsEarned
+          loyaltyPoints: state.loyaltyPoints + pointsEarned,
+          lastOrderId: completedOrderId,
+          lastOrderNumber: completedOrderNumber,
         }));
+
+        return completedOrderId;
       },
 
       initSession: async () => {
-        if (!supabase) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          get().fetchUserProfile(session.user.id, session.user.email!);
+        if (!supabase) {
+          set({ isSessionLoading: false });
+          return;
+        }
+
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            await get().fetchUserProfile(session.user.id, session.user.email!);
+          } else {
+            set({ user: null });
+          }
+        } finally {
+          set({ isSessionLoading: false });
         }
 
         supabase.auth.onAuthStateChange(async (event, session) => {
-          if (session?.user) {
-            get().fetchUserProfile(session.user.id, session.user.email!);
-          } else {
-            set({ user: null });
+          set({ isSessionLoading: true });
+          try {
+            if (session?.user) {
+              await get().fetchUserProfile(session.user.id, session.user.email!);
+            } else {
+              set({ user: null });
+            }
+          } finally {
+            set({ isSessionLoading: false });
           }
         });
       },
@@ -362,31 +363,31 @@ export const useStore = create<AppState>()(
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
       if (error && error.code === 'PGRST116') {
-        // Profile not found, create fallback
-        const role = email.includes('admin') ? 'admin' : 'customer';
+        // Profile not found: create a safe customer profile. Elevated roles must be assigned server-side.
+        const role: UserRole = 'customer';
         const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([{ id: userId, email, role, address: '', phone: '' }]).select().single();
         if (!insertError && newProfile) {
-          set({ user: { id: userId, email, role: newProfile.role } });
+          set({ user: { id: userId, email, role: normalizeUserRole(newProfile.role) } });
           set({ loyaltyPoints: 0 });
           return;
         }
       }
       if (data) {
         set({
-          user: { id: userId, email, role: data.role, address: data.address ?? '', phone: data.phone ?? '' },
+          user: { id: userId, email, role: normalizeUserRole(data.role), address: data.address ?? '', phone: data.phone ?? '' },
           loyaltyPoints: data.loyalty_points ?? 0,
         });
       } else {
         // Ultimate fallback
         set({
-          user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer', address: '', phone: '' },
+          user: { id: userId, email, role: 'customer', address: '', phone: '' },
           loyaltyPoints: 0,
         });
       }
     } catch (e) {
       console.error("Error fetching/creating profile:", e);
       set({
-        user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' },
+        user: { id: userId, email, role: 'customer' },
         loyaltyPoints: 0,
       });
     }
@@ -429,17 +430,17 @@ export const useStore = create<AppState>()(
 
       syncCatalogToDb: async () => {
         if (!supabase) {
-          alert("Supabase non configuré.");
+          toast.error('Supabase non configuré.');
           return;
         }
         try {
           const { error } = await supabase.from('products').upsert(SEED_PRODUCTS);
           if (error) throw error;
-          alert("Catalogue synchronisé avec succès !");
+          toast.success('Catalogue synchronisé avec succès !');
           get().fetchProducts();
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Error syncing products:", err);
-          alert("Erreur de synchronisation : " + err.message);
+          toast.error('Erreur de synchronisation : ' + getErrorMessage(err));
         }
       }
     }), {

@@ -1,20 +1,31 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import StoreLayout from './components/StoreLayout';
 import { AnimatePresence } from 'motion/react';
 import PageTransition from './components/PageTransition';
-import StoreFront from './pages/StoreFront';
-import ProductDetail from './pages/ProductDetail';
-import Profile from './pages/Profile';
-import POS from './pages/POS';
-import Admin from './pages/Admin';
-import StoreScreen from './pages/StoreScreen';
-import Checkout from './pages/Checkout';
 import VoiceAssistant from './components/VoiceAssistant';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
 import { useStore } from './store';
+
+const StoreFront = lazy(() => import('./pages/StoreFront'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Profile = lazy(() => import('./pages/Profile'));
+const POS = lazy(() => import('./pages/POS'));
+const Admin = lazy(() => import('./pages/Admin'));
+const StoreScreen = lazy(() => import('./pages/StoreScreen'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
+function RouteFallback() {
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center bg-bg text-ink" role="status" aria-live="polite">
+      <span className="text-xs uppercase tracking-[0.35em] text-ink/50">Chargement Véridian...</span>
+    </div>
+  );
+}
 
 function EnvironmentSwitcher() {
   const { user } = useStore();
@@ -71,17 +82,21 @@ function AppContent() {
   return (
     <div className="bg-bg min-h-screen font-sans text-ink selection:bg-accent/20">
       <AnimatePresence mode="wait">
-        <Routes location={location}>
-          <Route element={<StoreLayout />}>
-            <Route path="/" element={<PageTransition><StoreFront /></PageTransition>} />
-            <Route path="/product/:id" element={<PageTransition><ProductDetail /></PageTransition>} />
-            <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
-            <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />
-          </Route>
-          <Route path="/pos" element={<PageTransition><ProtectedRoute role="admin"><POS /></ProtectedRoute></PageTransition>} />
-          <Route path="/admin" element={<PageTransition><ProtectedRoute role="admin"><Admin /></ProtectedRoute></PageTransition>} />
-          <Route path="/screen" element={<PageTransition><StoreScreen /></PageTransition>} />
-        </Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes location={location}>
+            <Route element={<StoreLayout />}>
+              <Route path="/" element={<PageTransition><StoreFront /></PageTransition>} />
+              <Route path="/product/:id" element={<PageTransition><ProductDetail /></PageTransition>} />
+              <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
+              <Route path="/order-confirmation" element={<PageTransition><OrderConfirmation /></PageTransition>} />
+              <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />
+            </Route>
+            <Route path="/pos" element={<PageTransition><ProtectedRoute role={["staff", "admin"]}><POS /></ProtectedRoute></PageTransition>} />
+            <Route path="/admin" element={<PageTransition><ProtectedRoute role="admin"><Admin /></ProtectedRoute></PageTransition>} />
+            <Route path="/screen" element={<PageTransition><ProtectedRoute role={["kiosk", "admin"]}><StoreScreen /></ProtectedRoute></PageTransition>} />
+            <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+          </Routes>
+        </Suspense>
       </AnimatePresence>
       <EnvironmentSwitcher />
       <VoiceAssistant />

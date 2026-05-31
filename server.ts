@@ -9,6 +9,10 @@ import { createClient } from "@supabase/supabase-js";
 const LIVE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const LIVE_MAX_CONNECTIONS_PER_WINDOW = 5;
 const LIVE_MAX_ACTIVE_CONNECTIONS = 2;
+const LIVE_SESSION_MAX_MS = Number(process.env.LIVE_SESSION_MAX_MS ?? 2 * 60 * 1000);
+const GEMINI_LIVE_MODEL = process.env.GEMINI_LIVE_MODEL || "gemini-3.1-flash-live-preview";
+const SERVER_STARTED_AT = Date.now();
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 type LiveRateRecord = {
   windowStart: number;
@@ -64,15 +68,23 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Dummy API to fetch initial state or products if needed
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({
+      status: "ok",
+      version: process.env.npm_package_version || "0.0.0",
+      uptimeSeconds: Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
+      dependencies: {
+        geminiLive: Boolean(process.env.GEMINI_API_KEY),
+        supabaseAuth: Boolean(supabaseAuth),
+      },
+    });
   });
 
   // ---- WebSocket handler for Gemini Live API ----
   const wss = new WebSocketServer({ server, path: "/live" });
 
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   const supabaseAuth = supabaseUrl && supabaseAnonKey
@@ -91,9 +103,32 @@ async function startServer() {
     }
     clientWs.once("close", () => rateLimit.release?.());
 
-    console.log("Client connected to WebSocket");
+    console.log("Client connected to WebSocket", { clientIp });
+
+    let liveSession: Awaited<ReturnType<GoogleGenAI['live']['connect']>> | null = null;
+    let sessionTimeout: NodeJS.Timeout | null = null;
+
+    const cleanupLiveSession = () => {
+      if (sessionTimeout) {
+        clearTimeout(sessionTimeout);
+        sessionTimeout = null;
+      }
+      (liveSession as any)?.close?.();
+      liveSession = null;
+    };
 
     try {
+      if (!ai) {
+        clientWs.send(JSON.stringify({ error: "AI voice service is not configured" }));
+        clientWs.close(1013, "AI service unavailable");
+        return;
+      }
+      if (!supabaseAuth && IS_PRODUCTION) {
+        clientWs.send(JSON.stringify({ error: "Voice authentication is not configured" }));
+        clientWs.close(1011, "Authentication unavailable");
+        return;
+      }
+
       if (supabaseAuth) {
         const token = new URL(request.url || "/live", "http://localhost").searchParams.get("token");
         if (!token) {
@@ -111,7 +146,7 @@ async function startServer() {
       }
 
       const session = await ai.live.connect({
-        model: "gemini-3.1-flash-live-preview",
+        model: GEMINI_LIVE_MODEL,
         callbacks: {
           onmessage: (message: LiveServerMessage) => {
             const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
@@ -135,7 +170,7 @@ async function startServer() {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
           },
-          systemInstruction: "Vous êtes Ava, une conseillère IA et chef pâtissière pour 'Véridian', une boutique premium de pâtisseries trompe-l'œil. Soyez accueillante, experte et conversationnelle. Posez des questions pour comprendre les préférences de goût du client (fruité, chocolaté, texture, etc.), puis recommandez la pâtisserie idéale. Soyez concise dans vos réponses.",
+          systemInstruction: "Vous êtes Ava, une conseillère IA pour Véridian, une boutique e-commerce premium. Utilisez uniquement le contexte catalogue fourni par le client ou les outils pour recommander des produits existants. Soyez accueillante, experte, concise et confirmez toute action d'ajout au panier.",
           tools: [{
             functionDeclarations: [{
               name: "addToCart",
@@ -145,7 +180,7 @@ async function startServer() {
                 properties: {
                   productId: {
                     type: Type.STRING, 
-                    description: "L'identifiant exact de la pâtisserie choisie. Valeurs possibles: prod_1 (La Noisette Fraîche), prod_2 (Le Citron Jaune), prod_3 (La Gousse de Vanille), prod_4 (Le Grain de Café)."
+                    description: "L'identifiant exact du produit choisi dans le contexte catalogue fourni pour la session."
                   },
                   quantity: { type: Type.INTEGER, description: "La quantité souhaitée par le client" }
                 },
@@ -155,6 +190,13 @@ async function startServer() {
           }]
         },
       });
+
+      liveSession = session;
+      sessionTimeout = setTimeout(() => {
+        clientWs.send(JSON.stringify({ error: "Session vocale terminée: durée maximale atteinte." }));
+        clientWs.close(1000, "Session duration limit reached");
+        cleanupLiveSession();
+      }, LIVE_SESSION_MAX_MS);
 
       // Handle messages coming from the client
       clientWs.on("message", (data: string) => {
@@ -178,10 +220,11 @@ async function startServer() {
       });
 
       clientWs.on("close", () => {
-        console.log("Client disconnected");
-        (session as any).close?.();
+        console.log("Client disconnected", { clientIp });
+        cleanupLiveSession();
       });
     } catch (e) {
+      cleanupLiveSession();
       console.error("Failed to start Gemini Live Session:", e);
       clientWs.send(JSON.stringify({ error: "Failed to connect to AI server" }));
       clientWs.close();
