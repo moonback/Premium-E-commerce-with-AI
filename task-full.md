@@ -40,6 +40,7 @@ Une tâche est terminée uniquement si :
 - [x] RPC `create_order_with_items` transactionnelle : création commande, insertion `order_items`, validation prix/stock et décrément stock.
 - [x] Checkout client connecté à la RPC, panier vidé uniquement après succès, erreurs conservant le panier.
 - [x] Page de confirmation commande ajoutée avec numéro, articles, total et prochaine étape.
+- [x] Formulaire livraison checkout typé sans `any` pour `clientInfo` et `deliveryMethod`.
 - [x] WebSocket IA `/live` durci : auth Supabase si configurée, refus en production sans auth, rate limit, timeout, modèle configurable, cleanup session.
 - [x] Assistant Ava alimenté par contexte catalogue réel borné au lieu d’IDs produits hardcodés.
 - [x] Store screen résilient quand le catalogue est vide.

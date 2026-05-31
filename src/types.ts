@@ -52,6 +52,9 @@ export type CheckoutClientInfo = {
   city?: string;
   postalCode?: string;
   country?: string;
+  pickupLocation?: string;
+  fee?: string;
+  timeSlot?: string;
 };
 
 export type CheckoutDeliveryMethod = 'clickCollect' | 'courier';
