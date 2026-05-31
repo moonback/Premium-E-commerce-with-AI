@@ -304,6 +304,19 @@ export const useStore = create<AppState>()(
               .select()
               .single();
             if (error) throw error;
+
+            const orderItems = state.cart.map((item) => ({
+              order_id: order.id,
+              product_id: item.product.id,
+              quantity: item.quantity,
+              price_at_time: item.product.price,
+            }));
+
+            const { error: orderItemsError } = await supabase
+              .from('order_items')
+              .insert(orderItems);
+            if (orderItemsError) throw orderItemsError;
+
             const { clientInfo } = state.checkoutInfo;
             // Persist client address and phone into user profile if available
             if (state.user) {

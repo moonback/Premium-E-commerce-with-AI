@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 
 export default function StoreFront() {
@@ -33,13 +32,13 @@ export default function StoreFront() {
           <p className="text-lg md:text-xl text-white/80 max-w-2xl font-light mb-6">
             Découvrez notre sélection de produits intemporels. L'alliance parfaite entre esthétique et utilité.
           </p>
-          <Link to="/storefront" className="px-6 py-3 bg-white text-ink font-bold uppercase tracking-widest hover:bg-white/90 transition-colors">
+          <a href="#collection" className="px-6 py-3 bg-white text-ink font-bold uppercase tracking-widest hover:bg-white/90 transition-colors">
             Explorer la collection
-          </Link>
+          </a>
         </motion.div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <main id="collection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 scroll-mt-24">
         <div className="flex gap-4 mb-12 overflow-x-auto pb-2 scrollbar-hide justify-center">
           {categories.map(cat => (
             <button

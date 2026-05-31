@@ -4,6 +4,24 @@
 
 ---
 
+
+## 🚀 Implémentation audit P0 — démarrage
+
+> Mise à jour au 31/05/2026 — cases cochées au fur et à mesure des correctifs réalisés.
+
+- [x] Corriger le build TypeScript cassé par le typage du formulaire `AddressBook`
+- [x] Remplacer le CTA cassé `/storefront` par une ancre valide vers la collection
+- [x] Protéger la route `/pos` derrière le rôle admin
+- [x] Persister les lignes de commande dans `order_items` lors du checkout authentifié
+- [x] Durcir la migration `orders` : suppression des `DROP`, création non destructive, index, RLS restrictive et révocation `anon`
+- [x] Valider avec `npm run lint`
+- [x] Valider avec `npm run build`
+- [ ] Remplacer le checkout client-side par une RPC transactionnelle Supabase `create_order_with_items`
+- [ ] Ajouter des tests automatisés Playwright sur le parcours panier → checkout → commande
+- [ ] Sécuriser le WebSocket IA `/live` avec auth Supabase JWT + rate limit
+
+---
+
 ## 🔴 Haute priorité — Impact immédiat
 
 ### 1. Hero Banner StoreFront
@@ -180,8 +198,8 @@
 
 ### 20. RLS Supabase — sécurisation orders
 **Fichiers :** `supabase/migrations/`
-- [ ] Créer une migration pour restreindre `SELECT orders` à `user_id = auth.uid()`
-- [ ] Garder l'accès total pour le rôle `service_role` (admin)
+- [x] Créer une migration pour restreindre `SELECT orders` à `user_id = auth.uid()`
+- [x] Garder l'accès total pour le rôle `service_role` (admin)
 - [ ] Tester la politique avec un compte non-admin
 
 ---
@@ -190,6 +208,7 @@
 
 - [ ] **`window.confirm`** dans Admin.tsx et AdminOrdersList.tsx — remplacer par des modales de confirmation custom (UX mobile cassée avec `window.confirm`)
 - [ ] **`any` TypeScript** dans plusieurs composants (`store.ts`, `Admin.tsx`) — typer correctement les retours Supabase
+  - [x] Corriger le typage du formulaire `AddressBook` qui bloquait `tsc --noEmit`
 - [ ] **`Math.random()` pour les noms de fichiers** dans l'upload image — utiliser `crypto.randomUUID()` à la place
 - [ ] **Loyauté hardcodée à 1250** dans `store.ts` — s'assurer que la valeur Supabase écrase toujours la valeur par défaut
 - [ ] **Erreur silencieuse** dans `fetchUserProfile` — logger et afficher un toast si le profil ne peut pas être créé
