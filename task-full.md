@@ -335,6 +335,7 @@ Une tâche est terminée uniquement si :
 - [x] Choisir le PSP cible, recommandé : Stripe.
 - [x] Créer endpoints serveur pour Payment Intent.
   - [x] Recalculer le montant côté serveur depuis le catalogue Supabase au lieu de faire confiance au total client.
+  - [x] Couvrir le calcul montant/stock et la vérification signature webhook par tests unitaires.
 - [x] Intégrer Payment Element.
 - [ ] Ajouter Apple Pay / Google Pay si domaine compatible.
 - [x] Ajouter webhooks serveur.
