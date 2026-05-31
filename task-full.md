@@ -37,6 +37,7 @@ Une tâche est terminée uniquement si :
 - [x] Suppression de l’élévation admin basée sur `email.includes('admin')` côté client et trigger Supabase durci.
 - [x] Routes sensibles protégées : `/admin`, `/pos`, `/screen` et profil ; confirmation commande sans lecture serveur directe.
 - [x] Migration Supabase non destructive `20260628_harden_profiles_roles.sql` pour RLS profils/commandes/lignes commande.
+- [x] Migration Supabase `20260629_secure_sensitive_tables.sql` pour verrouiller `payments`, `shipments`, `events`, `ai_conversations` et `audit_events`.
 - [x] RPC `create_order_with_items` transactionnelle : création commande, insertion `order_items`, validation prix/stock et décrément stock.
 - [x] Checkout client connecté à la RPC, panier vidé uniquement après succès, erreurs conservant le panier.
 - [x] Page de confirmation commande ajoutée avec numéro, articles, total et prochaine étape.
@@ -57,12 +58,15 @@ Une tâche est terminée uniquement si :
 
 - [ ] Ajouter tests automatisés autour de `checkout()` et de la RPC Supabase.
   - [x] Tests unitaires `checkoutService` pour payload RPC, sync profil et erreurs RPC.
+  - [x] Test statique des migrations Supabase : absence de `DROP TABLE` et déclarations PL/pgSQL dupliquées.
   - [ ] Tests d’intégration Supabase/staging pour la RPC transactionnelle.
 - [x] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
+- [x] Durcir la migration orders avec stratégie non destructive, rollback logique et validation statique.
 - [ ] Ajouter un paiement réel PSP/webhooks avant production commerciale.
 - [ ] Ajouter confirmation email transactionnelle.
 - [x] Ajouter un suivi commande côté profil avec numéro de commande et prochaine étape.
 - [ ] Lancer audit manuel RLS complet sur environnement Supabase cible.
+  - [x] Checklist d'audit RLS préparée dans `docs/RLS_AUDIT_2026-05-31.md`.
 
 ---
 
@@ -141,7 +145,7 @@ Une tâche est terminée uniquement si :
   - [x] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
 - [x] Créer ou durcir une fonction `is_admin()` fiable.
   - [x] Ne pas dériver le rôle admin depuis l'email côté client.
-  - [ ] Prévoir rôle via claim, table profil ou service role contrôlé.
+  - [x] Prévoir rôle via table `profiles` et mutations sensibles réservées au `service_role`/admin RLS.
 - [x] Documenter les rôles : `customer`, `staff`, `admin`, `kiosk`.
 - [ ] Tester manuellement les scénarios RLS.
   - [ ] Client A ne lit pas les commandes du client B.
@@ -294,24 +298,24 @@ Une tâche est terminée uniquement si :
   - [ ] Contact.
   - [ ] Livraison.
   - [ ] Paiement.
-- [ ] Ajouter un récapitulatif sticky sur desktop.
-- [ ] Ajouter une barre sticky mobile `Payer X€`.
+- [x] Ajouter un récapitulatif sticky sur desktop.
+- [x] Ajouter une barre sticky mobile `Payer X€`.
 - [ ] Ajouter un drawer mobile de résumé panier.
-- [ ] Ajouter erreurs inline avec scroll vers la première erreur.
-- [ ] Ajouter autocomplete HTML standard.
-  - [ ] `email`.
-  - [ ] `shipping name`.
-  - [ ] `shipping address-line1`.
-  - [ ] `shipping postal-code`.
-  - [ ] `shipping country`.
-- [ ] Préremplir depuis profil/adresses quand disponible.
-- [ ] Ajouter badges de réassurance : paiement sécurisé, retours, support.
+- [x] Ajouter erreurs inline avec scroll vers la première erreur.
+- [x] Ajouter autocomplete HTML standard.
+  - [x] `email`.
+  - [x] `shipping name`.
+  - [x] `shipping address-line1`.
+  - [x] `shipping postal-code`.
+  - [x] `shipping country`.
+- [x] Préremplir depuis profil/adresses quand disponible.
+- [x] Ajouter badges de réassurance : paiement sécurisé, retours, support.
 
 **Critères d'acceptation :**
 
 - [ ] Le checkout est utilisable à une main sur mobile.
-- [ ] Le total et le CTA principal restent visibles.
-- [ ] Les erreurs formulaire sont compréhensibles et accessibles.
+- [x] Le total et le CTA principal restent visibles.
+- [x] Les erreurs formulaire sont compréhensibles et accessibles.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne.
@@ -353,24 +357,24 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Ajouter titles/descriptions par route.
-- [ ] Ajouter canonical URLs.
-- [ ] Ajouter OpenGraph/Twitter cards.
-- [ ] Ajouter JSON-LD :
-  - [ ] `Product`.
-  - [ ] `Offer`.
-  - [ ] `BreadcrumbList`.
-  - [ ] `Organization`.
-  - [ ] `WebSite` avec `SearchAction`.
-- [ ] Ajouter slugs produits : `/product/:slug`.
-- [ ] Générer sitemap dynamique.
-- [ ] Ajouter `robots.txt`.
+- [x] Ajouter titles/descriptions par route.
+- [x] Ajouter canonical URLs.
+- [x] Ajouter OpenGraph/Twitter cards.
+- [x] Ajouter JSON-LD :
+  - [x] `Product`.
+  - [x] `Offer`.
+  - [x] `BreadcrumbList`.
+  - [x] `Organization`.
+  - [x] `WebSite` avec `SearchAction`.
+- [x] Ajouter slugs produits : `/product/:slug`.
+- [x] Générer sitemap dynamique.
+- [x] Ajouter `robots.txt`.
 - [ ] Prévoir stratégie SSR/SSG/prerender si le contenu SPA n'est pas indexé efficacement.
 
 **Critères d'acceptation :**
 
-- [ ] Chaque PDP a un title et une description uniques.
-- [ ] Les produits apparaissent dans le sitemap.
+- [x] Chaque PDP a un title et une description uniques.
+- [x] Les produits apparaissent dans le sitemap quand Supabase est configuré côté serveur.
 - [ ] Le JSON-LD est valide dans un validateur schema.org.
 
 **Impact :** élevé.  

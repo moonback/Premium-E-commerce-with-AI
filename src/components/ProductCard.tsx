@@ -5,9 +5,11 @@ import { Heart, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { getProductPath } from '../lib/seo';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addToCart, toggleFavorite, favorites } = useStore();
+  const productPath = getProductPath(product);
   const isFavorite = favorites.includes(product.id);
 
   // hover state for AnimatePresence overlay
@@ -48,7 +50,7 @@ export default function ProductCard({ product }: { product: Product }) {
         N°{product.id.replace('prod_', '').padStart(3, '0')}
       </div>
 
-      <Link to={`/product/${product.id}`} className="relative aspect-[4/5] overflow-hidden bg-soft-green rounded-t-full mb-6 block">
+      <Link to={productPath} className="relative aspect-[4/5] overflow-hidden bg-soft-green rounded-t-full mb-6 block">
         <img
           src={product.image}
           alt={product.name}
@@ -67,7 +69,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
       <div>
         <div className="flex justify-between items-start mb-1">
-          <Link to={`/product/${product.id}`}>
+          <Link to={productPath}>
             <h3 className="font-serif text-xl leading-tight hover:text-ink/70 transition-colors">
               {product.name}
             </h3>

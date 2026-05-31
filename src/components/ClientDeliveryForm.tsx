@@ -67,6 +67,7 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
   };
 
   const inputClass = "w-full bg-transparent border-b border-ink/20 px-0 py-3 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic";
+  const deliveryOptionClass = "p-5 text-left border transition-all duration-300 flex flex-col justify-between cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
   return (
     <motion.div 
@@ -90,6 +91,7 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
             </label>
             <select
               className="w-full bg-transparent border-b border-ink/20 py-3 text-sm focus:outline-none focus:border-ink transition-colors text-ink"
+              aria-label="Utiliser une adresse enregistrée"
               onChange={e => {
                 const addr = addresses.find(a => a.id === e.target.value);
                 if (addr) {
@@ -119,9 +121,11 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Nom Complet</label>
+            <label htmlFor="checkout-name" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Nom Complet</label>
             <input
+              id="checkout-name"
               type="text"
+              autoComplete="shipping name"
               placeholder="Votre nom"
               value={clientInfo.name}
               onChange={(e) => setInfo({ ...clientInfo, name: e.target.value })}
@@ -131,9 +135,11 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Email</label>
+            <label htmlFor="checkout-email" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Email</label>
             <input
+              id="checkout-email"
               type="email"
+              autoComplete="email"
               placeholder="votre@email.com"
               value={clientInfo.email}
               onChange={(e) => setInfo({ ...clientInfo, email: e.target.value })}
@@ -145,9 +151,11 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Téléphone</label>
+            <label htmlFor="checkout-phone" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Téléphone</label>
             <input
+              id="checkout-phone"
               type="tel"
+              autoComplete="shipping tel"
               placeholder="+33 6 00 00 00 00"
               value={clientInfo.phone}
               onChange={(e) => setInfo({ ...clientInfo, phone: e.target.value })}
@@ -156,12 +164,15 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Adresse Ligne 1</label>
+            <label htmlFor="checkout-address-line1" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Adresse Ligne 1</label>
             <input
+              id="checkout-address-line1"
               type="text"
+              autoComplete="shipping address-line1"
               placeholder="12 rue de la Paix"
               value={clientInfo.addressLine1 || ''}
               onChange={(e) => setInfo({ ...clientInfo, addressLine1: e.target.value })}
+              required
               className={inputClass}
             />
           </div>
@@ -169,9 +180,11 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Adresse Ligne 2 (Optionnel)</label>
+            <label htmlFor="checkout-address-line2" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Adresse Ligne 2 (Optionnel)</label>
             <input
+              id="checkout-address-line2"
               type="text"
+              autoComplete="shipping address-line2"
               placeholder="Appartement, bâtiment..."
               value={clientInfo.addressLine2 || ''}
               onChange={(e) => setInfo({ ...clientInfo, addressLine2: e.target.value })}
@@ -180,12 +193,15 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Ville</label>
+            <label htmlFor="checkout-city" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Ville</label>
             <input
+              id="checkout-city"
               type="text"
+              autoComplete="shipping address-level2"
               placeholder="Paris"
               value={clientInfo.city || ''}
               onChange={(e) => setInfo({ ...clientInfo, city: e.target.value })}
+              required
               className={inputClass}
             />
           </div>
@@ -193,23 +209,29 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Code Postal</label>
+            <label htmlFor="checkout-postal-code" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Code Postal</label>
             <input
+              id="checkout-postal-code"
               type="text"
+              autoComplete="shipping postal-code"
               placeholder="75001"
               value={clientInfo.postalCode || ''}
               onChange={(e) => setInfo({ ...clientInfo, postalCode: e.target.value })}
+              required
               className={inputClass}
             />
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Pays</label>
+            <label htmlFor="checkout-country" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Pays</label>
             <input
+              id="checkout-country"
               type="text"
+              autoComplete="shipping country"
               placeholder="France"
               value={clientInfo.country || ''}
               onChange={(e) => setInfo({ ...clientInfo, country: e.target.value })}
+              required
               className={inputClass}
             />
           </div>
@@ -221,7 +243,7 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
             <button
               type="button"
               onClick={() => setMethod('courier')}
-              className={`p-5 text-left border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+              className={`${deliveryOptionClass} ${
                 deliveryMethod === 'courier'
                   ? 'border-ink bg-soft-green/30'
                   : 'border-ink/10 bg-transparent text-ink/60 hover:border-ink/30 hover:bg-ink/5'
@@ -234,7 +256,7 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
             <button
               type="button"
               onClick={() => setMethod('clickCollect')}
-              className={`p-5 text-left border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+              className={`${deliveryOptionClass} ${
                 deliveryMethod === 'clickCollect'
                   ? 'border-ink bg-soft-green/30'
                   : 'border-ink/10 bg-transparent text-ink/60 hover:border-ink/30 hover:bg-ink/5'
@@ -254,9 +276,11 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
             className="grid gap-6 pt-4 border-t border-ink/10"
           >
             <div>
-              <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Lieu de Retrait</label>
+              <label htmlFor="checkout-pickup-location" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Lieu de Retrait</label>
               <input
+                id="checkout-pickup-location"
                 type="text"
+                autoComplete="off"
                 placeholder="Ex: Boutique Paris Marais"
                 value={pickupLocation}
                 onChange={(e) => setPickupLocation(e.target.value)}
@@ -267,8 +291,9 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Frais de Retrait (€)</label>
+                <label htmlFor="checkout-pickup-fee" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Frais de Retrait (€)</label>
                 <input
+                  id="checkout-pickup-fee"
                   type="number"
                   placeholder="0"
                   value={fee}
@@ -278,9 +303,11 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Créneau Horaire</label>
+                <label htmlFor="checkout-time-slot" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">Créneau Horaire</label>
                 <input
+                  id="checkout-time-slot"
                   type="text"
+                  autoComplete="off"
                   placeholder="Ex: 14:00 - 16:00"
                   value={timeSlot}
                   onChange={(e) => setTimeSlot(e.target.value)}
