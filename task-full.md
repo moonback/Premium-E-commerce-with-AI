@@ -70,10 +70,10 @@ Une tâche est terminée uniquement si :
   - [x] Vérifier toutes les lectures/écritures des propriétés d'adresse.
 - [x] Exécuter `npm run lint` et corriger toutes les erreurs bloquantes.
 - [x] Exécuter `npm run build` et corriger les erreurs TypeScript/Vite.
-- [ ] Ajouter une checklist CI minimale si absente.
-  - [ ] Lint.
-  - [ ] Build.
-  - [ ] Tests unitaires quand ils seront ajoutés.
+- [x] Ajouter une checklist CI minimale si absente.
+  - [x] Lint.
+  - [x] Build.
+  - [x] Tests unitaires quand ils seront ajoutés.
 
 **Critères d'acceptation :**
 
