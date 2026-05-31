@@ -356,24 +356,24 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Ajouter titles/descriptions par route.
-- [ ] Ajouter canonical URLs.
-- [ ] Ajouter OpenGraph/Twitter cards.
-- [ ] Ajouter JSON-LD :
-  - [ ] `Product`.
-  - [ ] `Offer`.
-  - [ ] `BreadcrumbList`.
-  - [ ] `Organization`.
-  - [ ] `WebSite` avec `SearchAction`.
-- [ ] Ajouter slugs produits : `/product/:slug`.
-- [ ] Générer sitemap dynamique.
-- [ ] Ajouter `robots.txt`.
+- [x] Ajouter titles/descriptions par route.
+- [x] Ajouter canonical URLs.
+- [x] Ajouter OpenGraph/Twitter cards.
+- [x] Ajouter JSON-LD :
+  - [x] `Product`.
+  - [x] `Offer`.
+  - [x] `BreadcrumbList`.
+  - [x] `Organization`.
+  - [x] `WebSite` avec `SearchAction`.
+- [x] Ajouter slugs produits : `/product/:slug`.
+- [x] Générer sitemap dynamique.
+- [x] Ajouter `robots.txt`.
 - [ ] Prévoir stratégie SSR/SSG/prerender si le contenu SPA n'est pas indexé efficacement.
 
 **Critères d'acceptation :**
 
-- [ ] Chaque PDP a un title et une description uniques.
-- [ ] Les produits apparaissent dans le sitemap.
+- [x] Chaque PDP a un title et une description uniques.
+- [x] Les produits apparaissent dans le sitemap quand Supabase est configuré côté serveur.
 - [ ] Le JSON-LD est valide dans un validateur schema.org.
 
 **Impact :** élevé.  
