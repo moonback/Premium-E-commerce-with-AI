@@ -12,14 +12,54 @@ type CreateCheckoutOrderInput = {
   user: User | null;
 };
 
-function toRpcOrderItems(cart: CartItem[]) {
+type RpcOrderItem = {
+  product_id: string;
+  quantity: number;
+};
+
+type ProfileUpdate = {
+  address: string;
+  phone: string;
+  address_line1: string;
+  address_line2: string;
+  city: string;
+  postal_code: string;
+  country: string;
+};
+
+type QueryResult<T> = Promise<{ data: T | null; error: Error | null }>;
+
+type ProfileUpdateQuery = {
+  eq: (column: 'id', value: string) => Promise<{ error: Error | null }>;
+};
+
+type ProfileTableQuery = {
+  update: (payload: ProfileUpdate) => ProfileUpdateQuery;
+};
+
+export type CheckoutSupabaseClient = {
+  rpc: (
+    functionName: 'create_order_with_items',
+    args: {
+      p_items: RpcOrderItem[];
+      p_status: 'Nouvelle';
+      p_checkout: {
+        clientInfo: CheckoutInfo['clientInfo'];
+        deliveryMethod: CheckoutInfo['deliveryMethod'];
+      };
+    }
+  ) => QueryResult<string>;
+  from: (table: 'profiles') => ProfileTableQuery;
+};
+
+export function toRpcOrderItems(cart: CartItem[]): RpcOrderItem[] {
   return cart.map((item) => ({
     product_id: item.product.id,
     quantity: item.quantity,
   }));
 }
 
-function toProfileUpdate(clientInfo: CheckoutInfo['clientInfo']) {
+export function toProfileUpdate(clientInfo: CheckoutInfo['clientInfo']): ProfileUpdate {
   return {
     address: clientInfo.address || '',
     phone: clientInfo.phone || '',
@@ -31,12 +71,11 @@ function toProfileUpdate(clientInfo: CheckoutInfo['clientInfo']) {
   };
 }
 
-export async function createCheckoutOrder({
-  cart,
-  checkoutInfo,
-  user,
-}: CreateCheckoutOrderInput): Promise<CheckoutOrderResult> {
-  if (!supabase || !user) {
+export async function createCheckoutOrderWithClient(
+  client: CheckoutSupabaseClient | null,
+  { cart, checkoutInfo, user }: CreateCheckoutOrderInput
+): Promise<CheckoutOrderResult> {
+  if (!client || !user) {
     return { orderId: null, profileSynced: false };
   }
 
@@ -44,7 +83,7 @@ export async function createCheckoutOrder({
     throw new Error('Le panier est vide.');
   }
 
-  const { data: orderId, error } = await supabase.rpc('create_order_with_items', {
+  const { data: orderId, error } = await client.rpc('create_order_with_items', {
     p_items: toRpcOrderItems(cart),
     p_status: 'Nouvelle',
     p_checkout: {
@@ -56,7 +95,7 @@ export async function createCheckoutOrder({
   if (error) throw error;
   if (!orderId) throw new Error('La commande n’a pas pu être créée.');
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await client
     .from('profiles')
     .update(toProfileUpdate(checkoutInfo.clientInfo))
     .eq('id', user.id);
@@ -66,4 +105,8 @@ export async function createCheckoutOrder({
   }
 
   return { orderId, profileSynced: !profileError };
+}
+
+export async function createCheckoutOrder(input: CreateCheckoutOrderInput): Promise<CheckoutOrderResult> {
+  return createCheckoutOrderWithClient(supabase as unknown as CheckoutSupabaseClient | null, input);
 }

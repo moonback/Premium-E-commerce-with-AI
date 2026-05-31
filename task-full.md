@@ -47,6 +47,8 @@ Une tâche est terminée uniquement si :
 ### Reste P0/P1 immédiat
 
 - [ ] Ajouter tests automatisés autour de `checkout()` et de la RPC Supabase.
+  - [x] Tests unitaires `checkoutService` pour payload RPC, sync profil et erreurs RPC.
+  - [ ] Tests d’intégration Supabase/staging pour la RPC transactionnelle.
 - [x] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
 - [ ] Ajouter un paiement réel PSP/webhooks avant production commerciale.
 - [ ] Ajouter confirmation email transactionnelle et suivi commande côté profil.
@@ -172,7 +174,8 @@ Une tâche est terminée uniquement si :
   - [ ] statut ;
   - [x] prochaine étape livraison/paiement.
 - [x] Prévoir rollback en cas d'erreur d'insertion d'article.
-- [ ] Ajouter tests unitaires/service ou tests d'intégration selon outillage disponible.
+- [x] Ajouter tests unitaires service selon outillage disponible.
+- [ ] Ajouter tests d'intégration Supabase/staging pour la RPC.
 
 **Critères d'acceptation :**
 
