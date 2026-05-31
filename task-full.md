@@ -171,7 +171,7 @@ Une tâche est terminée uniquement si :
   - [x] numéro de commande ;
   - [x] résumé articles ;
   - [x] total ;
-  - [ ] statut ;
+  - [x] statut ;
   - [x] prochaine étape livraison/paiement.
 - [x] Prévoir rollback en cas d'erreur d'insertion d'article.
 - [x] Ajouter tests unitaires service selon outillage disponible.

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { CheckCircle2, Package, ReceiptText, Truck } from 'lucide-react';
+import { CheckCircle2, Clock3, Package, ReceiptText, Truck } from 'lucide-react';
 import { useStore } from '../store';
 
 type ConfirmationItem = {
@@ -15,6 +15,7 @@ type ConfirmationState = {
   total?: number;
   deliveryMethod?: 'clickCollect' | 'courier';
   items?: ConfirmationItem[];
+  status?: string;
 };
 
 export default function OrderConfirmation() {
@@ -25,6 +26,7 @@ export default function OrderConfirmation() {
   const items = state.items || [];
   const total = state.total ?? items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const deliveryLabel = state.deliveryMethod === 'clickCollect' ? 'Click & collect' : 'Livraison à domicile';
+  const status = state.status || 'Nouvelle';
 
   return (
     <main className="min-h-[70vh] bg-bg px-4 py-16 text-ink sm:px-6 lg:px-8">
@@ -38,7 +40,7 @@ export default function OrderConfirmation() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <div className="border border-ink/10 bg-bg/70 p-4">
             <ReceiptText className="mb-3 h-5 w-5 text-accent" />
             <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Numéro</p>
@@ -48,6 +50,11 @@ export default function OrderConfirmation() {
             <Package className="mb-3 h-5 w-5 text-accent" />
             <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Articles</p>
             <p className="mt-1 font-medium">{items.reduce((sum, item) => sum + item.quantity, 0)} article(s)</p>
+          </div>
+          <div className="border border-ink/10 bg-bg/70 p-4">
+            <Clock3 className="mb-3 h-5 w-5 text-accent" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Statut</p>
+            <p className="mt-1 font-medium">{status}</p>
           </div>
           <div className="border border-ink/10 bg-bg/70 p-4">
             <Truck className="mb-3 h-5 w-5 text-accent" />

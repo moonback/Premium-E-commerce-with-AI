@@ -46,11 +46,12 @@ export default function Checkout() {
       }));
       const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       const deliveryMethod = checkoutInfo.deliveryMethod;
+      const status = 'Nouvelle';
       const orderId = await checkout(); // creates order in Supabase & clears cart only after success
       resetCheckout();
       toast.success("✅ Order placed! Thank you for your purchase.");
       navigate("/order-confirmation", {
-        state: { orderId, total, deliveryMethod, items },
+        state: { orderId, total, deliveryMethod, items, status },
       });
     } catch {
       // checkout() already shows the actionable error and keeps the cart intact
