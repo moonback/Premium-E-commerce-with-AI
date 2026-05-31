@@ -16,6 +16,7 @@ type OrderStage = typeof STAGES[number];
 type KitchenOrder = {
   id: string;
   status: string;
+  order_number?: string | null;
   created_at?: string;
 };
 
@@ -88,7 +89,7 @@ export default function KitchenOrders() {
               .filter(o => o.status === stage)
               .map(order => (
                 <div key={order.id} className="flex items-center justify-between bg-soft-green/30 p-2 rounded">
-                  <span className="text-xs font-mono">#{order.id.slice(0, 8)}</span>
+                  <span className="text-xs font-mono">#{order.order_number || order.id.slice(0, 8)}</span>
                   <button
                     className="text-ink text-xs underline"
                     onClick={() => handleAdvance(order.id, order.status)}

@@ -46,6 +46,8 @@ Une tâche est terminée uniquement si :
 - [x] WebSocket IA `/live` durci : auth Supabase si configurée, refus en production sans auth, rate limit, timeout, modèle configurable, cleanup session.
 - [x] Assistant Ava alimenté par contexte catalogue réel borné au lieu d’IDs produits hardcodés.
 - [x] Store screen résilient quand le catalogue est vide.
+- [x] Remplacement des alertes bloquantes restantes par des toasts pour POS, carnet d'adresses et synchronisation catalogue.
+- [x] Suivi commande profil/admin amélioré avec numéro de commande et prochaine étape client.
 
 ### Reste P0/P1 immédiat
 
@@ -54,7 +56,8 @@ Une tâche est terminée uniquement si :
   - [ ] Tests d’intégration Supabase/staging pour la RPC transactionnelle.
 - [x] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
 - [ ] Ajouter un paiement réel PSP/webhooks avant production commerciale.
-- [ ] Ajouter confirmation email transactionnelle et suivi commande côté profil.
+- [ ] Ajouter confirmation email transactionnelle.
+- [x] Ajouter un suivi commande côté profil avec numéro de commande et prochaine étape.
 - [ ] Lancer audit manuel RLS complet sur environnement Supabase cible.
 
 ---

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { Search, ShoppingCart, User, Plus, Minus, CreditCard, Banknote, ScanBarcode, ArrowRight } from 'lucide-react';
 import KitchenOrders from '../components/KitchenOrders';
+import toast from 'react-hot-toast';
 import type { CartItem, Product } from '../types';
 
 export default function POS() {
@@ -26,7 +27,7 @@ export default function POS() {
   };
 
   const checkout = () => {
-    alert("Transaction completed!");
+    toast.success('Transaction POS validée');
     setPosCart([]);
   };
 

@@ -430,17 +430,17 @@ export const useStore = create<AppState>()(
 
       syncCatalogToDb: async () => {
         if (!supabase) {
-          alert("Supabase non configuré.");
+          toast.error('Supabase non configuré.');
           return;
         }
         try {
           const { error } = await supabase.from('products').upsert(SEED_PRODUCTS);
           if (error) throw error;
-          alert("Catalogue synchronisé avec succès !");
+          toast.success('Catalogue synchronisé avec succès !');
           get().fetchProducts();
         } catch (err: unknown) {
           console.error("Error syncing products:", err);
-          alert("Erreur de synchronisation : " + getErrorMessage(err));
+          toast.error('Erreur de synchronisation : ' + getErrorMessage(err));
         }
       }
     }), {
