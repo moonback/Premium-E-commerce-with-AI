@@ -36,6 +36,7 @@ const checkoutInfo: CheckoutInfo = {
   deliveryMethod: 'courier',
   paymentStatus: 'succeeded',
   paymentIntentId: 'pi_test_123',
+  paymentProviderStatus: 'succeeded',
 };
 
 const user: User = {
@@ -108,7 +109,7 @@ test('createCheckoutOrderWithClient creates an order and syncs the profile', asy
       deliveryMethod: 'courier',
       payment_intent_id: 'pi_test_123',
       payment_provider: 'stripe',
-      payment_status: 'paid',
+      payment_status: 'succeeded',
     },
   });
   assert.equal(calls.profileUserId, 'user_123');

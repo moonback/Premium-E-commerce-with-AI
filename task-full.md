@@ -332,23 +332,23 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Choisir le PSP cible, recommandé : Stripe.
-- [ ] Créer endpoints serveur pour Payment Intent.
-- [ ] Intégrer Payment Element.
+- [x] Choisir le PSP cible, recommandé : Stripe.
+- [x] Créer endpoints serveur pour Payment Intent.
+- [x] Intégrer Payment Element.
 - [ ] Ajouter Apple Pay / Google Pay si domaine compatible.
-- [ ] Ajouter webhooks serveur.
-  - [ ] `payment_intent.succeeded`.
-  - [ ] `payment_intent.payment_failed`.
+- [x] Ajouter webhooks serveur.
+  - [x] `payment_intent.succeeded`.
+  - [x] `payment_intent.payment_failed`.
   - [ ] remboursements si nécessaire.
-- [ ] Synchroniser `payments.status` et `orders.status`.
-- [ ] Gérer erreurs carte, SCA/3DS et annulation.
-- [ ] Ajouter mode test documenté.
+- [x] Synchroniser `payments.status` et `orders.payment_status`.
+- [x] Gérer erreurs carte, SCA/3DS et annulation.
+- [x] Ajouter mode test documenté via `.env.example` et clés Stripe test.
 
 **Critères d'acceptation :**
 
-- [ ] Une commande ne passe pas payée sans confirmation webhook.
-- [ ] Les erreurs paiement sont lisibles par l'utilisateur.
-- [ ] Les statuts commande/paiement sont cohérents en base.
+- [x] Une commande ne passe pas payée sans confirmation webhook.
+- [x] Les erreurs paiement sont lisibles par l'utilisateur.
+- [x] Les statuts commande/paiement sont cohérents en base.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne à élevée.
@@ -1083,7 +1083,7 @@ Une tâche est terminée uniquement si :
 7. [x] Rate limiter/authentifier WebSocket IA.
 8. [x] Ajouter 404 et guards propres.
 9. [ ] Refondre checkout mobile.
-10. [ ] Intégrer paiement réel.
+10. [x] Intégrer paiement réel.
 
 ---
 
@@ -1092,7 +1092,7 @@ Une tâche est terminée uniquement si :
 - [ ] Régression checkout lors de l'extraction du store.
 - [ ] Migrations RLS qui bloquent involontairement les parcours admin/staff.
 - [ ] Calculs de prix divergents entre client et serveur.
-- [ ] Paiement marqué payé avant confirmation webhook.
+- [x] Empêcher qu’un paiement soit marqué payé avant confirmation webhook.
 - [ ] Assistant IA consommant trop de tokens ou recommandant des produits inexistants.
 - [ ] Performance dégradée par ajout de fonctionnalités sans pagination/cache.
 - [ ] Design system partiel créant deux systèmes UI concurrents.

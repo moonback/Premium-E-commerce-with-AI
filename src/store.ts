@@ -100,7 +100,7 @@ export interface AppState {
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
-  checkout: (paymentIntentId?: string | null) => Promise<string | null>;
+  checkout: (paymentIntentId?: string | null, paymentProviderStatus?: string | null) => Promise<string | null>;
   updateOrderStatus: (orderId: string, status: string) => Promise<void>;
   initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
@@ -130,7 +130,8 @@ export const useStore = create<AppState>()(
         clientInfo: { name: '', email: '', phone: '', address: '', addressLine1: '', addressLine2: '', city: '', postalCode: '', country: '' },
         deliveryMethod: 'courier',
         paymentStatus: 'idle',
-        paymentIntentId: null
+        paymentIntentId: null,
+        paymentProviderStatus: null
       },
       user: null,
       isSessionLoading: Boolean(supabase),
@@ -160,7 +161,8 @@ export const useStore = create<AppState>()(
           },
           deliveryMethod: 'courier',
           paymentStatus: 'idle',
-          paymentIntentId: null
+          paymentIntentId: null,
+          paymentProviderStatus: null
         },
       })),
       setCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
@@ -280,7 +282,7 @@ export const useStore = create<AppState>()(
         }
       },
 
-      checkout: async (paymentIntentId?: string | null) => {
+      checkout: async (paymentIntentId?: string | null, paymentProviderStatus?: string | null) => {
         const state = get();
         if (state.cart.length === 0) return null;
         const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
@@ -296,6 +298,7 @@ export const useStore = create<AppState>()(
                 ...state.checkoutInfo,
                 paymentStatus: paymentIntentId ? 'succeeded' : state.checkoutInfo.paymentStatus,
                 paymentIntentId: paymentIntentId || state.checkoutInfo.paymentIntentId || null,
+                paymentProviderStatus: paymentProviderStatus || state.checkoutInfo.paymentProviderStatus || null,
               },
               user: state.user,
             });

@@ -2,22 +2,25 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getErrorMessage } from "../lib/errors";
 
-type StripeCardElement = {
+type StripePaymentElement = {
   mount: (selector: string | HTMLElement) => void;
   unmount: () => void;
   on: (event: "change", handler: (event: { error?: { message?: string }; complete?: boolean }) => void) => void;
 };
 
 type StripeElements = {
-  create: (type: "card", options?: Record<string, unknown>) => StripeCardElement;
+  create: (type: "payment", options?: Record<string, unknown>) => StripePaymentElement;
 };
 
 type StripeInstance = {
-  elements: (options?: Record<string, unknown>) => StripeElements;
-  confirmCardPayment: (
-    clientSecret: string,
-    data: { payment_method: { card: StripeCardElement; billing_details: { name: string; email: string } } }
-  ) => Promise<{ paymentIntent?: { id: string; status: string }; error?: { message?: string } }>;
+  elements: (options: { clientSecret: string; locale?: "fr" }) => StripeElements;
+  confirmPayment: (options: {
+    elements: StripeElements;
+    confirmParams: {
+      payment_method_data: { billing_details: { name: string; email: string } };
+    };
+    redirect: "if_required";
+  }) => Promise<{ paymentIntent?: { id: string; status: string }; error?: { message?: string } }>;
 };
 
 declare global {
@@ -27,7 +30,7 @@ declare global {
 }
 
 interface PaymentFormProps {
-  onSuccess?: (paymentIntentId: string) => void | Promise<void>;
+  onSuccess?: (paymentIntentId: string, providerStatus: string) => void | Promise<void>;
   onBack?: () => void;
   formId?: string;
   isSubmitting?: boolean;
@@ -77,45 +80,66 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   customerName = "",
   customerEmail = "",
 }) => {
-  const cardElementRef = useRef<StripeCardElement | null>(null);
+  const paymentElementRef = useRef<StripePaymentElement | null>(null);
+  const elementsRef = useRef<StripeElements | null>(null);
   const stripeRef = useRef<StripeInstance | null>(null);
   const [name, setName] = useState(customerName);
   const [email, setEmail] = useState(customerEmail);
   const [isStripeReady, setIsStripeReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [cardComplete, setCardComplete] = useState(false);
+  const [paymentComplete, setPaymentComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function initializeStripe() {
-      if (!stripePublishableKey) return;
+    async function createPaymentIntent() {
+      const token = await getAccessToken();
+      const response = await fetch("/api/payments/create-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          amountCents: Math.round(totalAmount * 100),
+          currency: "eur",
+          customer: { name: customerName, email: customerEmail },
+        }),
+      });
+
+      const payload = await response.json() as { clientSecret?: string; error?: string };
+      if (!response.ok || !payload.clientSecret) {
+        throw new Error(payload.error || "Impossible d’initialiser le paiement.");
+      }
+      return payload.clientSecret;
+    }
+
+    async function initializeStripePaymentElement() {
+      if (!stripePublishableKey || totalAmount <= 0) return;
       try {
-        await loadStripeScript();
+        const [clientSecret] = await Promise.all([createPaymentIntent(), loadStripeScript()]);
         if (cancelled || !window.Stripe) return;
 
         const stripe = window.Stripe(stripePublishableKey);
-        const elements = stripe.elements({ locale: "fr" });
-        const card = elements.create("card", {
-          hidePostalCode: true,
-          style: {
-            base: {
-              color: "#1f1a17",
-              fontFamily: "Inter, system-ui, sans-serif",
-              fontSize: "16px",
-              "::placeholder": { color: "rgba(31, 26, 23, 0.35)" },
+        const elements = stripe.elements({ clientSecret, locale: "fr" });
+        const paymentElement = elements.create("payment", {
+          layout: "tabs",
+          defaultValues: {
+            billingDetails: {
+              name: customerName,
+              email: customerEmail,
             },
-            invalid: { color: "#dc2626" },
           },
         });
 
-        card.on("change", (event) => {
-          setCardComplete(Boolean(event.complete));
+        paymentElement.on("change", (event) => {
+          setPaymentComplete(Boolean(event.complete));
           setError(event.error?.message || null);
         });
-        card.mount("#stripe-card-element");
-        cardElementRef.current = card;
+        paymentElement.mount("#stripe-payment-element");
+        paymentElementRef.current = paymentElement;
+        elementsRef.current = elements;
         stripeRef.current = stripe;
         setIsStripeReady(true);
       } catch (err: unknown) {
@@ -123,14 +147,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       }
     }
 
-    initializeStripe();
+    initializeStripePaymentElement();
 
     return () => {
       cancelled = true;
-      cardElementRef.current?.unmount();
-      cardElementRef.current = null;
+      paymentElementRef.current?.unmount();
+      paymentElementRef.current = null;
+      elementsRef.current = null;
+      stripeRef.current = null;
+      setIsStripeReady(false);
     };
-  }, []);
+  }, [customerEmail, customerName, totalAmount]);
 
   useEffect(() => setName(customerName), [customerName]);
   useEffect(() => setEmail(customerEmail), [customerEmail]);
@@ -142,7 +169,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       setError("Paiement Stripe non configuré : ajoutez VITE_STRIPE_PUBLISHABLE_KEY et STRIPE_SECRET_KEY.");
       return;
     }
-    if (!stripeRef.current || !cardElementRef.current || !isStripeReady) {
+    if (!stripeRef.current || !elementsRef.current || !isStripeReady) {
       setError("Le module de paiement est encore en chargement.");
       return;
     }
@@ -150,8 +177,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       setError("Le nom et l’email de facturation sont requis.");
       return;
     }
-    if (!cardComplete) {
-      setError("Veuillez compléter vos informations de carte bancaire.");
+    if (!paymentComplete) {
+      setError("Veuillez compléter vos informations de paiement.");
       return;
     }
 
@@ -159,30 +186,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     setError(null);
 
     try {
-      const token = await getAccessToken();
-      const response = await fetch("/api/payments/create-intent", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      const confirmation = await stripeRef.current.confirmPayment({
+        elements: elementsRef.current,
+        confirmParams: {
+          payment_method_data: {
+            billing_details: { name, email },
+          },
         },
-        body: JSON.stringify({
-          amountCents: Math.round(totalAmount * 100),
-          currency: "eur",
-          customer: { name, email },
-        }),
-      });
-
-      const payload = await response.json() as { clientSecret?: string; paymentIntentId?: string; error?: string };
-      if (!response.ok || !payload.clientSecret) {
-        throw new Error(payload.error || "Impossible d’initialiser le paiement.");
-      }
-
-      const confirmation = await stripeRef.current.confirmCardPayment(payload.clientSecret, {
-        payment_method: {
-          card: cardElementRef.current,
-          billing_details: { name, email },
-        },
+        redirect: "if_required",
       });
 
       if (confirmation.error) {
@@ -190,11 +201,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       }
 
       const paymentIntent = confirmation.paymentIntent;
-      if (!paymentIntent || paymentIntent.status !== "succeeded") {
+      if (!paymentIntent || !["succeeded", "processing"].includes(paymentIntent.status)) {
         throw new Error("Le paiement n’est pas confirmé par le PSP.");
       }
 
-      await onSuccess?.(paymentIntent.id || payload.paymentIntentId || "");
+      await onSuccess?.(paymentIntent.id, paymentIntent.status);
     } catch (err: unknown) {
       setError(getErrorMessage(err));
       document.getElementById("payment-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -209,7 +220,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     <form id={formId} onSubmit={handleSubmit} className="w-full max-w-md mx-auto bg-bg border border-ink/10 shadow-2xl p-8 space-y-6">
       <h2 className="text-3xl font-serif text-ink tracking-tight text-center">Paiement sécurisé</h2>
       <p className="text-ink/60 text-xs uppercase tracking-widest font-bold text-center -mt-4">
-        PSP Stripe avec confirmation 3D Secure si nécessaire
+        Payment Element Stripe avec confirmation webhook serveur
       </p>
 
       {error && (
@@ -259,11 +270,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
         <div>
           <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-3">
-            Carte bancaire
+            Moyen de paiement
           </label>
-          <div id="stripe-card-element" className="rounded-2xl border border-ink/15 bg-white px-4 py-4 min-h-14" />
+          <div id="stripe-payment-element" className="rounded-2xl border border-ink/15 bg-white px-4 py-4 min-h-32" />
           <p className="mt-2 text-[11px] text-ink/45">
-            Les données carte sont saisies dans Stripe.js et ne transitent pas par Véridian.
+            Les données de paiement sont saisies dans Stripe.js et ne transitent pas par Véridian.
           </p>
         </div>
       </div>
@@ -273,7 +284,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           <span>Total sécurisé</span>
           <span>{totalAmount.toFixed(2)}€</span>
         </div>
-        <p className="mt-1 text-xs">La commande est créée uniquement après confirmation réussie du PSP.</p>
+        <p className="mt-1 text-xs">La commande est créée après acceptation PSP, puis marquée payée uniquement par webhook signé.</p>
       </div>
 
       <div className="pt-4 space-y-3">

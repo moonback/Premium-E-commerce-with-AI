@@ -5,6 +5,9 @@
 -- Rollback plan: deploy a follow-up migration that recreates the previous RPC
 -- signature/body and leaves the historical payments rows intact for accounting.
 
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_status public.payment_status NOT NULL DEFAULT 'requires_payment'::public.payment_status;
+CREATE INDEX IF NOT EXISTS orders_payment_status_created_at_idx ON public.orders(payment_status, created_at DESC);
+
 ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS raw_provider_status text;
 ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS reconciled_at timestamp with time zone;
 CREATE INDEX IF NOT EXISTS payments_provider_status_idx ON public.payments(provider, raw_provider_status);
@@ -37,6 +40,7 @@ DECLARE
   v_order_number text;
   v_payment_intent_id text;
   v_payment_provider text;
+  v_initial_payment_status public.payment_status := 'requires_payment'::public.payment_status;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -51,6 +55,9 @@ BEGIN
   v_tax_total := GREATEST(COALESCE((p_checkout->>'tax_total')::numeric, 0), 0);
   v_payment_intent_id := NULLIF(p_checkout->>'payment_intent_id', '');
   v_payment_provider := COALESCE(NULLIF(p_checkout->>'payment_provider', ''), 'stripe');
+  IF v_payment_intent_id IS NOT NULL THEN
+    v_initial_payment_status := 'processing'::public.payment_status;
+  END IF;
 
   v_order_number := 'VER-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
 
@@ -62,7 +69,8 @@ BEGIN
     subtotal,
     discount_total,
     shipping_total,
-    tax_total
+    tax_total,
+    payment_status
   )
   VALUES (
     v_order_number,
@@ -72,7 +80,8 @@ BEGIN
     0,
     v_discount_total,
     v_shipping_total,
-    v_tax_total
+    v_tax_total,
+    v_initial_payment_status
   )
   RETURNING id INTO v_order_id;
 
@@ -142,8 +151,8 @@ BEGIN
       v_order_id,
       v_payment_provider,
       v_payment_intent_id,
-      'paid'::public.payment_status,
-      COALESCE(NULLIF(p_checkout->>'payment_status', ''), 'succeeded'),
+      v_initial_payment_status,
+      COALESCE(NULLIF(p_checkout->>'payment_status', ''), 'client_confirmed'),
       v_total,
       upper(COALESCE(NULLIF(p_checkout->>'currency', ''), 'EUR')),
       jsonb_build_object('source', 'checkout_rpc', 'order_number', v_order_number),

@@ -185,15 +185,52 @@ async function startServer() {
       const paymentIntentId = event.data?.object?.id;
       if (supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
         const status = toPaymentStatus(event.data?.object?.status);
-        const { error } = await supabaseAdmin
+        const { data: payments, error } = await supabaseAdmin
           .from("payments")
-          .update({ status, metadata: { stripe_event_id: event.id, stripe_event_type: event.type } })
+          .update({
+            status,
+            raw_provider_status: event.data?.object?.status || null,
+            metadata: { stripe_event_id: event.id, stripe_event_type: event.type },
+            reconciled_at: new Date().toISOString(),
+          })
           .eq("provider", "stripe")
-          .eq("provider_payment_id", paymentIntentId);
+          .eq("provider_payment_id", paymentIntentId)
+          .select("id, order_id");
 
         if (error) {
           console.warn("Unable to reconcile Stripe payment webhook", error);
+          res.status(500).json({ error: "Payment reconciliation failed" });
+          return;
         }
+
+        if (!payments || payments.length === 0) {
+          if (status === "paid") {
+            console.warn("Stripe webhook arrived before local payment row", { paymentIntentId, eventId: event.id });
+            res.status(409).json({ error: "Payment row not ready" });
+            return;
+          }
+          res.json({ received: true, ignored: "no_local_payment" });
+          return;
+        }
+
+        const orderIds = payments
+          .map((payment) => payment.order_id)
+          .filter((orderId): orderId is string => typeof orderId === "string" && orderId.length > 0);
+        if (orderIds.length > 0) {
+          const { error: orderError } = await supabaseAdmin
+            .from("orders")
+            .update({ payment_status: status })
+            .in("id", orderIds);
+          if (orderError) {
+            console.warn("Unable to update order payment status", orderError);
+            res.status(500).json({ error: "Order reconciliation failed" });
+            return;
+          }
+        }
+      } else if (!supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
+        console.warn("Stripe webhook received but SUPABASE_SERVICE_ROLE_KEY is not configured");
+        res.status(503).json({ error: "Payment reconciliation is not configured" });
+        return;
       }
 
       res.json({ received: true });
@@ -276,6 +313,7 @@ async function startServer() {
       amount: String(amountCents),
       currency,
       "automatic_payment_methods[enabled]": "true",
+      "automatic_payment_methods[allow_redirects]": "never",
       "metadata[source]": "veridian_checkout",
     });
     if (customer?.email) body.set("receipt_email", customer.email);

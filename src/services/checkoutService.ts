@@ -54,7 +54,7 @@ export type CheckoutSupabaseClient = {
         deliveryMethod: CheckoutInfo['deliveryMethod'];
         payment_intent_id?: string | null;
         payment_provider?: 'stripe';
-        payment_status?: 'paid';
+        payment_status?: string | null;
       };
     }
   ) => QueryResult<CreateOrderRpcResult>;
@@ -100,7 +100,7 @@ export async function createCheckoutOrderWithClient(
       deliveryMethod: checkoutInfo.deliveryMethod,
       payment_intent_id: checkoutInfo.paymentIntentId || null,
       payment_provider: checkoutInfo.paymentIntentId ? 'stripe' : undefined,
-      payment_status: checkoutInfo.paymentIntentId ? 'paid' : undefined,
+      payment_status: checkoutInfo.paymentProviderStatus || null,
     },
   });
 

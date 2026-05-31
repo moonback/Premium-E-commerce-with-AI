@@ -64,6 +64,7 @@ export type CheckoutInfo = {
   deliveryMethod: CheckoutDeliveryMethod;
   paymentStatus: 'idle' | 'processing' | 'succeeded' | 'failed';
   paymentIntentId?: string | null;
+  paymentProviderStatus?: string | null;
 };
 
 export type UserRole = 'admin' | 'staff' | 'kiosk' | 'customer';
