@@ -1,5 +1,5 @@
 // src/pages/Checkout.tsx
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
@@ -99,6 +99,10 @@ export default function Checkout() {
   } = useStore();
   const navigate = useNavigate();
   const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const paymentItems = useMemo(
+    () => cart.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+    [cart]
+  );
 
   // ---- STEP NAVIGATION -------------------------------------------------
   const next = useCallback(
@@ -114,7 +118,7 @@ export default function Checkout() {
   const back = useCallback(() => setStep((s) => Math.max(s - 1, 0)), []);
 
   // ---- FINAL PAYMENT HANDLER -------------------------------------------
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentIntentId: string, providerStatus: string) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -126,7 +130,7 @@ export default function Checkout() {
       }));
       const deliveryMethod = checkoutInfo.deliveryMethod;
       const status = 'Nouvelle';
-      const orderId = await checkout(); // creates order in Supabase & clears cart only after success
+      const orderId = await checkout(paymentIntentId, providerStatus); // creates order after PSP acceptance; paid status is reconciled by webhook
       const orderNumber = useStore.getState().lastOrderNumber;
       resetCheckout();
       toast.success("✅ Order placed! Thank you for your purchase.");
@@ -203,6 +207,9 @@ export default function Checkout() {
                   formId={PAYMENT_FORM_ID}
                   isSubmitting={isSubmitting}
                   totalAmount={total}
+                  items={paymentItems}
+                  customerName={checkoutInfo.clientInfo.name}
+                  customerEmail={checkoutInfo.clientInfo.email}
                   onBack={back}
                   onSuccess={handlePaymentSuccess}
                 />

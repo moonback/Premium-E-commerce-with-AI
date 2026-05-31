@@ -6,6 +6,14 @@ import { createServer, type IncomingMessage } from "http";
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
+import {
+  calculatePaymentAmountCents,
+  createStripeIdempotencyKey,
+  getPaymentIntentErrorStatus,
+  getStripeWebhookPayload,
+  normalizeCheckoutAttemptId,
+  toPaymentStatus,
+} from "./src/services/paymentSecurity";
 
 const LIVE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const LIVE_MAX_CONNECTIONS_PER_WINDOW = 5;
@@ -19,6 +27,12 @@ type SitemapProductRow = {
   id: string;
   name: string;
   created_at?: string | null;
+};
+
+type StripePaymentIntent = {
+  id: string;
+  client_secret?: string;
+  status: string;
 };
 
 type LiveRateRecord = {
@@ -89,11 +103,91 @@ async function startServer() {
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const supabaseAuth = supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
     : null;
+  const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    : null;
+
+  app.post("/api/payments/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    if (!stripeWebhookSecret) {
+      res.status(503).json({ error: "Stripe webhook secret is not configured" });
+      return;
+    }
+
+    const signature = req.header("stripe-signature");
+    if (!signature || !Buffer.isBuffer(req.body)) {
+      res.status(400).json({ error: "Missing Stripe signature or raw body" });
+      return;
+    }
+
+    try {
+      const event = getStripeWebhookPayload(req.body, signature, stripeWebhookSecret);
+      const paymentIntentId = event.data?.object?.id;
+      if (supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
+        const status = toPaymentStatus(event.data?.object?.status);
+        const { data: payments, error } = await supabaseAdmin
+          .from("payments")
+          .update({
+            status,
+            raw_provider_status: event.data?.object?.status || null,
+            metadata: { stripe_event_id: event.id, stripe_event_type: event.type },
+            reconciled_at: new Date().toISOString(),
+          })
+          .eq("provider", "stripe")
+          .eq("provider_payment_id", paymentIntentId)
+          .select("id, order_id");
+
+        if (error) {
+          console.warn("Unable to reconcile Stripe payment webhook", error);
+          res.status(500).json({ error: "Payment reconciliation failed" });
+          return;
+        }
+
+        if (!payments || payments.length === 0) {
+          if (status === "paid") {
+            console.warn("Stripe webhook arrived before local payment row", { paymentIntentId, eventId: event.id });
+            res.status(409).json({ error: "Payment row not ready" });
+            return;
+          }
+          res.json({ received: true, ignored: "no_local_payment" });
+          return;
+        }
+
+        const orderIds = payments
+          .map((payment) => payment.order_id)
+          .filter((orderId): orderId is string => typeof orderId === "string" && orderId.length > 0);
+        if (orderIds.length > 0) {
+          const { error: orderError } = await supabaseAdmin
+            .from("orders")
+            .update({ payment_status: status })
+            .in("id", orderIds);
+          if (orderError) {
+            console.warn("Unable to update order payment status", orderError);
+            res.status(500).json({ error: "Order reconciliation failed" });
+            return;
+          }
+        }
+      } else if (!supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
+        console.warn("Stripe webhook received but SUPABASE_SERVICE_ROLE_KEY is not configured");
+        res.status(503).json({ error: "Payment reconciliation is not configured" });
+        return;
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.warn("Invalid Stripe webhook", error);
+      res.status(400).json({ error: "Invalid webhook" });
+    }
+  });
 
   app.use(express.json());
 
@@ -131,6 +225,87 @@ async function startServer() {
     res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...productUrls].join("")}</urlset>`);
   });
 
+
+  app.post("/api/payments/create-intent", async (req, res) => {
+    if (!stripeSecretKey) {
+      res.status(503).json({ error: "Stripe is not configured on the server" });
+      return;
+    }
+
+    let authenticatedUserId: string | null = null;
+    if (supabaseAuth) {
+      const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
+      if (!token) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const { data, error } = await supabaseAuth.auth.getUser(token);
+      if (error || !data.user) {
+        res.status(401).json({ error: "Invalid authentication token" });
+        return;
+      }
+      authenticatedUserId = data.user.id;
+    }
+
+    const currency = String(req.body?.currency || "eur").toLowerCase();
+    const customer = req.body?.customer as { name?: string; email?: string } | undefined;
+
+    if (!/^[a-z]{3}$/.test(currency)) {
+      res.status(400).json({ error: "Invalid currency" });
+      return;
+    }
+
+    try {
+      const catalogClient = supabaseAdmin || supabaseAuth;
+      const { amountCents, itemCount, cartHash } = await calculatePaymentAmountCents(catalogClient, req.body?.items);
+      const body = new URLSearchParams({
+        amount: String(amountCents),
+        currency,
+        "automatic_payment_methods[enabled]": "true",
+        "automatic_payment_methods[allow_redirects]": "never",
+        "metadata[source]": "veridian_checkout",
+        "metadata[item_count]": String(itemCount),
+        "metadata[cart_hash]": cartHash,
+      });
+      if (customer?.email) body.set("receipt_email", customer.email);
+      if (customer?.name) body.set("metadata[customer_name]", customer.name);
+
+      const checkoutAttemptId = normalizeCheckoutAttemptId(req.body?.checkoutAttemptId);
+      const idempotencyKey = createStripeIdempotencyKey({
+        userId: authenticatedUserId,
+        attemptId: checkoutAttemptId,
+        cartHash,
+      });
+
+      const stripeResponse = await fetch("https://api.stripe.com/v1/payment_intents", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+          ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+        },
+        body,
+      });
+      const paymentIntent = await stripeResponse.json() as StripePaymentIntent & { error?: { message?: string } };
+
+      if (!stripeResponse.ok || !paymentIntent.client_secret) {
+        res.status(stripeResponse.status).json({ error: paymentIntent.error?.message || "Stripe payment intent failed" });
+        return;
+      }
+
+      res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id, amountCents });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Payment provider unavailable";
+      const status = getPaymentIntentErrorStatus(message);
+      if (status < 500 || message === "Catalog pricing is not configured") {
+        res.status(status).json({ error: message });
+        return;
+      }
+      console.error("Unable to create Stripe PaymentIntent", error);
+      res.status(status).json({ error: "Payment provider unavailable" });
+    }
+  });
+
   app.get("/api/health", (req, res) => {
     res.json({
       status: "ok",
@@ -139,6 +314,8 @@ async function startServer() {
       dependencies: {
         geminiLive: Boolean(process.env.GEMINI_API_KEY),
         supabaseAuth: Boolean(supabaseAuth),
+        supabaseAdmin: Boolean(supabaseAdmin),
+        stripePayments: Boolean(stripeSecretKey),
       },
     });
   });
