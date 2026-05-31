@@ -163,7 +163,7 @@ Une tâche est terminée uniquement si :
 - [x] Créer une RPC Supabase transactionnelle `create_order_with_items`.
   - [x] Créer la ligne `orders`.
   - [x] Insérer toutes les lignes `order_items`.
-  - [ ] Calculer subtotal, discount, shipping, taxes, total côté serveur.
+  - [x] Calculer subtotal, discount, shipping, taxes, total côté serveur.
   - [x] Vérifier stock/prix produit côté serveur.
   - [ ] Retourner `order_id` et `order_number`.
 - [x] Mettre à jour le checkout client pour appeler la RPC.

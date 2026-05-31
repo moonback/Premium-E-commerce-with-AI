@@ -185,7 +185,13 @@ CREATE POLICY "order_items_admin_all"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- Replace the checkout RPC with server-side product validation and stock reservation.
+-- Add non-destructive commerce totals needed by the hardened checkout RPC.
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS subtotal numeric(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS discount_total numeric(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS shipping_total numeric(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS tax_total numeric(10,2) NOT NULL DEFAULT 0;
+
+-- Replace the checkout RPC with server-side product validation, stock reservation and totals.
 DROP FUNCTION IF EXISTS public.create_order_with_items(jsonb, public.order_status);
 
 CREATE OR REPLACE FUNCTION public.create_order_with_items(
@@ -205,6 +211,11 @@ DECLARE
   v_quantity integer;
   v_unit_price numeric(10,2);
   v_stock integer;
+  v_line_total numeric(10,2);
+  v_subtotal numeric(10,2) := 0;
+  v_discount_total numeric(10,2) := 0;
+  v_shipping_total numeric(10,2) := 0;
+  v_tax_total numeric(10,2) := 0;
   v_total numeric(10,2) := 0;
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -215,8 +226,28 @@ BEGIN
     RAISE EXCEPTION 'Order items are required';
   END IF;
 
-  INSERT INTO public.orders (user_id, total, status)
-  VALUES (auth.uid(), 0, p_status)
+  v_discount_total := GREATEST(COALESCE((p_checkout->>'discount_total')::numeric, 0), 0);
+  v_shipping_total := GREATEST(COALESCE((p_checkout->>'shipping_total')::numeric, 0), 0);
+  v_tax_total := GREATEST(COALESCE((p_checkout->>'tax_total')::numeric, 0), 0);
+
+  INSERT INTO public.orders (
+    user_id,
+    total,
+    status,
+    subtotal,
+    discount_total,
+    shipping_total,
+    tax_total
+  )
+  VALUES (
+    auth.uid(),
+    0,
+    p_status,
+    0,
+    v_discount_total,
+    v_shipping_total,
+    v_tax_total
+  )
   RETURNING id INTO v_order_id;
 
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
@@ -250,14 +281,23 @@ BEGIN
     SET stock = stock - v_quantity
     WHERE id = v_product_id;
 
+    v_line_total := v_unit_price * v_quantity;
+
     INSERT INTO public.order_items (order_id, product_id, quantity, price_at_time)
     VALUES (v_order_id, v_product_id, v_quantity, v_unit_price);
 
-    v_total := v_total + (v_unit_price * v_quantity);
+    v_subtotal := v_subtotal + v_line_total;
   END LOOP;
 
+  v_total := GREATEST(v_subtotal - v_discount_total + v_shipping_total + v_tax_total, 0);
+
   UPDATE public.orders
-  SET total = v_total
+  SET
+    subtotal = v_subtotal,
+    discount_total = v_discount_total,
+    shipping_total = v_shipping_total,
+    tax_total = v_tax_total,
+    total = v_total
   WHERE id = v_order_id;
 
   RETURN v_order_id;
