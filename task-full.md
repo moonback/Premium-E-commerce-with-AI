@@ -55,8 +55,10 @@ Une tâche est terminée uniquement si :
 
 - [ ] Ajouter tests automatisés autour de `checkout()` et de la RPC Supabase.
   - [x] Tests unitaires `checkoutService` pour payload RPC, sync profil et erreurs RPC.
+  - [x] Test statique des migrations Supabase : absence de `DROP TABLE` et déclarations PL/pgSQL dupliquées.
   - [ ] Tests d’intégration Supabase/staging pour la RPC transactionnelle.
 - [x] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
+- [x] Durcir la migration orders avec stratégie non destructive, rollback logique et validation statique.
 - [ ] Ajouter un paiement réel PSP/webhooks avant production commerciale.
 - [ ] Ajouter confirmation email transactionnelle.
 - [x] Ajouter un suivi commande côté profil avec numéro de commande et prochaine étape.
@@ -206,17 +208,18 @@ Une tâche est terminée uniquement si :
 - [x] Auditer `supabase/migrations/20260627_create_orders.sql`.
 - [x] Supprimer tout `DROP TABLE` dangereux sur `orders` ou tables transactionnelles.
 - [x] Remplacer par migrations additives :
-  - [ ] `alter table add column if not exists` ;
-  - [ ] création d'index concurrente si applicable ;
-  - [ ] backfill contrôlé ;
-  - [ ] policies remplacées explicitement.
-- [ ] Ajouter un commentaire dans la migration expliquant la stratégie non destructive.
-- [ ] Prévoir plan rollback logique.
+  - [x] `alter table add column if not exists` ;
+  - [x] création d'index idempotente, avec note pour reindex concurrent hors transaction si gros volume ;
+  - [x] backfill contrôlé des champs `order_items` avant contraintes ;
+  - [x] policies remplacées explicitement.
+- [x] Ajouter un commentaire dans la migration expliquant la stratégie non destructive.
+- [x] Prévoir plan rollback logique.
+- [x] Ajouter un test statique empêchant le retour de `DROP TABLE` et des déclarations PL/pgSQL dupliquées.
 
 **Critères d'acceptation :**
 
 - [x] Aucune migration de prod ne détruit `orders`, `order_items`, `profiles`, `payments`.
-- [ ] Les changements schéma peuvent être appliqués sans perte de données.
+- [x] Les changements schéma peuvent être appliqués sans perte de données.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne.
