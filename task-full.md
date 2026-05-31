@@ -50,6 +50,7 @@ Une tâche est terminée uniquement si :
 - [x] Suivi commande profil/admin amélioré avec numéro de commande et prochaine étape client.
 - [x] Code splitting route-level ajouté avec `React.lazy`/`Suspense` pour réduire le bundle initial.
 - [x] Chunks vendor Vite séparés (`react`, `data`, `motion`, `icons`) pour limiter le poids du chunk principal.
+- [x] Migration Supabase additive `20260629_restrict_sensitive_commerce_tables.sql` pour créer/restreindre `payments`, `shipments`, `events`, `ai_conversations` et `audit_events` avec RLS propriétaire/admin.
 
 ### Reste P0/P1 immédiat
 
@@ -136,7 +137,7 @@ Une tâche est terminée uniquement si :
   - [x] Ajouter `profiles_self_update` : utilisateur lui-même uniquement, avec restrictions.
   - [x] Ajouter `orders_self_or_admin_read`.
   - [x] Ajouter policies `order_items` basées sur la commande parente.
-  - [ ] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
+  - [x] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
 - [x] Créer ou durcir une fonction `is_admin()` fiable.
   - [x] Ne pas dériver le rôle admin depuis l'email côté client.
   - [ ] Prévoir rôle via claim, table profil ou service role contrôlé.
@@ -210,13 +211,13 @@ Une tâche est terminée uniquement si :
   - [ ] création d'index concurrente si applicable ;
   - [ ] backfill contrôlé ;
   - [ ] policies remplacées explicitement.
-- [ ] Ajouter un commentaire dans la migration expliquant la stratégie non destructive.
-- [ ] Prévoir plan rollback logique.
+- [x] Ajouter un commentaire dans la migration expliquant la stratégie non destructive.
+- [x] Prévoir plan rollback logique.
 
 **Critères d'acceptation :**
 
 - [x] Aucune migration de prod ne détruit `orders`, `order_items`, `profiles`, `payments`.
-- [ ] Les changements schéma peuvent être appliqués sans perte de données.
+- [x] Les changements schéma peuvent être appliqués sans perte de données.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne.
@@ -938,12 +939,12 @@ Une tâche est terminée uniquement si :
 - [ ] `wishlist_items` : favoris serveur.
 - [ ] `orders` : commande globale.
 - [ ] `order_items` : lignes commande.
-- [ ] `payments` : PSP et statuts.
-- [ ] `shipments` : livraison/tracking.
+- [x] `payments` : PSP et statuts.
+- [x] `shipments` : livraison/tracking.
 - [ ] `discounts` : promotions.
-- [ ] `events` : analytics.
-- [ ] `ai_conversations` : historique IA contrôlé.
-- [ ] `audit_events` : audit actions sensibles.
+- [x] `events` : analytics.
+- [x] `ai_conversations` : historique IA contrôlé.
+- [x] `audit_events` : audit actions sensibles.
 
 ---
 
