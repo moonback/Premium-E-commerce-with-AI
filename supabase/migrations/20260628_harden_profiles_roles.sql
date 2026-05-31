@@ -84,6 +84,15 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 
+REVOKE ALL ON TABLE public.profiles FROM anon;
+REVOKE ALL ON TABLE public.profiles FROM authenticated;
+GRANT SELECT ON TABLE public.profiles TO authenticated;
+GRANT INSERT (id, email, role, address, phone, address_line1, address_line2, city, postal_code, country)
+  ON TABLE public.profiles TO authenticated;
+GRANT UPDATE (address, phone, address_line1, address_line2, city, postal_code, country)
+  ON TABLE public.profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.profiles TO service_role;
+
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
@@ -102,8 +111,6 @@ CREATE POLICY "profiles_insert_self_customer"
   FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = id AND role = 'customer');
-
-REVOKE UPDATE (role) ON public.profiles FROM authenticated;
 
 CREATE POLICY "profiles_update_self"
   ON public.profiles
@@ -177,3 +184,88 @@ CREATE POLICY "order_items_admin_all"
   TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
+
+-- Replace the checkout RPC with server-side product validation and stock reservation.
+DROP FUNCTION IF EXISTS public.create_order_with_items(jsonb, public.order_status);
+
+CREATE OR REPLACE FUNCTION public.create_order_with_items(
+  p_items jsonb,
+  p_status public.order_status DEFAULT 'Nouvelle'::public.order_status,
+  p_checkout jsonb DEFAULT '{}'::jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_order_id uuid;
+  v_item jsonb;
+  v_product_id text;
+  v_quantity integer;
+  v_unit_price numeric(10,2);
+  v_stock integer;
+  v_total numeric(10,2) := 0;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' OR jsonb_array_length(p_items) = 0 THEN
+    RAISE EXCEPTION 'Order items are required';
+  END IF;
+
+  INSERT INTO public.orders (user_id, total, status)
+  VALUES (auth.uid(), 0, p_status)
+  RETURNING id INTO v_order_id;
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
+  LOOP
+    v_product_id := v_item->>'product_id';
+    v_quantity := COALESCE((v_item->>'quantity')::integer, 0);
+
+    IF v_product_id IS NULL OR v_product_id = '' THEN
+      RAISE EXCEPTION 'Product id is required';
+    END IF;
+
+    IF v_quantity <= 0 THEN
+      RAISE EXCEPTION 'Quantity must be greater than zero';
+    END IF;
+
+    SELECT price, stock
+      INTO v_unit_price, v_stock
+    FROM public.products
+    WHERE id = v_product_id
+    FOR UPDATE;
+
+    IF v_unit_price IS NULL THEN
+      RAISE EXCEPTION 'Product % not found', v_product_id;
+    END IF;
+
+    IF v_stock < v_quantity THEN
+      RAISE EXCEPTION 'Insufficient stock for product %', v_product_id;
+    END IF;
+
+    UPDATE public.products
+    SET stock = stock - v_quantity
+    WHERE id = v_product_id;
+
+    INSERT INTO public.order_items (order_id, product_id, quantity, price_at_time)
+    VALUES (v_order_id, v_product_id, v_quantity, v_unit_price);
+
+    v_total := v_total + (v_unit_price * v_quantity);
+  END LOOP;
+
+  UPDATE public.orders
+  SET total = v_total
+  WHERE id = v_order_id;
+
+  RETURN v_order_id;
+EXCEPTION
+  WHEN others THEN
+    RAISE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_order_with_items(jsonb, public.order_status, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_order_with_items(jsonb, public.order_status, jsonb) TO authenticated;

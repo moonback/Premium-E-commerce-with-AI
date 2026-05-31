@@ -309,14 +309,18 @@ export const useStore = create<AppState>()(
               quantity: item.quantity,
             }));
 
+            const { clientInfo } = state.checkoutInfo;
             const { data: orderId, error } = await supabase.rpc('create_order_with_items', {
               p_items: orderItems,
               p_status: 'Nouvelle',
+              p_checkout: {
+                clientInfo,
+                deliveryMethod: state.checkoutInfo.deliveryMethod,
+              },
             });
             if (error) throw error;
             if (!orderId) throw new Error('La commande n’a pas pu être créée.');
 
-            const { clientInfo } = state.checkoutInfo;
             // Persist client address and phone into user profile if available
             if (state.user) {
               await supabase
