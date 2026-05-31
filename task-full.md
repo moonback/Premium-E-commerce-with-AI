@@ -51,6 +51,8 @@ Une tâche est terminée uniquement si :
 - [x] Suivi commande profil/admin amélioré avec numéro de commande et prochaine étape client.
 - [x] Code splitting route-level ajouté avec `React.lazy`/`Suspense` pour réduire le bundle initial.
 - [x] Chunks vendor Vite séparés (`react`, `data`, `motion`, `icons`) pour limiter le poids du chunk principal.
+- [x] Migration Supabase additive `20260629_restrict_sensitive_commerce_tables.sql` pour créer/restreindre `payments`, `shipments`, `events`, `ai_conversations` et `audit_events` avec RLS propriétaire/admin.
+- [x] Audit RLS documenté dans `docs/SUPABASE_RLS_AUDIT.md` et contrôles automatisés ajoutés sur les migrations Supabase.
 
 ### Reste P0/P1 immédiat
 
@@ -210,13 +212,12 @@ Une tâche est terminée uniquement si :
 - [x] Auditer `supabase/migrations/20260627_create_orders.sql`.
 - [x] Supprimer tout `DROP TABLE` dangereux sur `orders` ou tables transactionnelles.
 - [x] Remplacer par migrations additives :
-  - [x] `alter table add column if not exists` ;
-  - [x] création d'index idempotente, avec note pour reindex concurrent hors transaction si gros volume ;
-  - [x] backfill contrôlé des champs `order_items` avant contraintes ;
-  - [x] policies remplacées explicitement.
+  - [ ] `alter table add column if not exists` ;
+  - [ ] création d'index concurrente si applicable ;
+  - [ ] backfill contrôlé ;
+  - [ ] policies remplacées explicitement.
 - [x] Ajouter un commentaire dans la migration expliquant la stratégie non destructive.
 - [x] Prévoir plan rollback logique.
-- [x] Ajouter un test statique empêchant le retour de `DROP TABLE` et des déclarations PL/pgSQL dupliquées.
 
 **Critères d'acceptation :**
 
@@ -943,12 +944,12 @@ Une tâche est terminée uniquement si :
 - [ ] `wishlist_items` : favoris serveur.
 - [ ] `orders` : commande globale.
 - [ ] `order_items` : lignes commande.
-- [ ] `payments` : PSP et statuts.
-- [ ] `shipments` : livraison/tracking.
+- [x] `payments` : PSP et statuts.
+- [x] `shipments` : livraison/tracking.
 - [ ] `discounts` : promotions.
-- [ ] `events` : analytics.
-- [ ] `ai_conversations` : historique IA contrôlé.
-- [ ] `audit_events` : audit actions sensibles.
+- [x] `events` : analytics.
+- [x] `ai_conversations` : historique IA contrôlé.
+- [x] `audit_events` : audit actions sensibles.
 
 ---
 
