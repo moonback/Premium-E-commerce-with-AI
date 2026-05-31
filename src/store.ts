@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product, CartItem, User, Category, Address, UserRole } from './types';
+import { Product, CartItem, User, Category, Address, UserRole, CheckoutClientInfo, CheckoutDeliveryMethod, CheckoutInfo } from './types';
 import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
+import { createCheckoutOrder } from './services/checkoutService';
 
 const USER_ROLES: UserRole[] = ['admin', 'staff', 'kiosk', 'customer'];
 
@@ -71,33 +72,9 @@ export const SEED_PRODUCTS: Product[] = [
 ];
 
 export interface AppState {
-  checkoutInfo: {
-    clientInfo: {
-      name: string;
-      email: string;
-      phone?: string;
-      address?: string;
-      addressLine1?: string;
-      addressLine2?: string;
-      city?: string;
-      postalCode?: string;
-      country?: string;
-    };
-    deliveryMethod: 'clickCollect' | 'courier';
-    paymentStatus: 'idle' | 'processing' | 'succeeded' | 'failed';
-  };
-  setClientInfo: (info: {
-    name: string;
-    email: string;
-    phone?: string;
-    address?: string;
-    addressLine1?: string;
-    addressLine2?: string;
-    city?: string;
-    postalCode?: string;
-    country?: string;
-  }) => void;
-  setDeliveryMethod: (method: 'clickCollect' | 'courier') => void;
+  checkoutInfo: CheckoutInfo;
+  setClientInfo: (info: CheckoutClientInfo) => void;
+  setDeliveryMethod: (method: CheckoutDeliveryMethod) => void;
   setPaymentStatus: (status: 'idle' | 'processing' | 'succeeded' | 'failed') => void;
   resetCheckout: () => void;
   // store slices
@@ -307,50 +284,26 @@ export const useStore = create<AppState>()(
 
         if (supabase && state.user) {
           try {
-            const orderItems = state.cart.map((item) => ({
-              product_id: item.product.id,
-              quantity: item.quantity,
-            }));
-
-            const { clientInfo } = state.checkoutInfo;
-            const { data: orderId, error } = await supabase.rpc('create_order_with_items', {
-              p_items: orderItems,
-              p_status: 'Nouvelle',
-              p_checkout: {
-                clientInfo,
-                deliveryMethod: state.checkoutInfo.deliveryMethod,
-              },
+            const result = await createCheckoutOrder({
+              cart: state.cart,
+              checkoutInfo: state.checkoutInfo,
+              user: state.user,
             });
-            if (error) throw error;
-            if (!orderId) throw new Error('La commande n’a pas pu être créée.');
-            completedOrderId = orderId;
+            completedOrderId = result.orderId;
 
-            // Profile sync is useful, but it must not invalidate a completed order.
-            if (state.user) {
-              const { error: profileError } = await supabase
-                .from('profiles')
-                .update({
-                  address: clientInfo.address || '',
-                  phone: clientInfo.phone || '',
-                  address_line1: clientInfo.addressLine1 || '',
-                  address_line2: clientInfo.addressLine2 || '',
-                  city: clientInfo.city || '',
-                  postal_code: clientInfo.postalCode || '',
-                  country: clientInfo.country || ''
-                })
-                .eq('id', state.user.id);
-
-              if (profileError) {
-                console.warn('Order completed, but profile sync failed', profileError);
-                toast.error('Commande validée, mais le profil n’a pas pu être mis à jour.');
-              } else {
-                set({
-                  user: { ...state.user, address: clientInfo.address || '', phone: clientInfo.phone || '' }
-                });
-              }
+            if (!result.profileSynced) {
+              toast.error('Commande validée, mais le profil n’a pas pu être mis à jour.');
+            } else {
+              set({
+                user: {
+                  ...state.user,
+                  address: state.checkoutInfo.clientInfo.address || '',
+                  phone: state.checkoutInfo.clientInfo.phone || '',
+                },
+              });
             }
             toast.success(`Commande validée ! +${pointsEarned} points`);
-          } catch (e: any) {
+          } catch (e: unknown) {
             const message = e instanceof Error ? e.message : 'Erreur inconnue';
             toast.error('Impossible de valider la commande : ' + message);
             throw e;

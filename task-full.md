@@ -47,7 +47,7 @@ Une tâche est terminée uniquement si :
 ### Reste P0/P1 immédiat
 
 - [ ] Ajouter tests automatisés autour de `checkout()` et de la RPC Supabase.
-- [ ] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
+- [x] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
 - [ ] Ajouter un paiement réel PSP/webhooks avant production commerciale.
 - [ ] Ajouter confirmation email transactionnelle et suivi commande côté profil.
 - [ ] Lancer audit manuel RLS complet sur environnement Supabase cible.
@@ -154,10 +154,10 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Extraire la logique checkout de `src/store.ts` vers un service dédié.
-  - [ ] `checkoutService.createOrder(...)`.
-  - [ ] Validation des entrées.
-  - [ ] Normalisation des montants.
+- [x] Extraire la logique checkout de `src/store.ts` vers un service dédié.
+  - [x] `checkoutService.createOrder(...)`.
+  - [x] Validation des entrées panier côté service/RPC.
+  - [x] Normalisation des montants et calcul points côté store, montant final côté RPC.
 - [x] Créer une RPC Supabase transactionnelle `create_order_with_items`.
   - [x] Créer la ligne `orders`.
   - [x] Insérer toutes les lignes `order_items`.
