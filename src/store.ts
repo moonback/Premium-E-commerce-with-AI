@@ -113,6 +113,7 @@ export interface AppState {
   isSessionLoading: boolean;
   isAuthModalOpen: boolean;
   isCartOpen: boolean;
+  lastOrderId: string | null;
   setAuthModalOpen: (isOpen: boolean) => void;
   setCartOpen: (isOpen: boolean) => void;
   setUser: (user: User | null) => void;
@@ -120,7 +121,7 @@ export interface AppState {
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
-  checkout: () => Promise<void>;
+  checkout: () => Promise<string | null>;
   updateOrderStatus: (orderId: string, status: string) => Promise<void>;
   initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
@@ -155,6 +156,7 @@ export const useStore = create<AppState>()(
       isSessionLoading: Boolean(supabase),
       isAuthModalOpen: false,
       isCartOpen: false,
+      lastOrderId: null,
 
 
 
@@ -298,9 +300,10 @@ export const useStore = create<AppState>()(
 
       checkout: async () => {
         const state = get();
-        if (state.cart.length === 0) return;
+        if (state.cart.length === 0) return null;
         const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
         const pointsEarned = Math.floor(total / 10);
+        let completedOrderId: string | null = null;
 
         if (supabase && state.user) {
           try {
@@ -320,10 +323,11 @@ export const useStore = create<AppState>()(
             });
             if (error) throw error;
             if (!orderId) throw new Error('La commande n’a pas pu être créée.');
+            completedOrderId = orderId;
 
-            // Persist client address and phone into user profile if available
+            // Profile sync is useful, but it must not invalidate a completed order.
             if (state.user) {
-              await supabase
+              const { error: profileError } = await supabase
                 .from('profiles')
                 .update({
                   address: clientInfo.address || '',
@@ -335,10 +339,15 @@ export const useStore = create<AppState>()(
                   country: clientInfo.country || ''
                 })
                 .eq('id', state.user.id);
-              // Update local user state
-              set({
-                user: { ...state.user, address: clientInfo.address || '', phone: clientInfo.phone || '' }
-              });
+
+              if (profileError) {
+                console.warn('Order completed, but profile sync failed', profileError);
+                toast.error('Commande validée, mais le profil n’a pas pu être mis à jour.');
+              } else {
+                set({
+                  user: { ...state.user, address: clientInfo.address || '', phone: clientInfo.phone || '' }
+                });
+              }
             }
             toast.success(`Commande validée ! +${pointsEarned} points`);
           } catch (e: any) {
@@ -351,8 +360,11 @@ export const useStore = create<AppState>()(
         }
         set(state => ({
           cart: [],
-          loyaltyPoints: state.loyaltyPoints + pointsEarned
+          loyaltyPoints: state.loyaltyPoints + pointsEarned,
+          lastOrderId: completedOrderId,
         }));
+
+        return completedOrderId;
       },
 
       initSession: async () => {

@@ -12,6 +12,7 @@ const LIVE_MAX_ACTIVE_CONNECTIONS = 2;
 const LIVE_SESSION_MAX_MS = Number(process.env.LIVE_SESSION_MAX_MS ?? 2 * 60 * 1000);
 const GEMINI_LIVE_MODEL = process.env.GEMINI_LIVE_MODEL || "gemini-3.1-flash-live-preview";
 const SERVER_STARTED_AT = Date.now();
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 type LiveRateRecord = {
   windowStart: number;
@@ -74,7 +75,7 @@ async function startServer() {
       uptimeSeconds: Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
       dependencies: {
         geminiLive: Boolean(process.env.GEMINI_API_KEY),
-        supabaseAuth: Boolean(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+        supabaseAuth: Boolean(supabaseAuth),
       },
     });
   });
@@ -122,6 +123,12 @@ async function startServer() {
         clientWs.close(1013, "AI service unavailable");
         return;
       }
+      if (!supabaseAuth && IS_PRODUCTION) {
+        clientWs.send(JSON.stringify({ error: "Voice authentication is not configured" }));
+        clientWs.close(1011, "Authentication unavailable");
+        return;
+      }
+
       if (supabaseAuth) {
         const token = new URL(request.url || "/live", "http://localhost").searchParams.get("token");
         if (!token) {
