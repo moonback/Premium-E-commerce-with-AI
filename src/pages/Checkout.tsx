@@ -17,8 +17,8 @@ export default function Checkout() {
     resetCheckout,
     setClientInfo,
     setDeliveryMethod,
-    isLoadingProducts,
-    // optional: you could read the cart here for a final summary
+    cart,
+    checkoutInfo,
   } = useStore();
   const navigate = useNavigate();
 
@@ -38,10 +38,20 @@ export default function Checkout() {
   // ---- FINAL PAYMENT HANDLER -------------------------------------------
   const handlePaymentSuccess = async () => {
     try {
-      await checkout(); // creates order in Supabase & clears cart only after success
+      const items = cart.map(item => ({
+        id: item.product.id,
+        name: item.product.name,
+        quantity: item.quantity,
+        unitPrice: item.product.price,
+      }));
+      const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+      const deliveryMethod = checkoutInfo.deliveryMethod;
+      const orderId = await checkout(); // creates order in Supabase & clears cart only after success
       resetCheckout();
       toast.success("✅ Order placed! Thank you for your purchase.");
-      navigate("/"); // back to home after order
+      navigate("/order-confirmation", {
+        state: { orderId, total, deliveryMethod, items },
+      });
     } catch {
       // checkout() already shows the actionable error and keeps the cart intact
     }

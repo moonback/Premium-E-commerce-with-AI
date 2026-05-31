@@ -10,6 +10,7 @@ import POS from './pages/POS';
 import Admin from './pages/Admin';
 import StoreScreen from './pages/StoreScreen';
 import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
 import VoiceAssistant from './components/VoiceAssistant';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -77,6 +78,7 @@ function AppContent() {
             <Route path="/" element={<PageTransition><StoreFront /></PageTransition>} />
             <Route path="/product/:id" element={<PageTransition><ProductDetail /></PageTransition>} />
             <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
+            <Route path="/order-confirmation" element={<PageTransition><OrderConfirmation /></PageTransition>} />
             <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />
           </Route>
           <Route path="/pos" element={<PageTransition><ProtectedRoute role={["staff", "admin"]}><POS /></ProtectedRoute></PageTransition>} />

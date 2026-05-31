@@ -27,6 +27,33 @@ Une tâche est terminée uniquement si :
 
 ---
 
+## État d’avancement — 31 mai 2026
+
+### Corrections P0 déjà implémentées
+
+- [x] Build TypeScript et `npm run lint` verts après les premières corrections.
+- [x] CTA hero vers `#collection` existant et route wildcard 404 ajoutée.
+- [x] Rôles applicatifs normalisés : `customer`, `staff`, `kiosk`, `admin`.
+- [x] Suppression de l’élévation admin basée sur `email.includes('admin')` côté client et trigger Supabase durci.
+- [x] Routes sensibles protégées : `/admin`, `/pos`, `/screen` et profil ; confirmation commande sans lecture serveur directe.
+- [x] Migration Supabase non destructive `20260628_harden_profiles_roles.sql` pour RLS profils/commandes/lignes commande.
+- [x] RPC `create_order_with_items` transactionnelle : création commande, insertion `order_items`, validation prix/stock et décrément stock.
+- [x] Checkout client connecté à la RPC, panier vidé uniquement après succès, erreurs conservant le panier.
+- [x] Page de confirmation commande ajoutée avec numéro, articles, total et prochaine étape.
+- [x] WebSocket IA `/live` durci : auth Supabase si configurée, refus en production sans auth, rate limit, timeout, modèle configurable, cleanup session.
+- [x] Assistant Ava alimenté par contexte catalogue réel borné au lieu d’IDs produits hardcodés.
+- [x] Store screen résilient quand le catalogue est vide.
+
+### Reste P0/P1 immédiat
+
+- [ ] Ajouter tests automatisés autour de `checkout()` et de la RPC Supabase.
+- [ ] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
+- [ ] Ajouter un paiement réel PSP/webhooks avant production commerciale.
+- [ ] Ajouter confirmation email transactionnelle et suivi commande côté profil.
+- [ ] Lancer audit manuel RLS complet sur environnement Supabase cible.
+
+---
+
 ## P0 — Stabilisation critique et sécurité immédiate
 
 ### P0.1 — Rendre TypeScript et le build verts
@@ -35,12 +62,12 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Corriger le typage du formulaire dans `src/components/AddressBook.tsx`.
-  - [ ] Créer un type explicite `AddressFormState`.
-  - [ ] Initialiser `useState<AddressFormState>` au lieu de laisser `{}` être inféré.
-  - [ ] Vérifier toutes les lectures/écritures des propriétés d'adresse.
-- [ ] Exécuter `npm run lint` et corriger toutes les erreurs bloquantes.
-- [ ] Exécuter `npm run build` et corriger les erreurs TypeScript/Vite.
+- [x] Corriger le typage du formulaire dans `src/components/AddressBook.tsx`.
+  - [x] Créer un type explicite `AddressFormState` / `AddressFormData`.
+  - [x] Initialiser explicitement l’état formulaire au lieu de laisser `{}` être inféré.
+  - [x] Vérifier toutes les lectures/écritures des propriétés d'adresse.
+- [x] Exécuter `npm run lint` et corriger toutes les erreurs bloquantes.
+- [x] Exécuter `npm run build` et corriger les erreurs TypeScript/Vite.
 - [ ] Ajouter une checklist CI minimale si absente.
   - [ ] Lint.
   - [ ] Build.
@@ -48,8 +75,8 @@ Une tâche est terminée uniquement si :
 
 **Critères d'acceptation :**
 
-- [ ] `npm run lint` passe sans erreur.
-- [ ] `npm run build` passe sans erreur.
+- [x] `npm run lint` passe sans erreur.
+- [x] `npm run build` passe sans erreur.
 - [ ] Aucun `any` ajouté pour masquer le problème.
 
 **Impact :** très élevé.  
@@ -63,19 +90,19 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Identifier le CTA qui pointe vers `/storefront`.
-- [ ] Remplacer la destination par une route existante ou une ancre valide.
+- [x] Identifier le CTA qui pointe vers `/storefront`.
+- [x] Remplacer la destination par une route existante ou une ancre valide.
   - Option recommandée : `/` + ancre catalogue si le catalogue est sur la home.
   - Alternative : créer une route catalogue dédiée `/catalog` ou `/shop`.
-- [ ] Ajouter un état focus/hover cohérent sur le CTA.
-- [ ] Vérifier le parcours sur mobile et desktop.
-- [ ] Ajouter une page 404 pour les futures routes invalides.
+- [x] Ajouter un état focus/hover cohérent sur le CTA.
+- [x] Vérifier le parcours sur mobile et desktop.
+- [x] Ajouter une page 404 pour les futures routes invalides.
 
 **Critères d'acceptation :**
 
-- [ ] Le CTA principal ouvre un parcours marchand réel.
-- [ ] Aucun clic principal ne mène vers une route inexistante.
-- [ ] Une route inconnue affiche une page 404 utile.
+- [x] Le CTA principal ouvre un parcours marchand réel.
+- [x] Aucun clic principal ne mène vers une route inexistante.
+- [x] Une route inconnue affiche une page 404 utile.
 
 **Impact :** élevé.  
 **Complexité :** très faible.
@@ -93,17 +120,17 @@ Une tâche est terminée uniquement si :
   - [ ] Commandes lisibles/insérables/modifiables par tous.
   - [ ] Profils lisibles publiquement.
   - [ ] Accès non restreint aux données checkout.
-- [ ] Créer une migration corrective non destructive.
-  - [ ] Activer RLS sur toutes les tables sensibles.
-  - [ ] Ajouter `profiles_self_select` : utilisateur lui-même ou admin.
-  - [ ] Ajouter `profiles_self_update` : utilisateur lui-même uniquement, avec restrictions.
-  - [ ] Ajouter `orders_self_or_admin_read`.
-  - [ ] Ajouter policies `order_items` basées sur la commande parente.
+- [x] Créer une migration corrective non destructive.
+  - [x] Activer RLS sur toutes les tables sensibles.
+  - [x] Ajouter `profiles_self_select` : utilisateur lui-même ou admin.
+  - [x] Ajouter `profiles_self_update` : utilisateur lui-même uniquement, avec restrictions.
+  - [x] Ajouter `orders_self_or_admin_read`.
+  - [x] Ajouter policies `order_items` basées sur la commande parente.
   - [ ] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
-- [ ] Créer ou durcir une fonction `is_admin()` fiable.
-  - [ ] Ne pas dériver le rôle admin depuis l'email côté client.
+- [x] Créer ou durcir une fonction `is_admin()` fiable.
+  - [x] Ne pas dériver le rôle admin depuis l'email côté client.
   - [ ] Prévoir rôle via claim, table profil ou service role contrôlé.
-- [ ] Documenter les rôles : `customer`, `staff`, `admin`, `kiosk`.
+- [x] Documenter les rôles : `customer`, `staff`, `admin`, `kiosk`.
 - [ ] Tester manuellement les scénarios RLS.
   - [ ] Client A ne lit pas les commandes du client B.
   - [ ] Client non connecté ne lit pas les profils.
@@ -111,10 +138,10 @@ Une tâche est terminée uniquement si :
 
 **Critères d'acceptation :**
 
-- [ ] Aucune policy critique n'utilise `using (true)` sur données privées.
-- [ ] Les commandes/profils/adresses ne sont accessibles qu'au propriétaire ou aux rôles autorisés.
-- [ ] L'admin n'est jamais attribué par `email.includes('admin')` côté client.
-- [ ] Les migrations sont additives et non destructives.
+- [x] Aucune policy critique n'utilise `using (true)` sur données privées.
+- [x] Les commandes/profils/adresses ne sont accessibles qu'au propriétaire ou aux rôles autorisés.
+- [x] L'admin n'est jamais attribué par `email.includes('admin')` côté client.
+- [x] Les migrations sont additives et non destructives.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne.
@@ -131,28 +158,28 @@ Une tâche est terminée uniquement si :
   - [ ] `checkoutService.createOrder(...)`.
   - [ ] Validation des entrées.
   - [ ] Normalisation des montants.
-- [ ] Créer une RPC Supabase transactionnelle `create_order_with_items`.
-  - [ ] Créer la ligne `orders`.
-  - [ ] Insérer toutes les lignes `order_items`.
+- [x] Créer une RPC Supabase transactionnelle `create_order_with_items`.
+  - [x] Créer la ligne `orders`.
+  - [x] Insérer toutes les lignes `order_items`.
   - [ ] Calculer subtotal, discount, shipping, taxes, total côté serveur.
-  - [ ] Vérifier stock/prix produit côté serveur.
+  - [x] Vérifier stock/prix produit côté serveur.
   - [ ] Retourner `order_id` et `order_number`.
-- [ ] Mettre à jour le checkout client pour appeler la RPC.
-- [ ] Afficher une confirmation de commande avec :
-  - [ ] numéro de commande ;
-  - [ ] résumé articles ;
-  - [ ] total ;
+- [x] Mettre à jour le checkout client pour appeler la RPC.
+- [x] Afficher une confirmation de commande avec :
+  - [x] numéro de commande ;
+  - [x] résumé articles ;
+  - [x] total ;
   - [ ] statut ;
-  - [ ] prochaine étape livraison/paiement.
-- [ ] Prévoir rollback en cas d'erreur d'insertion d'article.
+  - [x] prochaine étape livraison/paiement.
+- [x] Prévoir rollback en cas d'erreur d'insertion d'article.
 - [ ] Ajouter tests unitaires/service ou tests d'intégration selon outillage disponible.
 
 **Critères d'acceptation :**
 
-- [ ] Une commande validée contient toujours ses `order_items`.
-- [ ] Le panier n'est vidé qu'après succès transactionnel complet.
-- [ ] Les montants serveur correspondent au panier attendu.
-- [ ] Les erreurs checkout sont affichées inline et loggées.
+- [x] Une commande validée contient toujours ses `order_items`.
+- [x] Le panier n'est vidé qu'après succès transactionnel complet.
+- [x] Les montants serveur correspondent au panier attendu.
+- [x] Les erreurs checkout sont affichées inline et loggées.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne.
@@ -165,9 +192,9 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Auditer `supabase/migrations/20260627_create_orders.sql`.
-- [ ] Supprimer tout `DROP TABLE` dangereux sur `orders` ou tables transactionnelles.
-- [ ] Remplacer par migrations additives :
+- [x] Auditer `supabase/migrations/20260627_create_orders.sql`.
+- [x] Supprimer tout `DROP TABLE` dangereux sur `orders` ou tables transactionnelles.
+- [x] Remplacer par migrations additives :
   - [ ] `alter table add column if not exists` ;
   - [ ] création d'index concurrente si applicable ;
   - [ ] backfill contrôlé ;
@@ -177,7 +204,7 @@ Une tâche est terminée uniquement si :
 
 **Critères d'acceptation :**
 
-- [ ] Aucune migration de prod ne détruit `orders`, `order_items`, `profiles`, `payments`.
+- [x] Aucune migration de prod ne détruit `orders`, `order_items`, `profiles`, `payments`.
 - [ ] Les changements schéma peuvent être appliqués sans perte de données.
 
 **Impact :** très élevé.  
@@ -191,25 +218,25 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Mettre à jour `ProtectedRoute` pour supporter plusieurs rôles.
-  - [ ] `admin`.
-  - [ ] `staff`.
-  - [ ] `kiosk`.
-  - [ ] `customer`.
-- [ ] Protéger `/admin` avec rôle `admin`.
-- [ ] Protéger `/pos` avec rôles `staff` ou `admin`.
-- [ ] Protéger `/screen` via stratégie kiosk.
-  - [ ] Court terme : rôle `kiosk` ou token de device.
+- [x] Mettre à jour `ProtectedRoute` pour supporter plusieurs rôles.
+  - [x] `admin`.
+  - [x] `staff`.
+  - [x] `kiosk`.
+  - [x] `customer`.
+- [x] Protéger `/admin` avec rôle `admin`.
+- [x] Protéger `/pos` avec rôles `staff` ou `admin`.
+- [x] Protéger `/screen` via stratégie kiosk.
+  - [x] Court terme : rôle `kiosk` ou token de device.
   - [ ] Moyen terme : device management.
-- [ ] Ajouter loading auth robuste.
-- [ ] Ajouter redirection avec intent de retour après connexion.
+- [x] Ajouter loading auth robuste.
+- [x] Ajouter redirection avec intent de retour après connexion.
 - [ ] Vérifier que la RLS serveur bloque même si l'UI est contournée.
 
 **Critères d'acceptation :**
 
-- [ ] Un utilisateur non connecté ne peut pas ouvrir POS/admin.
-- [ ] Un client ne peut pas accéder à POS/admin.
-- [ ] Les routes protégées affichent un état loading clair.
+- [x] Un utilisateur non connecté ne peut pas ouvrir POS/admin.
+- [x] Un client ne peut pas accéder à POS/admin.
+- [x] Les routes protégées affichent un état loading clair.
 
 **Impact :** élevé.  
 **Complexité :** moyenne.
@@ -222,14 +249,14 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Ajouter vérification JWT Supabase sur connexion WebSocket.
-- [ ] Ajouter rate limit par IP, session et user.
-- [ ] Ajouter durée maximale de session.
-- [ ] Fermer explicitement les sessions IA au `close` WebSocket.
-- [ ] Déplacer le nom du modèle IA vers variable d'environnement.
-- [ ] Ajouter logs structurés : connexion, durée, erreurs, tokens/coûts si disponibles.
-- [ ] Ajouter fallback refus propre si quota dépassé.
-- [ ] Prévoir allowlist ou mode invité limité si l'assistant doit rester public.
+- [x] Ajouter vérification JWT Supabase sur connexion WebSocket.
+- [x] Ajouter rate limit par IP/session.
+- [x] Ajouter durée maximale de session.
+- [x] Fermer explicitement les sessions IA au `close` WebSocket.
+- [x] Déplacer le nom du modèle IA vers variable d'environnement.
+- [x] Ajouter logs structurés : connexion, durée et erreurs.
+- [x] Ajouter fallback refus propre si quota dépassé.
+- [x] Refuser l'assistant en production si l'auth Supabase n'est pas configurée.
 
 **Critères d'acceptation :**
 
@@ -1026,14 +1053,14 @@ Une tâche est terminée uniquement si :
 
 ## Ordre d'exécution court terme recommandé
 
-1. [ ] Corriger build TypeScript.
-2. [ ] Corriger CTA route cassée.
-3. [ ] Corriger RLS commandes/profils.
-4. [ ] Supprimer migration destructive.
-5. [ ] Ajouter RPC checkout `create_order_with_items`.
-6. [ ] Protéger POS/admin/screen.
-7. [ ] Rate limiter/authentifier WebSocket IA.
-8. [ ] Ajouter 404 et guards propres.
+1. [x] Corriger build TypeScript.
+2. [x] Corriger CTA route cassée.
+3. [x] Corriger RLS commandes/profils.
+4. [x] Supprimer migration destructive.
+5. [x] Ajouter RPC checkout `create_order_with_items`.
+6. [x] Protéger POS/admin/screen.
+7. [x] Rate limiter/authentifier WebSocket IA.
+8. [x] Ajouter 404 et guards propres.
 9. [ ] Refondre checkout mobile.
 10. [ ] Intégrer paiement réel.
 
