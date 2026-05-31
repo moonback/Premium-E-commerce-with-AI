@@ -6,30 +6,35 @@ import { motion, AnimatePresence } from 'motion/react';
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
+type AddressFormData = Omit<Address, 'id' | 'user_id'>;
+
+const EMPTY_ADDRESS_FORM: Partial<AddressFormData> = {};
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Omit<Address, 'id' | 'user_id'>) => void;
-  initialData?: Partial<Omit<Address, 'id' | 'user_id'>>;
+  onSubmit: (data: AddressFormData) => void;
+  initialData?: Partial<AddressFormData>;
 }
 
-const AddressModal: React.FC<ModalProps> = ({ isOpen, onClose, onSubmit, initialData = {} }) => {
-  const [label, setLabel]     = useState(initialData.label ?? '');
-  const [line1, setLine1]     = useState(initialData.address_line1 ?? '');
-  const [line2, setLine2]     = useState(initialData.address_line2 ?? '');
-  const [city, setCity]       = useState(initialData.city ?? '');
-  const [postal, setPostal]   = useState(initialData.postal_code ?? '');
-  const [country, setCountry] = useState(initialData.country ?? '');
+const AddressModal: React.FC<ModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
+  const formInitialData = initialData ?? EMPTY_ADDRESS_FORM;
+  const [label, setLabel]     = useState(formInitialData.label ?? '');
+  const [line1, setLine1]     = useState(formInitialData.address_line1 ?? '');
+  const [line2, setLine2]     = useState(formInitialData.address_line2 ?? '');
+  const [city, setCity]       = useState(formInitialData.city ?? '');
+  const [postal, setPostal]   = useState(formInitialData.postal_code ?? '');
+  const [country, setCountry] = useState(formInitialData.country ?? '');
 
   // Sync fields whenever the modal opens with new initialData (edit mode)
   useEffect(() => {
-    setLabel(initialData.label ?? '');
-    setLine1(initialData.address_line1 ?? '');
-    setLine2(initialData.address_line2 ?? '');
-    setCity(initialData.city ?? '');
-    setPostal(initialData.postal_code ?? '');
-    setCountry(initialData.country ?? '');
-  }, [isOpen, initialData.address_line1]);
+    setLabel(formInitialData.label ?? '');
+    setLine1(formInitialData.address_line1 ?? '');
+    setLine2(formInitialData.address_line2 ?? '');
+    setCity(formInitialData.city ?? '');
+    setPostal(formInitialData.postal_code ?? '');
+    setCountry(formInitialData.country ?? '');
+  }, [isOpen, formInitialData]);
 
   const reset = () => {
     setLabel(''); setLine1(''); setLine2('');
@@ -47,7 +52,7 @@ const AddressModal: React.FC<ModalProps> = ({ isOpen, onClose, onSubmit, initial
       city: city.trim(),
       postal_code: postal.trim(),
       country: country.trim(),
-      is_default: initialData.is_default ?? false,
+      is_default: formInitialData.is_default ?? false,
     });
     reset();
     onClose();
@@ -55,7 +60,7 @@ const AddressModal: React.FC<ModalProps> = ({ isOpen, onClose, onSubmit, initial
 
   const handleClose = () => { reset(); onClose(); };
 
-  const isEdit = Boolean(initialData.address_line1);
+  const isEdit = Boolean(formInitialData.address_line1);
   const inputCls = 'w-full p-3 border border-ink/10 rounded-md bg-bg text-ink text-sm focus:outline-none focus:border-accent/60 transition-colors';
 
   return (
@@ -119,7 +124,7 @@ const AddressCard: React.FC<{ address: Address }> = ({ address }) => {
   const { setDefaultAddress, deleteAddress, updateAddress } = useStore();
   const [editing, setEditing] = useState(false);
 
-  const handleEditSubmit = (data: Omit<Address, 'id' | 'user_id'>) => {
+  const handleEditSubmit = (data: AddressFormData) => {
     updateAddress(address.id, data);
     setEditing(false);
   };

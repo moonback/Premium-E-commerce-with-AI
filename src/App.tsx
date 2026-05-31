@@ -78,7 +78,7 @@ function AppContent() {
             <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
             <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />
           </Route>
-          <Route path="/pos" element={<PageTransition><POS /></PageTransition>} />
+          <Route path="/pos" element={<PageTransition><ProtectedRoute role="admin"><POS /></ProtectedRoute></PageTransition>} />
           <Route path="/admin" element={<PageTransition><ProtectedRoute role="admin"><Admin /></ProtectedRoute></PageTransition>} />
           <Route path="/screen" element={<PageTransition><StoreScreen /></PageTransition>} />
         </Routes>

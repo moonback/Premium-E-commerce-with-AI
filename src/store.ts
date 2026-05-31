@@ -296,14 +296,17 @@ export const useStore = create<AppState>()(
 
         if (supabase && state.user) {
           try {
-            const { data: order, error } = await supabase
-              .from('orders')
-              .insert([
-                { user_id: state.user.id, total, status: 'Nouvelle' }
-              ])
-              .select()
-              .single();
+            const orderItems = state.cart.map((item) => ({
+              product_id: item.product.id,
+              quantity: item.quantity,
+            }));
+
+            const { error } = await supabase.rpc('create_order_with_items', {
+              p_items: orderItems,
+              p_status: 'Nouvelle',
+            });
             if (error) throw error;
+
             const { clientInfo } = state.checkoutInfo;
             // Persist client address and phone into user profile if available
             if (state.user) {
