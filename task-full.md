@@ -48,6 +48,8 @@ Une tâche est terminée uniquement si :
 - [x] Store screen résilient quand le catalogue est vide.
 - [x] Remplacement des alertes bloquantes restantes par des toasts pour POS, carnet d'adresses et synchronisation catalogue.
 - [x] Suivi commande profil/admin amélioré avec numéro de commande et prochaine étape client.
+- [x] Code splitting route-level ajouté avec `React.lazy`/`Suspense` pour réduire le bundle initial.
+- [x] Chunks vendor Vite séparés (`react`, `data`, `motion`, `icons`) pour limiter le poids du chunk principal.
 
 ### Reste P0/P1 immédiat
 
@@ -528,14 +530,14 @@ Une tâche est terminée uniquement si :
 - [ ] Ajouter lazy loading et placeholders.
 - [ ] Remplacer les images Unsplash directes par stratégie CDN/image proxy.
 - [ ] Ajouter pagination ou infinite scroll.
-- [ ] Ajouter code splitting route-level avec `React.lazy`.
+- [x] Ajouter code splitting route-level avec `React.lazy`.
 - [ ] Ajouter cache query, recommandé : TanStack Query ou service cache dédié.
 - [ ] Optimiser admin polling vers realtime/RPC ciblées.
 
 **Critères d'acceptation :**
 
 - [ ] Les images n'entraînent pas de CLS majeur.
-- [ ] Le bundle initial est réduit par lazy routes.
+- [x] Le bundle initial est réduit par lazy routes et vendor chunks dédiés.
 - [ ] Le catalogue ne charge pas indéfiniment toutes les données sans pagination.
 
 **Impact :** moyen à élevé.  
