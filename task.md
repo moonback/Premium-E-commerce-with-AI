@@ -16,9 +16,9 @@
 - [x] Durcir la migration `orders` : suppression des `DROP`, création non destructive, index, RLS restrictive et révocation `anon`
 - [x] Valider avec `npm run lint`
 - [x] Valider avec `npm run build`
-- [ ] Remplacer le checkout client-side par une RPC transactionnelle Supabase `create_order_with_items`
+- [x] Remplacer le checkout client-side par une RPC transactionnelle Supabase `create_order_with_items`
 - [ ] Ajouter des tests automatisés Playwright sur le parcours panier → checkout → commande
-- [ ] Sécuriser le WebSocket IA `/live` avec auth Supabase JWT + rate limit
+- [x] Sécuriser le WebSocket IA `/live` avec auth Supabase JWT + rate limit
 
 ---
 
@@ -122,6 +122,8 @@
 ### 11. Onde vocale Ava (visualiseur audio)
 **Fichiers :** `src/components/VoiceAssistant.tsx`
 - [ ] Créer un visualiseur SVG animé avec barres ou cercles pulsants
+- [x] Ajouter authentification JWT Supabase au WebSocket `/live` quand Supabase est configuré
+- [x] Ajouter rate limit mémoire par IP sur `/live`
 - [ ] Activer l'animation quand `isRecording === true`
 - [ ] Ajouter une bulle d'onboarding au premier chargement ("Besoin d'un conseil ?")
 - [ ] Toast flottant quand Ava déclenche `addToCart` ("Ava a ajouté X au panier")
@@ -201,6 +203,7 @@
 - [x] Créer une migration pour restreindre `SELECT orders` à `user_id = auth.uid()`
 - [x] Garder l'accès total pour le rôle `service_role` (admin)
 - [ ] Tester la politique avec un compte non-admin
+- [x] Ajouter la RPC transactionnelle `create_order_with_items` pour éviter les commandes partielles
 
 ---
 

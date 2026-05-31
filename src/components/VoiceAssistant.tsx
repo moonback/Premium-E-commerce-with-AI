@@ -3,6 +3,7 @@ import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useStore } from '../store';
+import { supabase } from '../lib/supabase';
 
 export default function VoiceAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +24,15 @@ export default function VoiceAssistant() {
     setIsConnecting(true);
     setError(null);
     try {
-      const wsUrl = `ws://${window.location.host}/live`;
+      const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      if (supabase && !session?.access_token) {
+        setError('Connectez-vous pour utiliser Ava en mode vocal.');
+        setIsConnecting(false);
+        return;
+      }
+      const tokenParam = session?.access_token ? `?token=${encodeURIComponent(session.access_token)}` : '';
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const wsUrl = `${wsProtocol}://${window.location.host}/live${tokenParam}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
