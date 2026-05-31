@@ -54,6 +54,7 @@ export default function ProductDetail() {
   if (!product) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-bg">
+        <SEO title="Produit introuvable" description="Ce produit Véridian est introuvable ou n'est plus disponible." path={id ? `/product/${id}` : '/product'} />
         <h2 className="text-3xl font-serif mb-4">Produit introuvable</h2>
         <Link to="/" className="text-xs font-bold uppercase tracking-widest text-ink hover:underline">Retour à la boutique</Link>
       </div>
@@ -80,6 +81,14 @@ export default function ProductDetail() {
 
   return (
     <div className="flex-1 bg-bg px-4 sm:px-6 lg:px-8 py-12 flex flex-col">
+      <SEO
+        title={product.name}
+        description={product.description}
+        path={getProductPath(product)}
+        image={product.image}
+        type="product"
+        jsonLd={buildProductJsonLd(product)}
+      />
       <div className="max-w-7xl mx-auto w-full">
         <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink/60 hover:text-ink mb-12 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Retour

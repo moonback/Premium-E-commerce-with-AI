@@ -3,6 +3,7 @@ import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
+import { CheckCircle2, RotateCcw, ShieldCheck } from "lucide-react";
 
 import CheckoutStepper from "../components/CheckoutStepper";
 import CartReview from "../components/CartReview";
@@ -10,8 +11,84 @@ import ClientDeliveryForm from "../components/ClientDeliveryForm";
 import PaymentForm from "../components/PaymentForm";
 import { useStore } from "../store";
 
+const PAYMENT_FORM_ID = "checkout-payment-form";
+
+function formatPrice(value: number) {
+  return `${value.toFixed(2)}€`;
+}
+
+function AssuranceBadges() {
+  const badges = [
+    { icon: ShieldCheck, label: "Paiement sécurisé" },
+    { icon: RotateCcw, label: "Retours simplifiés" },
+    { icon: CheckCircle2, label: "Support premium" },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1" aria-label="Garanties Véridian">
+      {badges.map(({ icon: Icon, label }) => (
+        <div key={label} className="flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/60 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-ink/60">
+          <Icon className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+          <span>{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OrderSummary({ total }: { total: number }) {
+  const { cart, checkoutInfo } = useStore();
+  const deliveryLabel = checkoutInfo.deliveryMethod === "clickCollect" ? "Click & Collect" : "Coursier";
+
+  return (
+    <aside className="rounded-[2rem] border border-ink/10 bg-bg/95 p-6 shadow-2xl shadow-ink/5 lg:sticky lg:top-24" aria-label="Récapitulatif de commande">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <h2 className="font-serif text-2xl text-ink">Résumé</h2>
+        <span className="rounded-full bg-ink/5 px-3 py-1 text-xs font-bold uppercase tracking-widest text-ink/50">
+          {cart.length} article{cart.length > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      <div className="max-h-72 space-y-4 overflow-auto pr-1">
+        {cart.length === 0 ? (
+          <p className="text-sm text-ink/50">Votre panier est vide.</p>
+        ) : (
+          cart.map((item) => (
+            <div key={item.product.id} className="flex gap-3">
+              <img src={item.product.image} alt="" className="h-14 w-14 rounded-2xl object-cover" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-serif text-sm text-ink">{item.product.name}</p>
+                <p className="text-xs text-ink/45">Qté {item.quantity}</p>
+              </div>
+              <p className="text-sm font-semibold text-ink">{formatPrice(item.product.price * item.quantity)}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="my-6 space-y-3 border-y border-ink/10 py-5 text-sm">
+        <div className="flex justify-between text-ink/60">
+          <span>Sous-total</span>
+          <span>{formatPrice(total)}</span>
+        </div>
+        <div className="flex justify-between text-ink/60">
+          <span>Livraison</span>
+          <span>{deliveryLabel}</span>
+        </div>
+        <div className="flex justify-between text-lg font-bold text-ink">
+          <span>Total</span>
+          <span>{formatPrice(total)}</span>
+        </div>
+      </div>
+
+      <AssuranceBadges />
+    </aside>
+  );
+}
+
 export default function Checkout() {
   const [step, setStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     checkout,
     resetCheckout,
@@ -21,6 +98,7 @@ export default function Checkout() {
     checkoutInfo,
   } = useStore();
   const navigate = useNavigate();
+  const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   // ---- STEP NAVIGATION -------------------------------------------------
   const next = useCallback(
@@ -37,6 +115,8 @@ export default function Checkout() {
 
   // ---- FINAL PAYMENT HANDLER -------------------------------------------
   const handlePaymentSuccess = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const items = cart.map(item => ({
         id: item.product.id,
@@ -44,7 +124,6 @@ export default function Checkout() {
         quantity: item.quantity,
         unitPrice: item.product.price,
       }));
-      const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       const deliveryMethod = checkoutInfo.deliveryMethod;
       const status = 'Nouvelle';
       const orderId = await checkout(); // creates order in Supabase & clears cart only after success
@@ -56,71 +135,103 @@ export default function Checkout() {
       });
     } catch {
       // checkout() already shows the actionable error and keeps the cart intact
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // ---- RENDER -----------------------------------------------------------
   return (
-    <section className="flex min-h-screen flex-col items-center bg-bg font-sans text-ink">
-      <header className="w-full max-w-2xl py-6">
-        <h1 className="text-3xl font-bold text-center">Checkout</h1>
-        <p className="text-center text-ink/60">
-          Review your cart, add delivery details and complete payment.
+    <section className="flex min-h-screen flex-col items-center bg-bg px-4 pb-28 font-sans text-ink lg:pb-12">
+      <header className="w-full max-w-3xl py-6 text-center">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.35em] text-ink/40">Checkout sécurisé</p>
+        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">Finaliser ma commande</h1>
+        <p className="mx-auto mt-3 max-w-xl text-sm text-ink/60 md:text-base">
+          Vérifiez votre panier, confirmez la livraison et validez le paiement en trois étapes lisibles.
         </p>
         <Link
           to="/"
-          className="mt-4 block w-max mx-auto text-sm underline hover:text-ink/80"
+          className="mt-4 inline-flex text-sm underline underline-offset-4 hover:text-ink/80"
         >
           ← Back to store
         </Link>
       </header>
 
-      <div className="w-full max-w-2xl flex-1 p-6">
-        <CheckoutStepper activeStep={step} />
+      <div className="grid w-full max-w-6xl flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div className="min-w-0 rounded-[2rem] border border-ink/10 bg-white/40 p-4 shadow-xl shadow-ink/5 sm:p-6 lg:p-8">
+          <CheckoutStepper activeStep={step} />
 
-        <AnimatePresence mode="wait">
-          {step === 0 && (
-            <motion.div
-              key="cart"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <CartReview onNext={() => next(true)} />
-            </motion.div>
-          )}
+          <AnimatePresence mode="wait">
+            {step === 0 && (
+              <motion.div
+                key="cart"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <CartReview onNext={() => next(true)} />
+              </motion.div>
+            )}
 
-          {step === 1 && (
-            <motion.div
-              key="client"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-            >
-              <ClientDeliveryForm
-                onBack={back}
-                onNext={next}
-                // store the data when the form is valid
-                onValid={(clientInfo, deliveryMethod) => {
-                  setClientInfo(clientInfo);
-                  setDeliveryMethod(deliveryMethod);
-                }}
-              />
-            </motion.div>
-          )}
+            {step === 1 && (
+              <motion.div
+                key="client"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <ClientDeliveryForm
+                  onBack={back}
+                  onNext={next}
+                  // store the data when the form is valid
+                  onValid={(clientInfo, deliveryMethod) => {
+                    setClientInfo(clientInfo);
+                    setDeliveryMethod(deliveryMethod);
+                  }}
+                />
+              </motion.div>
+            )}
 
-          {step === 2 && (
-            <motion.div
-              key="payment"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-            >
-              <PaymentForm onBack={back} onSuccess={handlePaymentSuccess} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {step === 2 && (
+              <motion.div
+                key="payment"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+              >
+                <PaymentForm
+                  formId={PAYMENT_FORM_ID}
+                  isSubmitting={isSubmitting}
+                  totalAmount={total}
+                  onBack={back}
+                  onSuccess={handlePaymentSuccess}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <OrderSummary total={total} />
       </div>
+
+      {step === 2 && cart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-bg/95 p-4 shadow-[0_-12px_30px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-6xl items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink/45">Total à payer</p>
+              <p className="text-xl font-serif text-ink">{formatPrice(total)}</p>
+            </div>
+            <button
+              type="submit"
+              form={PAYMENT_FORM_ID}
+              disabled={isSubmitting}
+              className="rounded-full bg-ink px-6 py-4 text-xs font-bold uppercase tracking-widest text-bg shadow-lg transition-colors hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Validation..." : `Payer ${formatPrice(total)}`}
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

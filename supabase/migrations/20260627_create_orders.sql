@@ -1,5 +1,18 @@
--- Migration: create order status enum, orders and order_items with restrictive RLS
+-- Migration: create order status enum, orders and order_items with restrictive RLS.
 -- Generated on 2026-06-27; hardened after audit.
+--
+-- Non-destructive production strategy:
+-- - never DROP existing transactional tables or columns; preserve orders/order_items history;
+-- - create missing tables only when absent, then add missing columns with IF NOT EXISTS;
+-- - replace unsafe RLS policies explicitly while keeping data intact;
+-- - indexes are additive and idempotent. CONCURRENTLY is intentionally not used here
+--   because Supabase migrations may run inside a transaction; schedule a separate
+--   out-of-band concurrent reindex only for very large production tables.
+--
+-- Logical rollback plan:
+-- 1. restore previous grants/policies from the database migration backup if access must be reverted;
+-- 2. leave added tables/columns in place to avoid deleting historical commerce data;
+-- 3. replace or drop only the RPC/function version if checkout behavior needs rollback.
 
 DO $$
 BEGIN
@@ -35,6 +48,53 @@ CREATE TABLE IF NOT EXISTS public.order_items (
   CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders (id) ON DELETE CASCADE,
   CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products (id) ON DELETE SET NULL
 );
+
+-- CREATE TABLE IF NOT EXISTS is not enough when a table already exists with an
+-- older shape, so each required column is also added idempotently.
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS id uuid NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS user_id uuid NULL;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS total numeric(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS status public.order_status NOT NULL DEFAULT 'pending'::public.order_status;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now());
+
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS id uuid NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS order_id uuid;
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS product_id text NULL;
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS quantity integer;
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS price_at_time numeric(10,2);
+
+-- Backfill safe defaults before tightening constraints that may be missing on
+-- an older table created before this migration became non-destructive.
+UPDATE public.order_items SET quantity = 1 WHERE quantity IS NULL OR quantity <= 0;
+UPDATE public.order_items SET price_at_time = 0 WHERE price_at_time IS NULL OR price_at_time < 0;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.order_items WHERE order_id IS NULL) THEN
+    ALTER TABLE public.order_items ALTER COLUMN order_id SET NOT NULL;
+  ELSE
+    RAISE NOTICE 'order_items.order_id contains NULL values; keeping column nullable until orphan rows are remediated.';
+  END IF;
+
+  ALTER TABLE public.order_items ALTER COLUMN quantity SET NOT NULL;
+  ALTER TABLE public.order_items ALTER COLUMN price_at_time SET NOT NULL;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'order_items_quantity_positive'
+      AND conrelid = 'public.order_items'::regclass
+  ) THEN
+    ALTER TABLE public.order_items
+      ADD CONSTRAINT order_items_quantity_positive CHECK (quantity > 0) NOT VALID;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'order_items_price_at_time_non_negative'
+      AND conrelid = 'public.order_items'::regclass
+  ) THEN
+    ALTER TABLE public.order_items
+      ADD CONSTRAINT order_items_price_at_time_non_negative CHECK (price_at_time >= 0) NOT VALID;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS orders_user_id_created_at_idx ON public.orders (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_status_created_at_idx ON public.orders (status, created_at DESC);

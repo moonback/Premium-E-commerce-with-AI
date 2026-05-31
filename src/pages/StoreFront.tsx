@@ -63,6 +63,12 @@ export default function StoreFront() {
 
   return (
     <div className="bg-bg flex-1">
+      <SEO
+        title="Collection premium e-commerce"
+        description="Explorez la collection Véridian : produits premium, recommandations IA et expérience d'achat élégante."
+        path="/"
+        jsonLd={buildStoreJsonLd()}
+      />
       <div className="relative w-full h-[60vh] md:h-[80vh] bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04')" }}>
         <div className="absolute inset-0 bg-gradient-to-b from-ink/70 to-transparent opacity-70"></div>
         <motion.div

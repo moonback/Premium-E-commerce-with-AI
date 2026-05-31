@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createServer, type IncomingMessage } from "http";
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
 
 const LIVE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const LIVE_MAX_CONNECTIONS_PER_WINDOW = 5;
@@ -139,13 +140,69 @@ function registerLiveConnection(ip: string) {
   };
 }
 
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function sitemapUrl(location: string, lastmod?: string | null) {
+  const escapedLocation = escapeXml(location);
+  const escapedLastmod = lastmod ? `<lastmod>${escapeXml(lastmod.slice(0, 10))}</lastmod>` : "";
+  return `<url><loc>${escapedLocation}</loc>${escapedLastmod}</url>`;
+}
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
   const server = createServer(app);
 
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseAuth = supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    : null;
+
   app.use(express.json());
+
+  app.get("/robots.txt", (req, res) => {
+    const siteUrl = (process.env.SITE_URL || `${req.protocol}://${req.get("host") || "localhost:3000"}`).replace(/\/$/, "");
+    res.type("text/plain").send([
+      "User-agent: *",
+      "Allow: /",
+      `Sitemap: ${siteUrl}/sitemap.xml`,
+    ].join("\n"));
+  });
+
+  app.get("/sitemap.xml", async (req, res) => {
+    const siteUrl = (process.env.SITE_URL || `${req.protocol}://${req.get("host") || DEFAULT_SITE_URL}`).replace(/\/$/, "");
+    const staticUrls = [
+      sitemapUrl(`${siteUrl}/`),
+      sitemapUrl(`${siteUrl}/checkout`),
+    ];
+
+    let productUrls: string[] = [];
+    if (supabaseAuth) {
+      const { data, error } = await supabaseAuth
+        .from("products")
+        .select("id,name,created_at")
+        .limit(500);
+
+      if (error) {
+        console.warn("Unable to build product sitemap entries", error);
+      } else {
+        const products = (data ?? []) as SitemapProductRow[];
+        productUrls = products.map((product) => sitemapUrl(`${siteUrl}${getProductPath(product)}`, product.created_at));
+      }
+    }
+
+    res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...productUrls].join("")}</urlset>`);
+  });
 
   app.get("/api/health", (req, res) => {
     res.json({
@@ -195,14 +252,6 @@ Sitemap: ${origin}/sitemap.xml
 
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-  const supabaseAuth = supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-    : null;
-
   wss.on("connection", async (clientWs: WebSocket, request: IncomingMessage) => {
     const clientIp = getClientIp(request);
     const rateLimit = registerLiveConnection(clientIp);
@@ -215,7 +264,7 @@ Sitemap: ${origin}/sitemap.xml
 
     console.log("Client connected to WebSocket", { clientIp });
 
-    let liveSession: Awaited<ReturnType<GoogleGenAI['live']['connect']>> | null = null;
+    let liveSession: (Awaited<ReturnType<GoogleGenAI['live']['connect']>> & { close?: () => void }) | null = null;
     let sessionTimeout: NodeJS.Timeout | null = null;
 
     const cleanupLiveSession = () => {
@@ -223,7 +272,7 @@ Sitemap: ${origin}/sitemap.xml
         clearTimeout(sessionTimeout);
         sessionTimeout = null;
       }
-      (liveSession as any)?.close?.();
+      liveSession?.close?.();
       liveSession = null;
     };
 
