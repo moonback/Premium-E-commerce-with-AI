@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer, type IncomingMessage } from "http";
+import crypto from "crypto";
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
@@ -19,6 +20,18 @@ type SitemapProductRow = {
   id: string;
   name: string;
   created_at?: string | null;
+};
+
+type StripePaymentIntent = {
+  id: string;
+  client_secret?: string;
+  status: string;
+};
+
+type StripeWebhookEvent = {
+  id: string;
+  type: string;
+  data?: { object?: { id?: string; status?: string } };
 };
 
 type LiveRateRecord = {
@@ -67,6 +80,58 @@ function registerLiveConnection(ip: string) {
   };
 }
 
+
+function getStripeWebhookPayload(rawBody: Buffer, signatureHeader: string, secret: string) {
+  const parts = Object.fromEntries(
+    signatureHeader.split(",").map((part) => {
+      const [key, value] = part.split("=");
+      return [key, value];
+    })
+  );
+  const timestamp = parts.t;
+  const signature = parts.v1;
+
+  if (!timestamp || !signature) {
+    throw new Error("Invalid Stripe signature header");
+  }
+
+  const signedPayload = `${timestamp}.${rawBody.toString("utf8")}`;
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(signedPayload)
+    .digest("hex");
+
+  const provided = Buffer.from(signature, "hex");
+  const expected = Buffer.from(expectedSignature, "hex");
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+    throw new Error("Stripe signature verification failed");
+  }
+
+  const toleranceSeconds = 5 * 60;
+  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > toleranceSeconds) {
+    throw new Error("Stripe signature timestamp is outside tolerance");
+  }
+
+  return JSON.parse(rawBody.toString("utf8")) as StripeWebhookEvent;
+}
+
+function toPaymentStatus(stripeStatus?: string) {
+  switch (stripeStatus) {
+    case "succeeded":
+      return "paid";
+    case "processing":
+      return "processing";
+    case "canceled":
+      return "cancelled";
+    case "requires_payment_method":
+    case "requires_action":
+    case "requires_confirmation":
+      return "requires_payment";
+    default:
+      return "failed";
+  }
+}
+
 function escapeXml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -89,11 +154,54 @@ async function startServer() {
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const supabaseAuth = supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
     : null;
+  const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    : null;
+
+  app.post("/api/payments/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    if (!stripeWebhookSecret) {
+      res.status(503).json({ error: "Stripe webhook secret is not configured" });
+      return;
+    }
+
+    const signature = req.header("stripe-signature");
+    if (!signature || !Buffer.isBuffer(req.body)) {
+      res.status(400).json({ error: "Missing Stripe signature or raw body" });
+      return;
+    }
+
+    try {
+      const event = getStripeWebhookPayload(req.body, signature, stripeWebhookSecret);
+      const paymentIntentId = event.data?.object?.id;
+      if (supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
+        const status = toPaymentStatus(event.data?.object?.status);
+        const { error } = await supabaseAdmin
+          .from("payments")
+          .update({ status, metadata: { stripe_event_id: event.id, stripe_event_type: event.type } })
+          .eq("provider", "stripe")
+          .eq("provider_payment_id", paymentIntentId);
+
+        if (error) {
+          console.warn("Unable to reconcile Stripe payment webhook", error);
+        }
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.warn("Invalid Stripe webhook", error);
+      res.status(400).json({ error: "Invalid webhook" });
+    }
+  });
 
   app.use(express.json());
 
@@ -131,6 +239,71 @@ async function startServer() {
     res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...productUrls].join("")}</urlset>`);
   });
 
+
+  app.post("/api/payments/create-intent", async (req, res) => {
+    if (!stripeSecretKey) {
+      res.status(503).json({ error: "Stripe is not configured on the server" });
+      return;
+    }
+
+    if (supabaseAuth) {
+      const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
+      if (!token) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const { data, error } = await supabaseAuth.auth.getUser(token);
+      if (error || !data.user) {
+        res.status(401).json({ error: "Invalid authentication token" });
+        return;
+      }
+    }
+
+    const amountCents = Number(req.body?.amountCents);
+    const currency = String(req.body?.currency || "eur").toLowerCase();
+    const customer = req.body?.customer as { name?: string; email?: string } | undefined;
+
+    if (!Number.isInteger(amountCents) || amountCents < 50 || amountCents > 9999999) {
+      res.status(400).json({ error: "Invalid payment amount" });
+      return;
+    }
+    if (!/^[a-z]{3}$/.test(currency)) {
+      res.status(400).json({ error: "Invalid currency" });
+      return;
+    }
+
+    const body = new URLSearchParams({
+      amount: String(amountCents),
+      currency,
+      "automatic_payment_methods[enabled]": "true",
+      "metadata[source]": "veridian_checkout",
+    });
+    if (customer?.email) body.set("receipt_email", customer.email);
+    if (customer?.name) body.set("metadata[customer_name]", customer.name);
+
+    try {
+      const stripeResponse = await fetch("https://api.stripe.com/v1/payment_intents", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+      const paymentIntent = await stripeResponse.json() as StripePaymentIntent & { error?: { message?: string } };
+
+      if (!stripeResponse.ok || !paymentIntent.client_secret) {
+        res.status(stripeResponse.status).json({ error: paymentIntent.error?.message || "Stripe payment intent failed" });
+        return;
+      }
+
+      res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
+    } catch (error) {
+      console.error("Unable to create Stripe PaymentIntent", error);
+      res.status(502).json({ error: "Payment provider unavailable" });
+    }
+  });
+
   app.get("/api/health", (req, res) => {
     res.json({
       status: "ok",
@@ -139,6 +312,8 @@ async function startServer() {
       dependencies: {
         geminiLive: Boolean(process.env.GEMINI_API_KEY),
         supabaseAuth: Boolean(supabaseAuth),
+        supabaseAdmin: Boolean(supabaseAdmin),
+        stripePayments: Boolean(stripeSecretKey),
       },
     });
   });

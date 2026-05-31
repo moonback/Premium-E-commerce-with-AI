@@ -114,7 +114,7 @@ export default function Checkout() {
   const back = useCallback(() => setStep((s) => Math.max(s - 1, 0)), []);
 
   // ---- FINAL PAYMENT HANDLER -------------------------------------------
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -126,7 +126,7 @@ export default function Checkout() {
       }));
       const deliveryMethod = checkoutInfo.deliveryMethod;
       const status = 'Nouvelle';
-      const orderId = await checkout(); // creates order in Supabase & clears cart only after success
+      const orderId = await checkout(paymentIntentId); // creates order in Supabase & clears cart only after PSP success
       const orderNumber = useStore.getState().lastOrderNumber;
       resetCheckout();
       toast.success("✅ Order placed! Thank you for your purchase.");
@@ -203,6 +203,8 @@ export default function Checkout() {
                   formId={PAYMENT_FORM_ID}
                   isSubmitting={isSubmitting}
                   totalAmount={total}
+                  customerName={checkoutInfo.clientInfo.name}
+                  customerEmail={checkoutInfo.clientInfo.email}
                   onBack={back}
                   onSuccess={handlePaymentSuccess}
                 />

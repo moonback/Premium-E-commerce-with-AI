@@ -62,7 +62,11 @@ Une tâche est terminée uniquement si :
   - [ ] Tests d’intégration Supabase/staging pour la RPC transactionnelle.
 - [x] Extraire complètement `checkoutService.createOrder(...)` hors du store Zustand.
 - [x] Durcir la migration orders avec stratégie non destructive, rollback logique et validation statique.
-- [ ] Ajouter un paiement réel PSP/webhooks avant production commerciale.
+- [x] Ajouter un paiement réel PSP/webhooks avant production commerciale.
+  - [x] Endpoint serveur de création Stripe PaymentIntent avec authentification Supabase si configurée.
+  - [x] Formulaire checkout connecté à Stripe.js au lieu d’une validation carte locale démo.
+  - [x] Webhook Stripe signé pour réconcilier les statuts dans `payments`.
+  - [x] RPC checkout enrichie pour enregistrer la référence PSP dans la transaction commande.
 - [ ] Ajouter confirmation email transactionnelle.
 - [x] Ajouter un suivi commande côté profil avec numéro de commande et prochaine étape.
 - [ ] Lancer audit manuel RLS complet sur environnement Supabase cible.

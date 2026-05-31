@@ -1,12 +1,71 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { getErrorMessage } from "../lib/errors";
 
-// Props for the payment form – onSuccess is called after a successful (demo) submission.
+type StripeCardElement = {
+  mount: (selector: string | HTMLElement) => void;
+  unmount: () => void;
+  on: (event: "change", handler: (event: { error?: { message?: string }; complete?: boolean }) => void) => void;
+};
+
+type StripeElements = {
+  create: (type: "card", options?: Record<string, unknown>) => StripeCardElement;
+};
+
+type StripeInstance = {
+  elements: (options?: Record<string, unknown>) => StripeElements;
+  confirmCardPayment: (
+    clientSecret: string,
+    data: { payment_method: { card: StripeCardElement; billing_details: { name: string; email: string } } }
+  ) => Promise<{ paymentIntent?: { id: string; status: string }; error?: { message?: string } }>;
+};
+
+declare global {
+  interface Window {
+    Stripe?: (publishableKey: string) => StripeInstance;
+  }
+}
+
 interface PaymentFormProps {
-  onSuccess?: () => void | Promise<void>;
+  onSuccess?: (paymentIntentId: string) => void | Promise<void>;
   onBack?: () => void;
   formId?: string;
   isSubmitting?: boolean;
   totalAmount?: number;
+  customerName?: string;
+  customerEmail?: string;
+}
+
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+let stripeScriptPromise: Promise<void> | null = null;
+
+function loadStripeScript() {
+  if (window.Stripe) return Promise.resolve();
+  if (stripeScriptPromise) return stripeScriptPromise;
+
+  stripeScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://js.stripe.com/v3/"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Stripe.js n’a pas pu être chargé.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://js.stripe.com/v3/";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Stripe.js n’a pas pu être chargé."));
+    document.head.appendChild(script);
+  });
+
+  return stripeScriptPromise;
+}
+
+async function getAccessToken() {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -15,46 +74,142 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   formId = "checkout-payment-form",
   isSubmitting = false,
   totalAmount = 0,
+  customerName = "",
+  customerEmail = "",
 }) => {
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [name, setName] = useState("");
+  const cardElementRef = useRef<StripeCardElement | null>(null);
+  const stripeRef = useRef<StripeInstance | null>(null);
+  const [name, setName] = useState(customerName);
+  const [email, setEmail] = useState(customerEmail);
+  const [isStripeReady, setIsStripeReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const validate = () => {
-    if (!cardNumber.match(/^\d{13,19}$/)) {
-      return "Card number must be 13‑19 digits.";
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initializeStripe() {
+      if (!stripePublishableKey) return;
+      try {
+        await loadStripeScript();
+        if (cancelled || !window.Stripe) return;
+
+        const stripe = window.Stripe(stripePublishableKey);
+        const elements = stripe.elements({ locale: "fr" });
+        const card = elements.create("card", {
+          hidePostalCode: true,
+          style: {
+            base: {
+              color: "#1f1a17",
+              fontFamily: "Inter, system-ui, sans-serif",
+              fontSize: "16px",
+              "::placeholder": { color: "rgba(31, 26, 23, 0.35)" },
+            },
+            invalid: { color: "#dc2626" },
+          },
+        });
+
+        card.on("change", (event) => {
+          setCardComplete(Boolean(event.complete));
+          setError(event.error?.message || null);
+        });
+        card.mount("#stripe-card-element");
+        cardElementRef.current = card;
+        stripeRef.current = stripe;
+        setIsStripeReady(true);
+      } catch (err: unknown) {
+        setError(getErrorMessage(err));
+      }
     }
-    if (!expiry.match(/^(0[1-9]|1[0-2])\/\d{2}$/)) {
-      return "Expiry must be in MM/YY format.";
-    }
-    if (!cvc.match(/^\d{3,4}$/)) {
-      return "CVC must be 3 or 4 digits.";
-    }
-    if (name.trim() === "") {
-      return "Name on card is required.";
-    }
-    return null;
-  };
+
+    initializeStripe();
+
+    return () => {
+      cancelled = true;
+      cardElementRef.current?.unmount();
+      cardElementRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => setName(customerName), [customerName]);
+  useEffect(() => setEmail(customerEmail), [customerEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      document.getElementById("payment-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    if (!stripePublishableKey) {
+      setError("Paiement Stripe non configuré : ajoutez VITE_STRIPE_PUBLISHABLE_KEY et STRIPE_SECRET_KEY.");
       return;
     }
+    if (!stripeRef.current || !cardElementRef.current || !isStripeReady) {
+      setError("Le module de paiement est encore en chargement.");
+      return;
+    }
+    if (!name.trim() || !email.trim()) {
+      setError("Le nom et l’email de facturation sont requis.");
+      return;
+    }
+    if (!cardComplete) {
+      setError("Veuillez compléter vos informations de carte bancaire.");
+      return;
+    }
+
+    setIsProcessing(true);
     setError(null);
-    await onSuccess?.();
+
+    try {
+      const token = await getAccessToken();
+      const response = await fetch("/api/payments/create-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          amountCents: Math.round(totalAmount * 100),
+          currency: "eur",
+          customer: { name, email },
+        }),
+      });
+
+      const payload = await response.json() as { clientSecret?: string; paymentIntentId?: string; error?: string };
+      if (!response.ok || !payload.clientSecret) {
+        throw new Error(payload.error || "Impossible d’initialiser le paiement.");
+      }
+
+      const confirmation = await stripeRef.current.confirmCardPayment(payload.clientSecret, {
+        payment_method: {
+          card: cardElementRef.current,
+          billing_details: { name, email },
+        },
+      });
+
+      if (confirmation.error) {
+        throw new Error(confirmation.error.message || "Le paiement a été refusé.");
+      }
+
+      const paymentIntent = confirmation.paymentIntent;
+      if (!paymentIntent || paymentIntent.status !== "succeeded") {
+        throw new Error("Le paiement n’est pas confirmé par le PSP.");
+      }
+
+      await onSuccess?.(paymentIntent.id || payload.paymentIntentId || "");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+      document.getElementById("payment-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  const isDisabled = isSubmitting || isProcessing;
 
   return (
     <form id={formId} onSubmit={handleSubmit} className="w-full max-w-md mx-auto bg-bg border border-ink/10 shadow-2xl p-8 space-y-6">
-      <h2 className="text-3xl font-serif text-ink tracking-tight text-center">Payment Details</h2>
+      <h2 className="text-3xl font-serif text-ink tracking-tight text-center">Paiement sécurisé</h2>
       <p className="text-ink/60 text-xs uppercase tracking-widest font-bold text-center -mt-4">
-        Espace de paiement sécurisé
+        PSP Stripe avec confirmation 3D Secure si nécessaire
       </p>
 
       {error && (
@@ -63,78 +218,53 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         </p>
       )}
 
+      {!stripePublishableKey && (
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+          Paiement réel désactivé en local : configurez <code>VITE_STRIPE_PUBLISHABLE_KEY</code> côté client et <code>STRIPE_SECRET_KEY</code> côté serveur.
+        </p>
+      )}
+
       <div className="space-y-6">
         <div>
-          <label htmlFor="cardNumber" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
-            Card Number
+          <label htmlFor="billingName" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
+            Nom de facturation
           </label>
           <input
-            id="cardNumber"
-            name="cardNumber"
-            type="text"
-            inputMode="numeric"
-            autoComplete="cc-number"
-            placeholder="1234 5678 9012 3456"
-            value={cardNumber}
-            onChange={(e) => setCardNumber(e.target.value.replace(/\s+/g, ""))}
-            required
-            className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="expiry" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
-              Expiry (MM/YY)
-            </label>
-            <input
-              id="expiry"
-              name="expiry"
-              type="text"
-              inputMode="numeric"
-              autoComplete="cc-exp"
-              placeholder="04/26"
-              value={expiry}
-              onChange={(e) => setExpiry(e.target.value)}
-              required
-              className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="cvc" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
-              CVC
-            </label>
-            <input
-              id="cvc"
-              name="cvc"
-              type="text"
-              inputMode="numeric"
-              autoComplete="cc-csc"
-              placeholder="123"
-              value={cvc}
-              onChange={(e) => setCvc(e.target.value)}
-              required
-              className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="name" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
-            Name on Card
-          </label>
-          <input
-            id="name"
-            name="ccname"
+            id="billingName"
+            name="billingName"
             type="text"
             autoComplete="cc-name"
-            placeholder="John Doe"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
           />
+        </div>
+
+        <div>
+          <label htmlFor="billingEmail" className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-1">
+            Email de reçu
+          </label>
+          <input
+            id="billingEmail"
+            name="billingEmail"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full bg-transparent border-b border-ink/20 px-0 py-2 text-sm focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30 italic"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] uppercase tracking-widest font-bold text-ink/50 mb-3">
+            Carte bancaire
+          </label>
+          <div id="stripe-card-element" className="rounded-2xl border border-ink/15 bg-white px-4 py-4 min-h-14" />
+          <p className="mt-2 text-[11px] text-ink/45">
+            Les données carte sont saisies dans Stripe.js et ne transitent pas par Véridian.
+          </p>
         </div>
       </div>
 
@@ -143,25 +273,25 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           <span>Total sécurisé</span>
           <span>{totalAmount.toFixed(2)}€</span>
         </div>
-        <p className="mt-1 text-xs">Vos informations sont vérifiées localement pour cette démo avant création transactionnelle de la commande.</p>
+        <p className="mt-1 text-xs">La commande est créée uniquement après confirmation réussie du PSP.</p>
       </div>
 
       <div className="pt-4 space-y-3">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isDisabled}
           className="w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors cursor-pointer flex justify-center items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? "Validation..." : `Pay ${totalAmount.toFixed(2)}€`}
+          {isDisabled ? "Validation..." : `Payer ${totalAmount.toFixed(2)}€`}
         </button>
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            disabled={isSubmitting}
-            className="w-full py-4 border border-ink text-ink bg-transparent font-bold text-xs uppercase tracking-widest hover:bg-ink/5 transition-colors cursor-pointer flex justify-center items-center disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isDisabled}
+            className="w-full py-3 text-xs font-bold uppercase tracking-widest text-ink/55 transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
           >
-            ← Retour
+            Retour
           </button>
         )}
       </div>

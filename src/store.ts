@@ -100,7 +100,7 @@ export interface AppState {
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
-  checkout: () => Promise<string | null>;
+  checkout: (paymentIntentId?: string | null) => Promise<string | null>;
   updateOrderStatus: (orderId: string, status: string) => Promise<void>;
   initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
@@ -129,7 +129,8 @@ export const useStore = create<AppState>()(
       checkoutInfo: {
         clientInfo: { name: '', email: '', phone: '', address: '', addressLine1: '', addressLine2: '', city: '', postalCode: '', country: '' },
         deliveryMethod: 'courier',
-        paymentStatus: 'idle'
+        paymentStatus: 'idle',
+        paymentIntentId: null
       },
       user: null,
       isSessionLoading: Boolean(supabase),
@@ -158,7 +159,8 @@ export const useStore = create<AppState>()(
             country: ''
           },
           deliveryMethod: 'courier',
-          paymentStatus: 'idle'
+          paymentStatus: 'idle',
+          paymentIntentId: null
         },
       })),
       setCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
@@ -278,7 +280,7 @@ export const useStore = create<AppState>()(
         }
       },
 
-      checkout: async () => {
+      checkout: async (paymentIntentId?: string | null) => {
         const state = get();
         if (state.cart.length === 0) return null;
         const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
@@ -290,7 +292,11 @@ export const useStore = create<AppState>()(
           try {
             const result = await createCheckoutOrder({
               cart: state.cart,
-              checkoutInfo: state.checkoutInfo,
+              checkoutInfo: {
+                ...state.checkoutInfo,
+                paymentStatus: paymentIntentId ? 'succeeded' : state.checkoutInfo.paymentStatus,
+                paymentIntentId: paymentIntentId || state.checkoutInfo.paymentIntentId || null,
+              },
               user: state.user,
             });
             completedOrderId = result.orderId;
