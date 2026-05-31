@@ -1,17 +1,33 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store';
+import { UserRole } from '../types';
 
-export default function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 'admin' | 'customer' }) {
-  const { user } = useStore();
+type ProtectedRouteProps = {
+  children: React.ReactNode;
+  role?: UserRole | UserRole[];
+};
 
-  if (!user) {
-    return <Navigate to="/" replace />;
+export default function ProtectedRoute({ children, role }: ProtectedRouteProps) {
+  const { user, isSessionLoading } = useStore();
+  const location = useLocation();
+
+  if (isSessionLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center bg-bg text-sm font-bold uppercase tracking-widest text-ink/50">
+        Vérification de l'accès…
+      </div>
+    );
   }
 
-  if (role && user.role !== role) {
-    // Dans le monde réel, renvoyer peut-être vers une page 403 "Accès Refusé"
-    return <Navigate to="/" replace />;
+  if (!user) {
+    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+  }
+
+  const allowedRoles = role ? (Array.isArray(role) ? role : [role]) : null;
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace state={{ from: location.pathname, denied: true }} />;
   }
 
   return <>{children}</>;

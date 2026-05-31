@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import StoreLayout from './components/StoreLayout';
 import { AnimatePresence } from 'motion/react';
 import PageTransition from './components/PageTransition';
@@ -14,6 +14,7 @@ import VoiceAssistant from './components/VoiceAssistant';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
+import NotFound from './pages/NotFound';
 import { useStore } from './store';
 
 function EnvironmentSwitcher() {
@@ -78,9 +79,10 @@ function AppContent() {
             <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
             <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />
           </Route>
-          <Route path="/pos" element={<PageTransition><ProtectedRoute role="admin"><POS /></ProtectedRoute></PageTransition>} />
+          <Route path="/pos" element={<PageTransition><ProtectedRoute role={["staff", "admin"]}><POS /></ProtectedRoute></PageTransition>} />
           <Route path="/admin" element={<PageTransition><ProtectedRoute role="admin"><Admin /></ProtectedRoute></PageTransition>} />
-          <Route path="/screen" element={<PageTransition><StoreScreen /></PageTransition>} />
+          <Route path="/screen" element={<PageTransition><ProtectedRoute role={["kiosk", "admin"]}><StoreScreen /></ProtectedRoute></PageTransition>} />
+          <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
       <EnvironmentSwitcher />

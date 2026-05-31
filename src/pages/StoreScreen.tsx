@@ -7,13 +7,35 @@ export default function StoreScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    if (products.length === 0) return;
+
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % products.length);
     }, 8000); // Rotate every 8 seconds
     return () => clearInterval(timer);
-  }, [products]);
+  }, [products.length]);
+
+  useEffect(() => {
+    if (currentIndex >= products.length) {
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, products.length]);
 
   const currentProduct = products[currentIndex];
+
+  if (!currentProduct) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ink px-8 text-center font-sans text-bg">
+        <div>
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.3em] text-white/40">Écran boutique</p>
+          <h1 className="font-serif text-5xl">Catalogue indisponible</h1>
+          <p className="mt-4 max-w-md text-sm leading-6 text-white/60">
+            Aucun produit actif n'est disponible pour l'affichage en magasin. Synchronisez le catalogue depuis l'admin.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ink text-bg overflow-hidden flex flex-col font-sans relative">

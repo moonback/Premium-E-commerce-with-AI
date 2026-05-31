@@ -1,8 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product, CartItem, User, Category, Address } from './types';
+import { Product, CartItem, User, Category, Address, UserRole } from './types';
 import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
+
+const USER_ROLES: UserRole[] = ['admin', 'staff', 'kiosk', 'customer'];
+
+function normalizeUserRole(role: unknown): UserRole {
+  return typeof role === 'string' && USER_ROLES.includes(role as UserRole) ? (role as UserRole) : 'customer';
+}
 
 // Initial Seed DB for testing/syncing
 export const SEED_PRODUCTS: Product[] = [
@@ -104,6 +110,7 @@ export interface AppState {
   searchQuery: string;
   isLoadingProducts: boolean;
   user: User | null;
+  isSessionLoading: boolean;
   isAuthModalOpen: boolean;
   isCartOpen: boolean;
   setAuthModalOpen: (isOpen: boolean) => void;
@@ -145,6 +152,7 @@ export const useStore = create<AppState>()(
         paymentStatus: 'idle'
       },
       user: null,
+      isSessionLoading: Boolean(supabase),
       isAuthModalOpen: false,
       isCartOpen: false,
 
@@ -301,11 +309,12 @@ export const useStore = create<AppState>()(
               quantity: item.quantity,
             }));
 
-            const { error } = await supabase.rpc('create_order_with_items', {
+            const { data: orderId, error } = await supabase.rpc('create_order_with_items', {
               p_items: orderItems,
               p_status: 'Nouvelle',
             });
             if (error) throw error;
+            if (!orderId) throw new Error('La commande n’a pas pu être créée.');
 
             const { clientInfo } = state.checkoutInfo;
             // Persist client address and phone into user profile if available
@@ -329,7 +338,9 @@ export const useStore = create<AppState>()(
             }
             toast.success(`Commande validée ! +${pointsEarned} points`);
           } catch (e: any) {
-            toast.error('Erreur, commande hors-ligne simulée : ' + e.message);
+            const message = e instanceof Error ? e.message : 'Erreur inconnue';
+            toast.error('Impossible de valider la commande : ' + message);
+            throw e;
           }
         } else {
           toast.success('Commande locale validée !');
@@ -341,17 +352,32 @@ export const useStore = create<AppState>()(
       },
 
       initSession: async () => {
-        if (!supabase) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          get().fetchUserProfile(session.user.id, session.user.email!);
+        if (!supabase) {
+          set({ isSessionLoading: false });
+          return;
+        }
+
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            await get().fetchUserProfile(session.user.id, session.user.email!);
+          } else {
+            set({ user: null });
+          }
+        } finally {
+          set({ isSessionLoading: false });
         }
 
         supabase.auth.onAuthStateChange(async (event, session) => {
-          if (session?.user) {
-            get().fetchUserProfile(session.user.id, session.user.email!);
-          } else {
-            set({ user: null });
+          set({ isSessionLoading: true });
+          try {
+            if (session?.user) {
+              await get().fetchUserProfile(session.user.id, session.user.email!);
+            } else {
+              set({ user: null });
+            }
+          } finally {
+            set({ isSessionLoading: false });
           }
         });
       },
@@ -362,31 +388,31 @@ export const useStore = create<AppState>()(
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
       if (error && error.code === 'PGRST116') {
-        // Profile not found, create fallback
-        const role = email.includes('admin') ? 'admin' : 'customer';
+        // Profile not found: create a safe customer profile. Elevated roles must be assigned server-side.
+        const role: UserRole = 'customer';
         const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([{ id: userId, email, role, address: '', phone: '' }]).select().single();
         if (!insertError && newProfile) {
-          set({ user: { id: userId, email, role: newProfile.role } });
+          set({ user: { id: userId, email, role: normalizeUserRole(newProfile.role) } });
           set({ loyaltyPoints: 0 });
           return;
         }
       }
       if (data) {
         set({
-          user: { id: userId, email, role: data.role, address: data.address ?? '', phone: data.phone ?? '' },
+          user: { id: userId, email, role: normalizeUserRole(data.role), address: data.address ?? '', phone: data.phone ?? '' },
           loyaltyPoints: data.loyalty_points ?? 0,
         });
       } else {
         // Ultimate fallback
         set({
-          user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer', address: '', phone: '' },
+          user: { id: userId, email, role: 'customer', address: '', phone: '' },
           loyaltyPoints: 0,
         });
       }
     } catch (e) {
       console.error("Error fetching/creating profile:", e);
       set({
-        user: { id: userId, email, role: email.includes('admin') ? 'admin' : 'customer' },
+        user: { id: userId, email, role: 'customer' },
         loyaltyPoints: 0,
       });
     }

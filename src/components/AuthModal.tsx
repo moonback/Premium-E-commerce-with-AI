@@ -18,12 +18,8 @@ export default function AuthModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) {
-      // Mock logic if no supabase env defined
-      if (email.includes('admin')) {
-        useStore.getState().setUser({ id: '1', email, role: 'admin' });
-      } else {
-        useStore.getState().setUser({ id: '2', email, role: 'customer' });
-      }
+      // Local fallback is intentionally customer-only. Elevated roles must come from Supabase profiles.
+      useStore.getState().setUser({ id: 'local-customer', email, role: 'customer' });
       toast.success("Connexion locale simulée");
       setAuthModalOpen(false);
       return;

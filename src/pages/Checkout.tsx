@@ -37,10 +37,14 @@ export default function Checkout() {
 
   // ---- FINAL PAYMENT HANDLER -------------------------------------------
   const handlePaymentSuccess = async () => {
-    await checkout(); // creates order in Supabase & clears cart
-    resetCheckout();
-    toast.success("✅ Order placed! Thank you for your purchase.");
-    navigate("/"); // back to home after order
+    try {
+      await checkout(); // creates order in Supabase & clears cart only after success
+      resetCheckout();
+      toast.success("✅ Order placed! Thank you for your purchase.");
+      navigate("/"); // back to home after order
+    } catch {
+      // checkout() already shows the actionable error and keeps the cart intact
+    }
   };
 
   // ---- RENDER -----------------------------------------------------------
