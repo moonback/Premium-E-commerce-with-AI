@@ -12,6 +12,7 @@ type ConfirmationItem = {
 
 type ConfirmationState = {
   orderId?: string | null;
+  orderNumber?: string | null;
   total?: number;
   deliveryMethod?: 'clickCollect' | 'courier';
   items?: ConfirmationItem[];
@@ -21,8 +22,10 @@ type ConfirmationState = {
 export default function OrderConfirmation() {
   const location = useLocation();
   const lastOrderId = useStore(state => state.lastOrderId);
+  const lastOrderNumber = useStore(state => state.lastOrderNumber);
   const state = (location.state || {}) as ConfirmationState;
   const orderId = state.orderId || lastOrderId;
+  const orderNumber = state.orderNumber || lastOrderNumber || orderId;
   const items = state.items || [];
   const total = state.total ?? items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const deliveryLabel = state.deliveryMethod === 'clickCollect' ? 'Click & collect' : 'Livraison à domicile';
@@ -44,7 +47,7 @@ export default function OrderConfirmation() {
           <div className="border border-ink/10 bg-bg/70 p-4">
             <ReceiptText className="mb-3 h-5 w-5 text-accent" />
             <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Numéro</p>
-            <p className="mt-1 break-all font-medium">{orderId || 'Commande locale'}</p>
+            <p className="mt-1 break-all font-medium">{orderNumber || 'Commande locale'}</p>
           </div>
           <div className="border border-ink/10 bg-bg/70 p-4">
             <Package className="mb-3 h-5 w-5 text-accent" />

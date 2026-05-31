@@ -190,16 +190,19 @@ ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS subtotal numeric(10,2) NOT NU
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS discount_total numeric(10,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS shipping_total numeric(10,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS tax_total numeric(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS order_number text;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_order_number_idx ON public.orders(order_number) WHERE order_number IS NOT NULL;
 
 -- Replace the checkout RPC with server-side product validation, stock reservation and totals.
 DROP FUNCTION IF EXISTS public.create_order_with_items(jsonb, public.order_status);
+DROP FUNCTION IF EXISTS public.create_order_with_items(jsonb, public.order_status, jsonb);
 
 CREATE OR REPLACE FUNCTION public.create_order_with_items(
   p_items jsonb,
   p_status public.order_status DEFAULT 'Nouvelle'::public.order_status,
   p_checkout jsonb DEFAULT '{}'::jsonb
 )
-RETURNS uuid
+RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -217,6 +220,7 @@ DECLARE
   v_shipping_total numeric(10,2) := 0;
   v_tax_total numeric(10,2) := 0;
   v_total numeric(10,2) := 0;
+  v_order_number text;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -230,7 +234,10 @@ BEGIN
   v_shipping_total := GREATEST(COALESCE((p_checkout->>'shipping_total')::numeric, 0), 0);
   v_tax_total := GREATEST(COALESCE((p_checkout->>'tax_total')::numeric, 0), 0);
 
+  v_order_number := 'VER-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+
   INSERT INTO public.orders (
+    order_number,
     user_id,
     total,
     status,
@@ -240,6 +247,7 @@ BEGIN
     tax_total
   )
   VALUES (
+    v_order_number,
     auth.uid(),
     0,
     p_status,
@@ -300,7 +308,10 @@ BEGIN
     total = v_total
   WHERE id = v_order_id;
 
-  RETURN v_order_id;
+  RETURN jsonb_build_object(
+    'order_id', v_order_id,
+    'order_number', v_order_number
+  );
 EXCEPTION
   WHEN others THEN
     RAISE;

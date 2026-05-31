@@ -43,7 +43,7 @@ const user: User = {
   role: 'customer',
 };
 
-function createMockClient(options: { orderId?: string | null; rpcError?: Error | null; profileError?: Error | null } = {}) {
+function createMockClient(options: { orderId?: string | null; orderNumber?: string | null; rpcError?: Error | null; profileError?: Error | null } = {}) {
   const calls = {
     rpcArgs: null as unknown,
     profileUpdate: null as unknown,
@@ -53,7 +53,13 @@ function createMockClient(options: { orderId?: string | null; rpcError?: Error |
   const client: CheckoutSupabaseClient = {
     rpc: async (_functionName, args) => {
       calls.rpcArgs = args;
-      return { data: options.orderId ?? 'order_123', error: options.rpcError ?? null };
+      return {
+        data: {
+          order_id: options.orderId ?? 'order_123',
+          order_number: options.orderNumber ?? 'VER-20260531-ABC12345',
+        },
+        error: options.rpcError ?? null,
+      };
     },
     from: () => ({
       update: (payload) => {
@@ -92,7 +98,7 @@ test('createCheckoutOrderWithClient creates an order and syncs the profile', asy
 
   const result = await createCheckoutOrderWithClient(client, { cart, checkoutInfo, user });
 
-  assert.deepEqual(result, { orderId: 'order_123', profileSynced: true });
+  assert.deepEqual(result, { orderId: 'order_123', orderNumber: 'VER-20260531-ABC12345', profileSynced: true });
   assert.deepEqual(calls.rpcArgs, {
     p_items: [{ product_id: 'prod_test', quantity: 2 }],
     p_status: 'Nouvelle',
@@ -112,7 +118,7 @@ test('createCheckoutOrderWithClient keeps a completed order when profile sync fa
   try {
     const result = await createCheckoutOrderWithClient(client, { cart, checkoutInfo, user });
 
-    assert.deepEqual(result, { orderId: 'order_123', profileSynced: false });
+    assert.deepEqual(result, { orderId: 'order_123', orderNumber: 'VER-20260531-ABC12345', profileSynced: false });
   } finally {
     console.warn = originalWarn;
   }

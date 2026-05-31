@@ -165,7 +165,7 @@ Une tâche est terminée uniquement si :
   - [x] Insérer toutes les lignes `order_items`.
   - [x] Calculer subtotal, discount, shipping, taxes, total côté serveur.
   - [x] Vérifier stock/prix produit côté serveur.
-  - [ ] Retourner `order_id` et `order_number`.
+  - [x] Retourner `order_id` et `order_number`.
 - [x] Mettre à jour le checkout client pour appeler la RPC.
 - [x] Afficher une confirmation de commande avec :
   - [x] numéro de commande ;

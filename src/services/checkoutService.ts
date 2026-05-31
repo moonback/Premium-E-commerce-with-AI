@@ -3,6 +3,7 @@ import { CartItem, CheckoutInfo, User } from '../types';
 
 export type CheckoutOrderResult = {
   orderId: string | null;
+  orderNumber: string | null;
   profileSynced: boolean;
 };
 
@@ -29,6 +30,11 @@ type ProfileUpdate = {
 
 type QueryResult<T> = Promise<{ data: T | null; error: Error | null }>;
 
+type CreateOrderRpcResult = {
+  order_id?: string | null;
+  order_number?: string | null;
+};
+
 type ProfileUpdateQuery = {
   eq: (column: 'id', value: string) => Promise<{ error: Error | null }>;
 };
@@ -48,7 +54,7 @@ export type CheckoutSupabaseClient = {
         deliveryMethod: CheckoutInfo['deliveryMethod'];
       };
     }
-  ) => QueryResult<string>;
+  ) => QueryResult<CreateOrderRpcResult>;
   from: (table: 'profiles') => ProfileTableQuery;
 };
 
@@ -76,14 +82,14 @@ export async function createCheckoutOrderWithClient(
   { cart, checkoutInfo, user }: CreateCheckoutOrderInput
 ): Promise<CheckoutOrderResult> {
   if (!client || !user) {
-    return { orderId: null, profileSynced: false };
+    return { orderId: null, orderNumber: null, profileSynced: false };
   }
 
   if (cart.length === 0) {
     throw new Error('Le panier est vide.');
   }
 
-  const { data: orderId, error } = await client.rpc('create_order_with_items', {
+  const { data: orderResult, error } = await client.rpc('create_order_with_items', {
     p_items: toRpcOrderItems(cart),
     p_status: 'Nouvelle',
     p_checkout: {
@@ -93,6 +99,10 @@ export async function createCheckoutOrderWithClient(
   });
 
   if (error) throw error;
+
+  const orderId = orderResult?.order_id || null;
+  const orderNumber = orderResult?.order_number || null;
+
   if (!orderId) throw new Error('La commande n’a pas pu être créée.');
 
   const { error: profileError } = await client
@@ -104,7 +114,7 @@ export async function createCheckoutOrderWithClient(
     console.warn('Order completed, but profile sync failed', profileError);
   }
 
-  return { orderId, profileSynced: !profileError };
+  return { orderId, orderNumber, profileSynced: !profileError };
 }
 
 export async function createCheckoutOrder(input: CreateCheckoutOrderInput): Promise<CheckoutOrderResult> {

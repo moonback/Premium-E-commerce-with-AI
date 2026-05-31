@@ -91,6 +91,7 @@ export interface AppState {
   isAuthModalOpen: boolean;
   isCartOpen: boolean;
   lastOrderId: string | null;
+  lastOrderNumber: string | null;
   setAuthModalOpen: (isOpen: boolean) => void;
   setCartOpen: (isOpen: boolean) => void;
   setUser: (user: User | null) => void;
@@ -134,6 +135,7 @@ export const useStore = create<AppState>()(
       isAuthModalOpen: false,
       isCartOpen: false,
       lastOrderId: null,
+      lastOrderNumber: null,
 
 
 
@@ -281,6 +283,7 @@ export const useStore = create<AppState>()(
         const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
         const pointsEarned = Math.floor(total / 10);
         let completedOrderId: string | null = null;
+        let completedOrderNumber: string | null = null;
 
         if (supabase && state.user) {
           try {
@@ -290,6 +293,7 @@ export const useStore = create<AppState>()(
               user: state.user,
             });
             completedOrderId = result.orderId;
+            completedOrderNumber = result.orderNumber;
 
             if (!result.profileSynced) {
               toast.error('Commande validée, mais le profil n’a pas pu être mis à jour.');
@@ -315,6 +319,7 @@ export const useStore = create<AppState>()(
           cart: [],
           loyaltyPoints: state.loyaltyPoints + pointsEarned,
           lastOrderId: completedOrderId,
+          lastOrderNumber: completedOrderNumber,
         }));
 
         return completedOrderId;
