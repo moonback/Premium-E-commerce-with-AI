@@ -37,6 +37,7 @@ Une tâche est terminée uniquement si :
 - [x] Suppression de l’élévation admin basée sur `email.includes('admin')` côté client et trigger Supabase durci.
 - [x] Routes sensibles protégées : `/admin`, `/pos`, `/screen` et profil ; confirmation commande sans lecture serveur directe.
 - [x] Migration Supabase non destructive `20260628_harden_profiles_roles.sql` pour RLS profils/commandes/lignes commande.
+- [x] Migration Supabase `20260629_secure_sensitive_tables.sql` pour verrouiller `payments`, `shipments`, `events`, `ai_conversations` et `audit_events`.
 - [x] RPC `create_order_with_items` transactionnelle : création commande, insertion `order_items`, validation prix/stock et décrément stock.
 - [x] Checkout client connecté à la RPC, panier vidé uniquement après succès, erreurs conservant le panier.
 - [x] Page de confirmation commande ajoutée avec numéro, articles, total et prochaine étape.
@@ -63,6 +64,7 @@ Une tâche est terminée uniquement si :
 - [ ] Ajouter confirmation email transactionnelle.
 - [x] Ajouter un suivi commande côté profil avec numéro de commande et prochaine étape.
 - [ ] Lancer audit manuel RLS complet sur environnement Supabase cible.
+  - [x] Checklist d'audit RLS préparée dans `docs/RLS_AUDIT_2026-05-31.md`.
 
 ---
 
@@ -127,21 +129,21 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Auditer toutes les migrations Supabase et `supabase/backup.sql`.
-- [ ] Identifier les policies dangereuses.
-  - [ ] Commandes lisibles/insérables/modifiables par tous.
-  - [ ] Profils lisibles publiquement.
-  - [ ] Accès non restreint aux données checkout.
+- [x] Auditer toutes les migrations Supabase et `supabase/backup.sql`.
+- [x] Identifier les policies dangereuses.
+  - [x] Commandes lisibles/insérables/modifiables par tous.
+  - [x] Profils lisibles publiquement.
+  - [x] Accès non restreint aux données checkout.
 - [x] Créer une migration corrective non destructive.
   - [x] Activer RLS sur toutes les tables sensibles.
   - [x] Ajouter `profiles_self_select` : utilisateur lui-même ou admin.
   - [x] Ajouter `profiles_self_update` : utilisateur lui-même uniquement, avec restrictions.
   - [x] Ajouter `orders_self_or_admin_read`.
   - [x] Ajouter policies `order_items` basées sur la commande parente.
-  - [ ] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
+  - [x] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
 - [x] Créer ou durcir une fonction `is_admin()` fiable.
   - [x] Ne pas dériver le rôle admin depuis l'email côté client.
-  - [ ] Prévoir rôle via claim, table profil ou service role contrôlé.
+  - [x] Prévoir rôle via table `profiles` et mutations sensibles réservées au `service_role`/admin RLS.
 - [x] Documenter les rôles : `customer`, `staff`, `admin`, `kiosk`.
 - [ ] Tester manuellement les scénarios RLS.
   - [ ] Client A ne lit pas les commandes du client B.
