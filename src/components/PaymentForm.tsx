@@ -29,6 +29,11 @@ declare global {
   }
 }
 
+type PaymentFormItem = {
+  productId: string;
+  quantity: number;
+};
+
 interface PaymentFormProps {
   onSuccess?: (paymentIntentId: string, providerStatus: string) => void | Promise<void>;
   onBack?: () => void;
@@ -37,6 +42,7 @@ interface PaymentFormProps {
   totalAmount?: number;
   customerName?: string;
   customerEmail?: string;
+  items?: PaymentFormItem[];
 }
 
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
@@ -79,6 +85,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   totalAmount = 0,
   customerName = "",
   customerEmail = "",
+  items = [],
 }) => {
   const paymentElementRef = useRef<StripePaymentElement | null>(null);
   const elementsRef = useRef<StripeElements | null>(null);
@@ -88,6 +95,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [isStripeReady, setIsStripeReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
+  const [verifiedAmountCents, setVerifiedAmountCents] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -102,27 +110,28 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          amountCents: Math.round(totalAmount * 100),
+          items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
           currency: "eur",
           customer: { name: customerName, email: customerEmail },
         }),
       });
 
-      const payload = await response.json() as { clientSecret?: string; error?: string };
+      const payload = await response.json() as { clientSecret?: string; amountCents?: number; error?: string };
       if (!response.ok || !payload.clientSecret) {
         throw new Error(payload.error || "Impossible d’initialiser le paiement.");
       }
-      return payload.clientSecret;
+      return { clientSecret: payload.clientSecret, amountCents: payload.amountCents ?? null };
     }
 
     async function initializeStripePaymentElement() {
-      if (!stripePublishableKey || totalAmount <= 0) return;
+      if (!stripePublishableKey || totalAmount <= 0 || items.length === 0) return;
       try {
-        const [clientSecret] = await Promise.all([createPaymentIntent(), loadStripeScript()]);
+        const [paymentIntentSetup] = await Promise.all([createPaymentIntent(), loadStripeScript()]);
         if (cancelled || !window.Stripe) return;
 
         const stripe = window.Stripe(stripePublishableKey);
-        const elements = stripe.elements({ clientSecret, locale: "fr" });
+        setVerifiedAmountCents(paymentIntentSetup.amountCents);
+        const elements = stripe.elements({ clientSecret: paymentIntentSetup.clientSecret, locale: "fr" });
         const paymentElement = elements.create("payment", {
           layout: "tabs",
           defaultValues: {
@@ -157,7 +166,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       stripeRef.current = null;
       setIsStripeReady(false);
     };
-  }, [customerEmail, customerName, totalAmount]);
+  }, [customerEmail, customerName, items, totalAmount]);
 
   useEffect(() => setName(customerName), [customerName]);
   useEffect(() => setEmail(customerEmail), [customerEmail]);
@@ -215,6 +224,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   };
 
   const isDisabled = isSubmitting || isProcessing;
+  const displayedTotal = ((verifiedAmountCents ?? Math.round(totalAmount * 100)) / 100).toFixed(2);
 
   return (
     <form id={formId} onSubmit={handleSubmit} className="w-full max-w-md mx-auto bg-bg border border-ink/10 shadow-2xl p-8 space-y-6">
@@ -282,7 +292,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       <div className="rounded-2xl bg-ink/5 px-4 py-3 text-sm text-ink/70">
         <div className="flex justify-between font-bold text-ink">
           <span>Total sécurisé</span>
-          <span>{totalAmount.toFixed(2)}€</span>
+          <span>{displayedTotal}€</span>
         </div>
         <p className="mt-1 text-xs">La commande est créée après acceptation PSP, puis marquée payée uniquement par webhook signé.</p>
       </div>
@@ -293,7 +303,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           disabled={isDisabled}
           className="w-full py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors cursor-pointer flex justify-center items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isDisabled ? "Validation..." : `Payer ${totalAmount.toFixed(2)}€`}
+          {isDisabled ? "Validation..." : `Payer ${displayedTotal}€`}
         </button>
         {onBack && (
           <button

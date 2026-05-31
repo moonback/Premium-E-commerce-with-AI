@@ -5,7 +5,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createServer, type IncomingMessage } from "http";
 import crypto from "crypto";
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
 
 const LIVE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -20,6 +20,17 @@ type SitemapProductRow = {
   id: string;
   name: string;
   created_at?: string | null;
+};
+
+type PaymentIntentLineItem = {
+  product_id?: unknown;
+  quantity?: unknown;
+};
+
+type ProductPaymentRow = {
+  id: string;
+  price: number;
+  stock: number | null;
 };
 
 type StripePaymentIntent = {
@@ -80,6 +91,80 @@ function registerLiveConnection(ip: string) {
   };
 }
 
+
+
+function normalizePaymentItems(rawItems: unknown) {
+  if (!Array.isArray(rawItems) || rawItems.length === 0 || rawItems.length > 100) {
+    throw new Error("Payment items are required");
+  }
+
+  const quantities = new Map<string, number>();
+  for (const rawItem of rawItems as PaymentIntentLineItem[]) {
+    const productId = typeof rawItem.product_id === "string" ? rawItem.product_id.trim() : "";
+    const quantity = Number(rawItem.quantity);
+
+    if (!productId) {
+      throw new Error("Invalid product id");
+    }
+    if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
+      throw new Error("Invalid product quantity");
+    }
+
+    quantities.set(productId, (quantities.get(productId) || 0) + quantity);
+  }
+
+  return [...quantities.entries()].map(([productId, quantity]) => ({ productId, quantity }));
+}
+
+function createCartHash(items: Array<{ productId: string; quantity: number }>) {
+  const stablePayload = items
+    .map((item) => `${item.productId}:${item.quantity}`)
+    .sort()
+    .join("|");
+  return crypto.createHash("sha256").update(stablePayload).digest("hex").slice(0, 32);
+}
+
+async function calculatePaymentAmountCents(
+  catalogClient: SupabaseClient | null,
+  rawItems: unknown
+) {
+  if (!catalogClient) {
+    throw new Error("Catalog pricing is not configured");
+  }
+
+  const items = normalizePaymentItems(rawItems);
+  const productIds = items.map((item) => item.productId);
+  const { data, error } = await catalogClient
+    .from("products")
+    .select("id,price,stock")
+    .in("id", productIds);
+
+  if (error) throw error;
+
+  const products = new Map((data ?? []).map((product) => {
+    const row = product as ProductPaymentRow;
+    return [row.id, row];
+  }));
+
+  let amountCents = 0;
+  for (const item of items) {
+    const product = products.get(item.productId);
+    if (!product) {
+      throw new Error(`Product ${item.productId} not found`);
+    }
+    if (typeof product.stock === "number" && product.stock < item.quantity) {
+      throw new Error(`Insufficient stock for product ${item.productId}`);
+    }
+
+    amountCents += Math.round(Number(product.price) * 100) * item.quantity;
+  }
+
+  if (!Number.isInteger(amountCents) || amountCents < 50 || amountCents > 9999999) {
+    throw new Error("Invalid payment amount");
+  }
+
+  return { amountCents, itemCount: items.reduce((sum, item) => sum + item.quantity, 0), cartHash: createCartHash(items) };
+}
 
 function getStripeWebhookPayload(rawBody: Buffer, signatureHeader: string, secret: string) {
   const parts = Object.fromEntries(
@@ -296,30 +381,29 @@ async function startServer() {
       }
     }
 
-    const amountCents = Number(req.body?.amountCents);
     const currency = String(req.body?.currency || "eur").toLowerCase();
     const customer = req.body?.customer as { name?: string; email?: string } | undefined;
 
-    if (!Number.isInteger(amountCents) || amountCents < 50 || amountCents > 9999999) {
-      res.status(400).json({ error: "Invalid payment amount" });
-      return;
-    }
     if (!/^[a-z]{3}$/.test(currency)) {
       res.status(400).json({ error: "Invalid currency" });
       return;
     }
 
-    const body = new URLSearchParams({
-      amount: String(amountCents),
-      currency,
-      "automatic_payment_methods[enabled]": "true",
-      "automatic_payment_methods[allow_redirects]": "never",
-      "metadata[source]": "veridian_checkout",
-    });
-    if (customer?.email) body.set("receipt_email", customer.email);
-    if (customer?.name) body.set("metadata[customer_name]", customer.name);
-
     try {
+      const catalogClient = supabaseAdmin || supabaseAuth;
+      const { amountCents, itemCount, cartHash } = await calculatePaymentAmountCents(catalogClient, req.body?.items);
+      const body = new URLSearchParams({
+        amount: String(amountCents),
+        currency,
+        "automatic_payment_methods[enabled]": "true",
+        "automatic_payment_methods[allow_redirects]": "never",
+        "metadata[source]": "veridian_checkout",
+        "metadata[item_count]": String(itemCount),
+        "metadata[cart_hash]": cartHash,
+      });
+      if (customer?.email) body.set("receipt_email", customer.email);
+      if (customer?.name) body.set("metadata[customer_name]", customer.name);
+
       const stripeResponse = await fetch("https://api.stripe.com/v1/payment_intents", {
         method: "POST",
         headers: {
@@ -335,8 +419,24 @@ async function startServer() {
         return;
       }
 
-      res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
+      res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id, amountCents });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Payment provider unavailable";
+      if (
+        message === "Payment items are required" ||
+        message === "Invalid product id" ||
+        message === "Invalid product quantity" ||
+        message === "Invalid payment amount" ||
+        message.includes("not found") ||
+        message.includes("Insufficient stock")
+      ) {
+        res.status(400).json({ error: message });
+        return;
+      }
+      if (message === "Catalog pricing is not configured") {
+        res.status(503).json({ error: message });
+        return;
+      }
       console.error("Unable to create Stripe PaymentIntent", error);
       res.status(502).json({ error: "Payment provider unavailable" });
     }
