@@ -4,6 +4,7 @@ import { Product, CartItem, User, Category, Address, UserRole, CheckoutClientInf
 import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
 import { createCheckoutOrder } from './services/checkoutService';
+import { getErrorMessage } from './lib/errors';
 
 const USER_ROLES: UserRole[] = ['admin', 'staff', 'kiosk', 'customer'];
 
@@ -437,9 +438,9 @@ export const useStore = create<AppState>()(
           if (error) throw error;
           alert("Catalogue synchronisé avec succès !");
           get().fetchProducts();
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Error syncing products:", err);
-          alert("Erreur de synchronisation : " + err.message);
+          alert("Erreur de synchronisation : " + getErrorMessage(err));
         }
       }
     }), {

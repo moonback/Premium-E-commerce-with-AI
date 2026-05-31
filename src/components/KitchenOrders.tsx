@@ -4,15 +4,23 @@ import { supabase } from '../lib/supabase';
 import { useStore } from '../store';
 
 // Define the Kanban stages in order
-const STAGES: Array<'Nouvelle' | 'En préparation' | 'Prête' | 'Livrée'> = [
+const STAGES = [
   'Nouvelle',
   'En préparation',
   'Prête',
   'Livrée',
-];
+] as const;
+
+type OrderStage = typeof STAGES[number];
+
+type KitchenOrder = {
+  id: string;
+  status: string;
+  created_at?: string;
+};
 
 export default function KitchenOrders() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const updateOrderStatus = useStore(state => state.updateOrderStatus);
 
   // Fetch orders from Supabase
@@ -21,18 +29,20 @@ export default function KitchenOrders() {
     try {
       const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
       if (error) throw error;
-      setOrders(data as any[]);
+      setOrders((data ?? []) as KitchenOrder[]);
     } catch (e) {
       console.error('Failed to load kitchen orders', e);
     }
   };
 
   useEffect(() => {
+    if (!supabase) return;
+
     fetchOrders();
     // Subscribe to realtime changes (optional)
     const subscription = supabase
       .channel('public:orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         fetchOrders();
       })
       .subscribe();
@@ -42,8 +52,12 @@ export default function KitchenOrders() {
   }, []);
 
   // Determine next status
+  const isOrderStage = (status: string): status is OrderStage =>
+    STAGES.includes(status as OrderStage);
+
   const getNextStatus = (current: string) => {
-    const idx = STAGES.indexOf(current as any);
+    if (!isOrderStage(current)) return null;
+    const idx = STAGES.indexOf(current);
     if (idx >= 0 && idx < STAGES.length - 1) {
       return STAGES[idx + 1];
     }

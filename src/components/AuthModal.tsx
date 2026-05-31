@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../lib/errors';
 
 export default function AuthModal() {
   const { isAuthModalOpen, setAuthModalOpen } = useStore();
@@ -38,9 +39,10 @@ export default function AuthModal() {
         toast.success("Compte créé avec succès");
       }
       setAuthModalOpen(false);
-    } catch (err: any) {
-      setError(err.message || 'Authentication error');
-      toast.error(err.message || "Erreur d'authentification");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, 'Authentication error');
+      setError(message);
+      toast.error(message || "Erreur d'authentification");
     } finally {
       setIsLoading(false);
     }

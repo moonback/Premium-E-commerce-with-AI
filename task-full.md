@@ -41,6 +41,8 @@ Une tâche est terminée uniquement si :
 - [x] Checkout client connecté à la RPC, panier vidé uniquement après succès, erreurs conservant le panier.
 - [x] Page de confirmation commande ajoutée avec numéro, articles, total et prochaine étape.
 - [x] Formulaire livraison checkout typé sans `any` pour `clientInfo` et `deliveryMethod`.
+- [x] Typage renforcé sans `any` dans `src/` : POS, admin, historique profil, commandes cuisine, client Supabase, icône panier et fallback AudioContext.
+- [x] Gestion d’erreurs critique typée (`unknown` + `getErrorMessage`) pour auth, profil, assistant vocal et sync catalogue.
 - [x] WebSocket IA `/live` durci : auth Supabase si configurée, refus en production sans auth, rate limit, timeout, modèle configurable, cleanup session.
 - [x] Assistant Ava alimenté par contexte catalogue réel borné au lieu d’IDs produits hardcodés.
 - [x] Store screen résilient quand le catalogue est vide.
@@ -80,7 +82,7 @@ Une tâche est terminée uniquement si :
 
 - [x] `npm run lint` passe sans erreur.
 - [x] `npm run build` passe sans erreur.
-- [ ] Aucun `any` ajouté pour masquer le problème.
+- [x] Aucun `any` restant dans le code `src/` pour masquer les problèmes TypeScript.
 
 **Impact :** très élevé.  
 **Complexité :** faible.

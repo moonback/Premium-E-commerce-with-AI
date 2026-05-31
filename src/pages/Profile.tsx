@@ -4,13 +4,21 @@ import { User as UserIcon, Package, Star, LogOut, CheckCircle, Clock } from 'luc
 import ProfileInfo from '../components/ProfileInfo';
 import AddressBook from '../components/AddressBook';
 import { supabase } from '../lib/supabase';
+import { getErrorMessage } from '../lib/errors';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+
+type ProfileOrder = {
+  id: string;
+  status: string;
+  created_at: string;
+  total: number;
+};
 
 export default function Profile() {
   const { user, setUser, loyaltyPoints } = useStore();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<ProfileOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   const getTierInfo = (points: number) => {
@@ -36,10 +44,10 @@ export default function Profile() {
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });
           if (!error && data) {
-            setOrders(data);
+            setOrders((data ?? []) as ProfileOrder[]);
           }
         } catch (err) {
-          console.error("Failed to load orders");
+          console.error('Failed to load orders', getErrorMessage(err));
         } finally {
           setLoading(false);
         }

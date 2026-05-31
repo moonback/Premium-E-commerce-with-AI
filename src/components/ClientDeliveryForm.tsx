@@ -16,7 +16,7 @@ export default function ClientDeliveryForm({ onNext, onBack, onValid }: ClientDe
   // Load saved addresses on mount
   useEffect(() => { fetchAddresses(); }, []);
 
-  // Build initial state from the default address (if any)
+  // Build initial state from the default address when present
   const defaultAddr = addresses.find(a => a.is_default) ?? addresses[0];
 
   const [clientInfo, setInfo] = useState<CheckoutClientInfo>({

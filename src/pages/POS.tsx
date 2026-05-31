@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { Search, ShoppingCart, User, Plus, Minus, CreditCard, Banknote, ScanBarcode, ArrowRight } from 'lucide-react';
 import KitchenOrders from '../components/KitchenOrders';
+import type { CartItem, Product } from '../types';
 
 export default function POS() {
   const { products } = useStore();
-  const [posCart, setPosCart] = useState<{ product: any, quantity: number }[]>([]);
+  const [posCart, setPosCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState('');
 
   const filteredProducts = products.filter(p =>
@@ -14,7 +15,7 @@ export default function POS() {
 
   const total = posCart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: Product) => {
     setPosCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
