@@ -6,6 +6,7 @@ import { useStore } from '../store';
 import { supabase } from '../lib/supabase';
 
 export default function VoiceAssistant() {
+  const products = useStore(state => state.products);
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -30,6 +31,10 @@ export default function VoiceAssistant() {
         setIsConnecting(false);
         return;
       }
+      const catalogContext = products
+        .slice(0, 20)
+        .map(product => `${product.id}: ${product.name} (${product.price.toFixed(2)}€) - ${product.description}`)
+        .join(' | ');
       const tokenParam = session?.access_token ? `?token=${encodeURIComponent(session.access_token)}` : '';
       const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
       const wsUrl = `${wsProtocol}://${window.location.host}/live${tokenParam}`;
@@ -41,6 +46,12 @@ export default function VoiceAssistant() {
       nextStartTimeRef.current = audioCtx.currentTime;
 
       ws.onopen = async () => {
+        if (catalogContext) {
+          ws.send(JSON.stringify({
+            text: `Contexte catalogue Véridian pour cette session. Recommande uniquement ces produits: ${catalogContext}`
+          }));
+        }
+
         setIsConnecting(false);
         setIsRecording(true);
         try {
