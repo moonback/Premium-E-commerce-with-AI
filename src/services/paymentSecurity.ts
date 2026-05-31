@@ -91,6 +91,19 @@ export async function calculatePaymentAmountCents(
   return { amountCents, itemCount: items.reduce((sum, item) => sum + item.quantity, 0), cartHash: createCartHash(items) };
 }
 
+
+export function normalizeCheckoutAttemptId(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  return /^[a-zA-Z0-9_-]{8,80}$/.test(normalized) ? normalized : null;
+}
+
+export function createStripeIdempotencyKey(input: { userId: string | null; attemptId: string | null; cartHash: string }) {
+  if (!input.attemptId) return null;
+  const userScope = input.userId || 'anonymous';
+  return `checkout:${userScope}:${input.attemptId}:${input.cartHash}`.slice(0, 255);
+}
+
 export function getStripeWebhookPayload(rawBody: Buffer, signatureHeader: string, secret: string) {
   const parts = Object.fromEntries(
     signatureHeader.split(',').map((part) => {

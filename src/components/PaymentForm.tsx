@@ -87,6 +87,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   customerEmail = "",
   items = [],
 }) => {
+  const checkoutAttemptIdRef = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   const paymentElementRef = useRef<StripePaymentElement | null>(null);
   const elementsRef = useRef<StripeElements | null>(null);
   const stripeRef = useRef<StripeInstance | null>(null);
@@ -111,6 +116,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         },
         body: JSON.stringify({
           items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
+          checkoutAttemptId: checkoutAttemptIdRef.current,
           currency: "eur",
           customer: { name: customerName, email: customerEmail },
         }),

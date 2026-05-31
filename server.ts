@@ -8,8 +8,10 @@ import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
 import {
   calculatePaymentAmountCents,
+  createStripeIdempotencyKey,
   getPaymentIntentErrorStatus,
   getStripeWebhookPayload,
+  normalizeCheckoutAttemptId,
   toPaymentStatus,
 } from "./src/services/paymentSecurity";
 
@@ -230,6 +232,7 @@ async function startServer() {
       return;
     }
 
+    let authenticatedUserId: string | null = null;
     if (supabaseAuth) {
       const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
       if (!token) {
@@ -241,6 +244,7 @@ async function startServer() {
         res.status(401).json({ error: "Invalid authentication token" });
         return;
       }
+      authenticatedUserId = data.user.id;
     }
 
     const currency = String(req.body?.currency || "eur").toLowerCase();
@@ -266,11 +270,19 @@ async function startServer() {
       if (customer?.email) body.set("receipt_email", customer.email);
       if (customer?.name) body.set("metadata[customer_name]", customer.name);
 
+      const checkoutAttemptId = normalizeCheckoutAttemptId(req.body?.checkoutAttemptId);
+      const idempotencyKey = createStripeIdempotencyKey({
+        userId: authenticatedUserId,
+        attemptId: checkoutAttemptId,
+        cartHash,
+      });
+
       const stripeResponse = await fetch("https://api.stripe.com/v1/payment_intents", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${stripeSecretKey}`,
           "Content-Type": "application/x-www-form-urlencoded",
+          ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
         },
         body,
       });

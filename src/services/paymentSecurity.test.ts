@@ -4,8 +4,10 @@ import crypto from 'node:crypto';
 import {
   calculatePaymentAmountCents,
   createCartHash,
+  createStripeIdempotencyKey,
   getPaymentIntentErrorStatus,
   getStripeWebhookPayload,
+  normalizeCheckoutAttemptId,
   normalizePaymentItems,
   toPaymentStatus,
 } from './paymentSecurity';
@@ -99,4 +101,15 @@ test('payment status and error helpers map expected values', () => {
   assert.equal(getPaymentIntentErrorStatus('Invalid product quantity'), 400);
   assert.equal(getPaymentIntentErrorStatus('Catalog pricing is not configured'), 503);
   assert.equal(getPaymentIntentErrorStatus('Stripe outage'), 502);
+});
+
+
+test('checkout attempt helpers create bounded Stripe idempotency keys', () => {
+  assert.equal(normalizeCheckoutAttemptId(' attempt_123 '), 'attempt_123');
+  assert.equal(normalizeCheckoutAttemptId('../bad'), null);
+  assert.equal(
+    createStripeIdempotencyKey({ userId: 'user_123', attemptId: 'attempt_123', cartHash: 'hash_abc' }),
+    'checkout:user_123:attempt_123:hash_abc'
+  );
+  assert.equal(createStripeIdempotencyKey({ userId: 'user_123', attemptId: null, cartHash: 'hash_abc' }), null);
 });
