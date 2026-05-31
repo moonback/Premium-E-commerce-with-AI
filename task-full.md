@@ -297,24 +297,24 @@ Une tâche est terminée uniquement si :
   - [ ] Contact.
   - [ ] Livraison.
   - [ ] Paiement.
-- [ ] Ajouter un récapitulatif sticky sur desktop.
-- [ ] Ajouter une barre sticky mobile `Payer X€`.
+- [x] Ajouter un récapitulatif sticky sur desktop.
+- [x] Ajouter une barre sticky mobile `Payer X€`.
 - [ ] Ajouter un drawer mobile de résumé panier.
-- [ ] Ajouter erreurs inline avec scroll vers la première erreur.
-- [ ] Ajouter autocomplete HTML standard.
-  - [ ] `email`.
-  - [ ] `shipping name`.
-  - [ ] `shipping address-line1`.
-  - [ ] `shipping postal-code`.
-  - [ ] `shipping country`.
-- [ ] Préremplir depuis profil/adresses quand disponible.
-- [ ] Ajouter badges de réassurance : paiement sécurisé, retours, support.
+- [x] Ajouter erreurs inline avec scroll vers la première erreur.
+- [x] Ajouter autocomplete HTML standard.
+  - [x] `email`.
+  - [x] `shipping name`.
+  - [x] `shipping address-line1`.
+  - [x] `shipping postal-code`.
+  - [x] `shipping country`.
+- [x] Préremplir depuis profil/adresses quand disponible.
+- [x] Ajouter badges de réassurance : paiement sécurisé, retours, support.
 
 **Critères d'acceptation :**
 
 - [ ] Le checkout est utilisable à une main sur mobile.
-- [ ] Le total et le CTA principal restent visibles.
-- [ ] Les erreurs formulaire sont compréhensibles et accessibles.
+- [x] Le total et le CTA principal restent visibles.
+- [x] Les erreurs formulaire sont compréhensibles et accessibles.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne.
