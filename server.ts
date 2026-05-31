@@ -14,6 +14,85 @@ const GEMINI_LIVE_MODEL = process.env.GEMINI_LIVE_MODEL || "gemini-3.1-flash-liv
 const SERVER_STARTED_AT = Date.now();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
+const FALLBACK_SITEMAP_PRODUCTS = [
+  { id: "prod_1", name: "Sac Cabas Signature" },
+  { id: "prod_2", name: "Écharpe Cachemire" },
+  { id: "prod_3", name: "Tasse Artisanale" },
+  { id: "prod_4", name: "Gourde Isotherme" },
+];
+
+type SitemapProduct = {
+  id: string;
+  name: string;
+  slug?: string | null;
+  updated_at?: string | null;
+};
+
+function getPublicSiteOrigin(request: IncomingMessage) {
+  const configuredOrigin = process.env.SITE_URL || process.env.VITE_SITE_URL;
+  if (configuredOrigin) return configuredOrigin.replace(/\/$/, "");
+  const forwardedProto = request.headers["x-forwarded-proto"];
+  const protocol = typeof forwardedProto === "string" ? forwardedProto.split(",")[0] : "https";
+  return `${protocol}://${request.headers.host || "localhost:3000"}`;
+}
+
+function xmlEscape(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getSitemapProductPath(product: SitemapProduct) {
+  return `/product/${product.slug || `${slugify(product.name)}-${product.id}`}`;
+}
+
+type SitemapUrl = {
+  loc: string;
+  changefreq: string;
+  priority: string;
+  lastmod?: string;
+};
+
+function renderSitemapXml(origin: string, products: SitemapProduct[]) {
+  const staticUrls: SitemapUrl[] = [
+    { loc: `${origin}/`, changefreq: "daily", priority: "1.0" },
+  ];
+  const productUrls: SitemapUrl[] = products.map(product => ({
+    loc: `${origin}${getSitemapProductPath(product)}`,
+    changefreq: "weekly",
+    priority: "0.8",
+    lastmod: product.updated_at ?? undefined,
+  }));
+  const urls = [...staticUrls, ...productUrls]
+    .map(({ loc, changefreq, priority, lastmod }) => [
+      "  <url>",
+      `    <loc>${xmlEscape(loc)}</loc>`,
+      lastmod ? `    <lastmod>${xmlEscape(new Date(lastmod).toISOString())}</lastmod>` : null,
+      `    <changefreq>${changefreq}</changefreq>`,
+      `    <priority>${priority}</priority>`,
+      "  </url>",
+    ].filter(Boolean).join("\n"))
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`;
+}
+
 type LiveRateRecord = {
   windowStart: number;
   count: number;
@@ -78,6 +157,37 @@ async function startServer() {
         supabaseAuth: Boolean(supabaseAuth),
       },
     });
+  });
+
+
+  app.get("/robots.txt", (req, res) => {
+    const origin = getPublicSiteOrigin(req);
+    res.type("text/plain").send(`User-agent: *
+Allow: /
+Sitemap: ${origin}/sitemap.xml
+`);
+  });
+
+  app.get("/sitemap.xml", async (req, res) => {
+    const origin = getPublicSiteOrigin(req);
+    let products: SitemapProduct[] = FALLBACK_SITEMAP_PRODUCTS;
+
+    if (supabaseAuth) {
+      try {
+        const { data, error } = await supabaseAuth
+          .from("products")
+          .select("id,name,slug,updated_at")
+          .order("name", { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          products = data as SitemapProduct[];
+        }
+      } catch (error) {
+        console.error("Failed to build sitemap from Supabase products", error);
+      }
+    }
+
+    res.type("application/xml").send(renderSitemapXml(origin, products));
   });
 
   // ---- WebSocket handler for Gemini Live API ----

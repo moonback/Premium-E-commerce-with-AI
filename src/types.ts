@@ -14,6 +14,7 @@ export type Spec = {
 export type Product = {
   id: string;
   name: string;
+  slug?: string | null;
   description: string;
   price: number;
   image: string;

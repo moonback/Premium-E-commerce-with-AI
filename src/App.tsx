@@ -86,7 +86,7 @@ function AppContent() {
           <Routes location={location}>
             <Route element={<StoreLayout />}>
               <Route path="/" element={<PageTransition><StoreFront /></PageTransition>} />
-              <Route path="/product/:id" element={<PageTransition><ProductDetail /></PageTransition>} />
+              <Route path="/product/:slug" element={<PageTransition><ProductDetail /></PageTransition>} />
               <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
               <Route path="/order-confirmation" element={<PageTransition><OrderConfirmation /></PageTransition>} />
               <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />

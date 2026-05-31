@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'motion/react';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
+import { buildStorefrontSeo } from '../lib/seo';
+import { useSeo } from '../lib/useSeo';
 import {
   LayoutGrid,
   Shirt,
@@ -44,6 +46,9 @@ function getCategoryConfig(name: string) {
 }
 
 export default function StoreFront() {
+  const seoMetadata = useMemo(() => buildStorefrontSeo(), []);
+  useSeo(seoMetadata);
+
   const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
 

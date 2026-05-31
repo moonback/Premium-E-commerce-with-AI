@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../store';
 import { ChevronLeft, Heart, Plus, Minus } from 'lucide-react';
@@ -6,9 +6,11 @@ import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Product } from '../types';
 import AccordionItem from '../components/AccordionItem';
+import { buildProductSeo, findProductByRouteParam, getProductPath } from '../lib/seo';
+import { useSeo } from '../lib/useSeo';
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { slug: routeProduct } = useParams();
   const { products, addToCart, toggleFavorite, favorites, fetchProducts } = useStore();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -25,10 +27,21 @@ export default function ProductDetail() {
   }, [products.length, fetchProducts]);
 
   useEffect(() => {
-    if (id && products.length > 0) {
-      setProduct(products.find(p => p.id === id) || null);
+    if (products.length > 0) {
+      setProduct(findProductByRouteParam(products, routeProduct));
     }
-  }, [id, products]);
+  }, [routeProduct, products]);
+
+  const seoMetadata = useMemo(() => (
+    product
+      ? buildProductSeo(product)
+      : {
+        title: 'Produit | Véridian',
+        description: 'Fiche produit Véridian en cours de chargement.',
+        noIndex: true,
+      }
+  ), [product]);
+  useSeo(seoMetadata);
 
   if (isLoading) {
     return (
@@ -193,7 +206,7 @@ export default function ProductDetail() {
             <h3 className="text-2xl font-serif text-center mb-12">S'accorde parfaitement avec...</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
               {suggestedProducts.map(p => (
-                <Link key={p.id} to={`/product/${p.id}`} className="group block">
+                <Link key={p.id} to={getProductPath(p)} className="group block">
                   <div className="aspect-square bg-soft-green mb-4 overflow-hidden rounded-t-full relative">
                     <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   </div>

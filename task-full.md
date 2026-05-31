@@ -50,6 +50,9 @@ Une tâche est terminée uniquement si :
 - [x] Suivi commande profil/admin amélioré avec numéro de commande et prochaine étape client.
 - [x] Code splitting route-level ajouté avec `React.lazy`/`Suspense` pour réduire le bundle initial.
 - [x] Chunks vendor Vite séparés (`react`, `data`, `motion`, `icons`) pour limiter le poids du chunk principal.
+- [x] Migration Supabase additive `20260629_restrict_sensitive_commerce_tables.sql` pour créer/restreindre `payments`, `shipments`, `events`, `ai_conversations` et `audit_events` avec RLS propriétaire/admin.
+- [x] Audit RLS documenté dans `docs/SUPABASE_RLS_AUDIT.md` et contrôles automatisés ajoutés sur les migrations Supabase.
+- [x] SEO produit initial : metadata dynamiques, canonical, OpenGraph/Twitter, JSON-LD Product/Breadcrumb et routes produits slugifiées compatibles anciens IDs.
 
 ### Reste P0/P1 immédiat
 
@@ -125,18 +128,18 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Auditer toutes les migrations Supabase et `supabase/backup.sql`.
-- [ ] Identifier les policies dangereuses.
-  - [ ] Commandes lisibles/insérables/modifiables par tous.
-  - [ ] Profils lisibles publiquement.
-  - [ ] Accès non restreint aux données checkout.
+- [x] Auditer toutes les migrations Supabase et `supabase/backup.sql`.
+- [x] Identifier les policies dangereuses.
+  - [x] Commandes lisibles/insérables/modifiables par tous.
+  - [x] Profils lisibles publiquement.
+  - [x] Accès non restreint aux données checkout.
 - [x] Créer une migration corrective non destructive.
   - [x] Activer RLS sur toutes les tables sensibles.
   - [x] Ajouter `profiles_self_select` : utilisateur lui-même ou admin.
   - [x] Ajouter `profiles_self_update` : utilisateur lui-même uniquement, avec restrictions.
   - [x] Ajouter `orders_self_or_admin_read`.
   - [x] Ajouter policies `order_items` basées sur la commande parente.
-  - [ ] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
+  - [x] Restreindre `payments`, `shipments`, `events`, `ai_conversations`, `audit_events`.
 - [x] Créer ou durcir une fonction `is_admin()` fiable.
   - [x] Ne pas dériver le rôle admin depuis l'email côté client.
   - [ ] Prévoir rôle via claim, table profil ou service role contrôlé.
@@ -210,13 +213,13 @@ Une tâche est terminée uniquement si :
   - [ ] création d'index concurrente si applicable ;
   - [ ] backfill contrôlé ;
   - [ ] policies remplacées explicitement.
-- [ ] Ajouter un commentaire dans la migration expliquant la stratégie non destructive.
-- [ ] Prévoir plan rollback logique.
+- [x] Ajouter un commentaire dans la migration expliquant la stratégie non destructive.
+- [x] Prévoir plan rollback logique.
 
 **Critères d'acceptation :**
 
 - [x] Aucune migration de prod ne détruit `orders`, `order_items`, `profiles`, `payments`.
-- [ ] Les changements schéma peuvent être appliqués sans perte de données.
+- [x] Les changements schéma peuvent être appliqués sans perte de données.
 
 **Impact :** très élevé.  
 **Complexité :** moyenne.
@@ -352,23 +355,29 @@ Une tâche est terminée uniquement si :
 **Tâches détaillées :**
 
 - [ ] Ajouter titles/descriptions par route.
+  - [x] Home/catalogue et fiches produit.
+  - [ ] Checkout, confirmation, profil et routes internes avec `noindex` explicite si nécessaire.
 - [ ] Ajouter canonical URLs.
+  - [x] Home/catalogue et fiches produit.
+  - [ ] Autres routes publiques.
 - [ ] Ajouter OpenGraph/Twitter cards.
-- [ ] Ajouter JSON-LD :
-  - [ ] `Product`.
-  - [ ] `Offer`.
-  - [ ] `BreadcrumbList`.
-  - [ ] `Organization`.
-  - [ ] `WebSite` avec `SearchAction`.
-- [ ] Ajouter slugs produits : `/product/:slug`.
-- [ ] Générer sitemap dynamique.
-- [ ] Ajouter `robots.txt`.
+  - [x] Home/catalogue et fiches produit.
+  - [ ] Autres routes partageables.
+- [x] Ajouter JSON-LD :
+  - [x] `Product`.
+  - [x] `Offer`.
+  - [x] `BreadcrumbList`.
+  - [x] `Organization`.
+  - [x] `WebSite` avec `SearchAction`.
+- [x] Ajouter slugs produits : `/product/:slug`.
+- [x] Générer sitemap dynamique.
+- [x] Ajouter `robots.txt`.
 - [ ] Prévoir stratégie SSR/SSG/prerender si le contenu SPA n'est pas indexé efficacement.
 
 **Critères d'acceptation :**
 
-- [ ] Chaque PDP a un title et une description uniques.
-- [ ] Les produits apparaissent dans le sitemap.
+- [x] Chaque PDP a un title et une description uniques.
+- [x] Les produits apparaissent dans le sitemap.
 - [ ] Le JSON-LD est valide dans un validateur schema.org.
 
 **Impact :** élevé.  
@@ -938,12 +947,12 @@ Une tâche est terminée uniquement si :
 - [ ] `wishlist_items` : favoris serveur.
 - [ ] `orders` : commande globale.
 - [ ] `order_items` : lignes commande.
-- [ ] `payments` : PSP et statuts.
-- [ ] `shipments` : livraison/tracking.
+- [x] `payments` : PSP et statuts.
+- [x] `shipments` : livraison/tracking.
 - [ ] `discounts` : promotions.
-- [ ] `events` : analytics.
-- [ ] `ai_conversations` : historique IA contrôlé.
-- [ ] `audit_events` : audit actions sensibles.
+- [x] `events` : analytics.
+- [x] `ai_conversations` : historique IA contrôlé.
+- [x] `audit_events` : audit actions sensibles.
 
 ---
 
