@@ -19,6 +19,8 @@ export default function Admin() {
   // Category Form
   const [catFormName, setCatFormName] = useState('');
   const [catFormParent, setCatFormParent] = useState('');
+  const [catFormImageUrl, setCatFormImageUrl] = useState('');
+  const [catImageUploading, setCatImageUploading] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   const [todaySales, setTodaySales] = React.useState(0);
@@ -144,6 +146,30 @@ export default function Admin() {
      }
   };
 
+  const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !supabase) return;
+    try {
+      setCatImageUploading(true);
+      toast.loading("Upload de l'image...", { id: "cat-upload" });
+      const fileExt = file.name.split('.').pop();
+      const fileName = `cat_${crypto.randomUUID()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+      setCatFormImageUrl(publicUrl);
+      toast.success("Image uploadée", { id: "cat-upload" });
+    } catch (err: any) {
+      toast.error(err.message || "Erreur upload", { id: "cat-upload" });
+    } finally {
+      setCatImageUploading(false);
+    }
+  };
+
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) return toast.error("Supabase requis");
@@ -169,7 +195,8 @@ export default function Admin() {
          const { error } = await supabase.from('categories').update({
              name: catFormName,
              parent_id: catFormParent || null,
-             level: newLevel
+             level: newLevel,
+             image_url: catFormImageUrl || null,
          }).eq('id', editingCategoryId);
          
          if (error) throw error;
@@ -191,7 +218,8 @@ export default function Admin() {
             id: `cat_${Date.now()}`,
             name: catFormName,
             parent_id: catFormParent || null,
-            level: newLevel
+            level: newLevel,
+            image_url: catFormImageUrl || null,
          }]);
          if (error) throw error;
          toast.success("Catégorie ajoutée");
@@ -199,6 +227,7 @@ export default function Admin() {
       
       setCatFormName('');
       setCatFormParent('');
+      setCatFormImageUrl('');
       setEditingCategoryId(null);
       useStore.getState().fetchCategories();
     } catch (err: any) {
@@ -210,11 +239,13 @@ export default function Admin() {
     setEditingCategoryId(cat.id);
     setCatFormName(cat.name);
     setCatFormParent(cat.parent_id || '');
+    setCatFormImageUrl(cat.image_url || '');
   };
 
   const handleCancelCategoryEdit = () => {
     setCatFormName('');
     setCatFormParent('');
+    setCatFormImageUrl('');
     setEditingCategoryId(null);
   };
 
@@ -492,8 +523,12 @@ export default function Admin() {
               <ul className="space-y-2 mt-4 font-mono text-xs">
                 {categories.filter(c => c.level === 1).map(c1 => (
                    <li key={c1.id}>
-                     <div className="font-bold border-b border-ink/10 pb-1 mb-1 flex justify-between items-center">
-                       <span>{c1.name} (Niv 1)</span>
+                     <div className="font-bold border-b border-ink/10 pb-1 mb-1 flex justify-between items-center gap-2">
+                       {c1.image_url
+                         ? <img src={c1.image_url} alt={c1.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0 border border-ink/10" />
+                         : <span className="w-8 h-8 rounded-lg bg-ink/5 flex items-center justify-center flex-shrink-0 text-ink/30 text-base">📁</span>
+                       }
+                       <span className="flex-1">{c1.name} <span className="text-ink/40">(Niv 1)</span></span>
                        <div className="flex gap-1">
                          <button onClick={() => handleEditCategoryClick(c1)} className="text-ink/60 hover:text-ink hover:bg-ink/5 p-1"><Edit2 className="w-3 h-3"/></button>
                          <button onClick={() => handleDeleteCategory(c1.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
@@ -502,8 +537,12 @@ export default function Admin() {
                      <ul className="pl-4 space-y-1 mt-1">
                        {categories.filter(c => c.parent_id === c1.id).map(c2 => (
                          <li key={c2.id}>
-                           <div className="flex justify-between items-center">
-                             <span>L {c2.name} (Niv 2)</span>
+                           <div className="flex justify-between items-center gap-2">
+                             {c2.image_url
+                               ? <img src={c2.image_url} alt={c2.name} className="w-6 h-6 rounded object-cover flex-shrink-0 border border-ink/10" />
+                               : <span className="w-6 h-6 rounded bg-ink/5 flex items-center justify-center flex-shrink-0 text-ink/30 text-xs">📂</span>
+                             }
+                             <span className="flex-1">↳ {c2.name} <span className="text-ink/40">(Niv 2)</span></span>
                              <div className="flex gap-1">
                                <button onClick={() => handleEditCategoryClick(c2)} className="text-ink/60 hover:text-ink hover:bg-ink/5 p-1"><Edit2 className="w-3 h-3"/></button>
                                <button onClick={() => handleDeleteCategory(c2.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
@@ -511,8 +550,12 @@ export default function Admin() {
                            </div>
                            <ul className="pl-6 space-y-1 text-ink/60">
                              {categories.filter(c => c.parent_id === c2.id).map(c3 => (
-                               <li key={c3.id} className="flex justify-between items-center">
-                                 <span>-- {c3.name} (Niv 3)</span>
+                               <li key={c3.id} className="flex justify-between items-center gap-2">
+                                 {c3.image_url
+                                   ? <img src={c3.image_url} alt={c3.name} className="w-5 h-5 rounded object-cover flex-shrink-0 border border-ink/10" />
+                                   : <span className="w-5 h-5 rounded bg-ink/5 flex items-center justify-center flex-shrink-0 text-ink/30 text-xs">—</span>
+                                 }
+                                 <span className="flex-1">-- {c3.name} <span className="text-ink/40">(Niv 3)</span></span>
                                  <div className="flex gap-1">
                                    <button onClick={() => handleEditCategoryClick(c3)} className="text-ink/60 hover:text-ink hover:bg-ink/5 p-1"><Edit2 className="w-3 h-3"/></button>
                                    <button onClick={() => handleDeleteCategory(c3.id)} className="text-red-600 hover:bg-red-50 p-1"><Trash2 className="w-3 h-3"/></button>
@@ -545,6 +588,43 @@ export default function Admin() {
                       <option key={c.id} value={c.id} disabled={editingCategoryId === c.id}>{c.name} (Niveau {c.level})</option>
                     ))}
                   </select>
+                </div>
+                {/* ── Image de la catégorie ── */}
+                <div>
+                  <label className="block text-xs uppercase tracking-widest font-bold mb-2 opacity-50">
+                    Image de la catégorie (optionnel)
+                  </label>
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="URL de l'image..."
+                        value={catFormImageUrl}
+                        onChange={e => setCatFormImageUrl(e.target.value)}
+                        className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent text-sm"
+                      />
+                    </div>
+                    <label className={`cursor-pointer px-4 py-2 border border-ink/20 hover:bg-ink/5 transition-colors text-xs font-bold uppercase tracking-widest flex-shrink-0 flex items-center gap-1 ${catImageUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                      {catImageUploading ? 'Upload...' : 'Upload'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleCategoryImageUpload} disabled={catImageUploading} />
+                    </label>
+                  </div>
+                  {catFormImageUrl && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <img
+                        src={catFormImageUrl}
+                        alt="Aperçu"
+                        className="w-16 h-16 object-cover rounded-xl border border-ink/10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCatFormImageUrl('')}
+                        className="text-xs text-red-500 hover:underline"
+                      >
+                        Supprimer l'image
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                    {editingCategoryId && (

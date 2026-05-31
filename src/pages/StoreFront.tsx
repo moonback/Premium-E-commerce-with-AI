@@ -1,14 +1,55 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
+import {
+  LayoutGrid,
+  Shirt,
+  ShoppingBag,
+  Home,
+  Gem,
+  Leaf,
+  Coffee,
+  Watch,
+  Sparkles,
+  Package,
+} from 'lucide-react';
+
+// ─── Category config ────────────────────────────────────────────────────────
+// Maps a category name (case-insensitive prefix match) to an icon + accent color.
+// Add more entries as your catalogue grows.
+const CATEGORY_CONFIG: Record<
+  string,
+  { icon: React.ElementType; accent: string; bg: string }
+> = {
+  tout:        { icon: LayoutGrid,  accent: 'text-ink',        bg: 'bg-ink/10'       },
+  vêtements:   { icon: Shirt,       accent: 'text-blue-600',   bg: 'bg-blue-50'      },
+  accessoires: { icon: ShoppingBag, accent: 'text-amber-600',  bg: 'bg-amber-50'     },
+  maison:      { icon: Home,        accent: 'text-emerald-600',bg: 'bg-emerald-50'   },
+  bijoux:      { icon: Gem,         accent: 'text-purple-600', bg: 'bg-purple-50'    },
+  beauté:      { icon: Sparkles,    accent: 'text-pink-600',   bg: 'bg-pink-50'      },
+  nature:      { icon: Leaf,        accent: 'text-green-600',  bg: 'bg-green-50'     },
+  café:        { icon: Coffee,      accent: 'text-orange-700', bg: 'bg-orange-50'    },
+  montres:     { icon: Watch,       accent: 'text-slate-600',  bg: 'bg-slate-100'    },
+};
+
+/** Returns the config for a given category name, falling back to a generic one. */
+function getCategoryConfig(name: string) {
+  const key = name.toLowerCase();
+  // Exact match first, then prefix match
+  if (CATEGORY_CONFIG[key]) return CATEGORY_CONFIG[key];
+  const prefixKey = Object.keys(CATEGORY_CONFIG).find(k => key.startsWith(k));
+  return prefixKey ? CATEGORY_CONFIG[prefixKey] : { icon: Package, accent: 'text-ink/70', bg: 'bg-ink/5' };
+}
 
 export default function StoreFront() {
   const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
 
   const categories = ['Tout', ...storeCategories.filter(c => c.level === 1).map(c => c.name)];
+  // Map category name → full Category object for image_url access
+  const categoryMap = Object.fromEntries(storeCategories.filter(c => c.level === 1).map(c => [c.name, c]));
 
   const filteredProducts = products.filter(p =>
     (activeTab === 'Tout' || (p.categories || []).includes(activeTab)) &&
@@ -39,19 +80,54 @@ export default function StoreFront() {
       </div>
 
       <main id="collection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 scroll-mt-24">
-        <div className="flex gap-4 mb-12 overflow-x-auto pb-2 scrollbar-hide justify-center">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              className={`px-5 py-2 text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${activeTab === cat
-                  ? 'bg-ink text-bg scale-105'
-                  : 'bg-transparent text-ink/60 hover:bg-ink/5 border border-ink/20 hover:border-ink/40'
-                }`}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* ── Visual category pills ── */}
+        <div className="flex gap-3 mb-12 overflow-x-auto pb-3 scrollbar-hide md:justify-center">
+          {categories.map(cat => {
+            const { icon: Icon, accent, bg } = getCategoryConfig(cat);
+            const isActive = activeTab === cat;
+            const catObj = cat !== 'Tout' ? categoryMap[cat] : null;
+            const hasImage = !!catObj?.image_url;
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveTab(cat)}
+                className="relative flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl whitespace-nowrap transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent min-w-[72px]"
+                aria-pressed={isActive}
+              >
+                {/* Animated background pill */}
+                {isActive && (
+                  <motion.span
+                    layoutId="category-active-bg"
+                    className={`absolute inset-0 rounded-2xl ${hasImage ? 'bg-ink/10' : bg} border border-current/20`}
+                    style={{ originX: 0.5, originY: 0.5 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+
+                {/* Icon or uploaded image */}
+                <span className={`relative z-10 transition-all duration-200 ${isActive ? accent : 'text-ink/40'}`}>
+                  {hasImage ? (
+                    <img
+                      src={catObj!.image_url!}
+                      alt={cat}
+                      className={`w-6 h-6 rounded-lg object-cover transition-all duration-200 ${isActive ? 'ring-2 ring-current' : 'opacity-50 grayscale'}`}
+                    />
+                  ) : (
+                    <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                  )}
+                </span>
+
+                {/* Label */}
+                <span
+                  className={`relative z-10 text-[10px] font-bold uppercase tracking-widest transition-colors duration-200 ${
+                    isActive ? accent : 'text-ink/50'
+                  }`}
+                >
+                  {cat}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">

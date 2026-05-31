@@ -3,6 +3,7 @@ export type Category = {
   name: string;
   parent_id: string | null;
   level: number;
+  image_url?: string | null;
 };
 
 export type Spec = {
