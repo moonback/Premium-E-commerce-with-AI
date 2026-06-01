@@ -12,6 +12,8 @@ import { buildProductJsonLd, findProductByRouteParam, getProductPath } from '../
 import toast from 'react-hot-toast';
 import { ViewingCount, LimitedStockBadge } from '../components/SocialProof';
 import { SecurityBadges, SatisfactionGuarantee } from '../components/TrustBadges';
+import Breadcrumbs from '../components/Breadcrumbs';
+import ErrorMessage, { ErrorMessages, useErrorMessage } from '../components/ErrorMessage';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -24,6 +26,7 @@ export default function ProductDetail() {
   // Sticky CTA — all hooks must be declared before any early return
   const addBtnRef = useRef<HTMLButtonElement>(null);
   const [showStickyAdd, setShowStickyAdd] = useState(false);
+  const { error, showError, clearError } = useErrorMessage();
 
   const handleWishlistToggle = () => {
     if (!user) {
@@ -36,6 +39,39 @@ export default function ProductDetail() {
     } else {
       addToWishlist(product!.id);
     }
+  };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    
+    // Vérifier le stock
+    if (product.stock === 0) {
+      showError(
+        'Produit indisponible',
+        'Ce produit est actuellement en rupture de stock. Ajoutez-le à vos favoris pour être notifié de son retour.',
+        [
+          { label: 'Ajouter aux favoris', onClick: handleWishlistToggle, variant: 'primary' },
+          { label: 'Fermer', onClick: clearError, variant: 'secondary' },
+        ]
+      );
+      return;
+    }
+
+    if (quantity > product.stock) {
+      const stockError = ErrorMessages.insufficientStock(product.stock);
+      showError(
+        stockError.title,
+        stockError.message,
+        [
+          { label: 'Ajuster', onClick: () => { setQuantity(product.stock); clearError(); }, variant: 'primary' },
+          { label: 'Annuler', onClick: clearError, variant: 'secondary' },
+        ]
+      );
+      return;
+    }
+
+    addToCart(product, quantity);
+    clearError();
   };
 
   useEffect(() => {
@@ -105,9 +141,31 @@ export default function ProductDetail() {
         jsonLd={buildProductJsonLd(product)}
       />
       <div className="max-w-7xl mx-auto w-full">
-        <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink/60 hover:text-ink mb-12 transition-colors">
+        {/* Breadcrumbs */}
+        <Breadcrumbs
+          items={[
+            { label: (product.categories || [])[0] || 'Produits', path: '/' },
+            { label: product.name, path: getProductPath(product) },
+          ]}
+          className="mb-8"
+        />
+
+        <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink/60 hover:text-ink mb-8 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Retour
         </Link>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-8">
+            <ErrorMessage
+              type={error.type}
+              title={error.title}
+              message={error.message}
+              actions={error.actions}
+              onClose={clearError}
+            />
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-12 lg:gap-24 items-start">
           {/* Section Image / Galerie */}
@@ -208,10 +266,16 @@ export default function ProductDetail() {
 
               <button
                 ref={addBtnRef}
-                onClick={() => addToCart(product, quantity)}
-                className="flex-1 py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors"
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className={cn(
+                  "flex-1 py-4 font-bold text-xs uppercase tracking-widest transition-colors",
+                  product.stock === 0
+                    ? "bg-ink/20 text-ink/40 cursor-not-allowed"
+                    : "bg-ink text-bg hover:bg-ink/90"
+                )}
               >
-                Ajouter au panier
+                {product.stock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}
               </button>
             </div>
 
@@ -283,11 +347,17 @@ export default function ProductDetail() {
                 <p className="text-xs font-bold text-ink/60">{product.price.toFixed(2)}€</p>
               </div>
               <button
-                onClick={() => addToCart(product, quantity)}
-                className="flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-bg shadow-lg transition-colors hover:bg-ink/90"
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className={cn(
+                  "flex items-center gap-2 rounded-full px-5 py-3 text-[10px] font-bold uppercase tracking-widest shadow-lg transition-colors",
+                  product.stock === 0
+                    ? "bg-ink/20 text-ink/40 cursor-not-allowed"
+                    : "bg-ink text-bg hover:bg-ink/90"
+                )}
               >
                 <ShoppingBag className="h-4 w-4" aria-hidden="true" />
-                Ajouter — {(product.price * quantity).toFixed(2)}€
+                {product.stock === 0 ? 'Indisponible' : `Ajouter — ${(product.price * quantity).toFixed(2)}€`}
               </button>
             </div>
           </motion.div>

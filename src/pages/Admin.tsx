@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard, TrendingUp, Warehouse, Activity, Tag } from 'lucide-react';
+import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard, TrendingUp, Warehouse, Activity, Tag, Menu } from 'lucide-react';
 import { useStore } from '../store';
 import { Category, Product, Spec } from '../types';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ import AdminSettings from '../components/AdminSettings';
 import AdminActivityLog from '../components/AdminActivityLog';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminDiscounts from '../components/AdminDiscounts';
+import MegaMenuManager from '../components/admin/MegaMenuManager';
 import { getErrorMessage } from '../lib/errors';
 
 type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
@@ -311,6 +312,7 @@ export default function Admin() {
             { icon: Package, label: "Products" },
             { icon: Warehouse, label: "Inventory" },
             { icon: LayoutDashboard, label: "Categories" },
+            { icon: Menu, label: "Mega Menu" },
             { icon: ShoppingCart, label: "Orders" },
             { icon: Users, label: "Customers" },
             { icon: Tag, label: "Discounts" },
@@ -367,6 +369,8 @@ export default function Admin() {
         {activeTab === 'Activity' && <AdminActivityLog />}
 
         {activeTab === 'Settings' && <AdminSettings />}
+
+        {activeTab === 'Mega Menu' && <MegaMenuManager />}
 
         {activeTab === 'Orders' && (
           <div className="bg-transparent border border-ink/10 overflow-hidden">

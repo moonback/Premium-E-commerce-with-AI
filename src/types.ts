@@ -94,3 +94,39 @@ export type ProductReview = {
   created_at: string;
 };
 
+// Mega Menu Types
+export type MegaMenuLinkType = 'category' | 'product' | 'page' | 'external';
+
+export interface MegaMenuLink {
+  id: string;
+  label: string;
+  type: MegaMenuLinkType;
+  url?: string; // Pour external et page
+  category_id?: string; // Pour category
+  product_id?: string; // Pour product
+  icon?: string; // Nom de l'icône Lucide
+  description?: string;
+  image_url?: string;
+  order: number;
+}
+
+export interface MegaMenuColumn {
+  id: string;
+  title: string;
+  links: MegaMenuLink[];
+  order: number;
+  highlight?: boolean; // Pour la colonne promotions/highlights
+  background_color?: string;
+}
+
+export interface MegaMenuItem {
+  id: string;
+  label: string;
+  category_id?: string; // Catégorie principale associée
+  columns: MegaMenuColumn[];
+  is_active: boolean;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+
