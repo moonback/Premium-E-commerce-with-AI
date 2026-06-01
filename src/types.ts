@@ -159,3 +159,55 @@ export interface MegaMenuItem {
   updated_at: string;
 }
 
+// Store Settings Types
+export type StoreSettings = {
+  id: string;
+  // Informations boutique
+  store_name: string;
+  store_email: string;
+  store_phone: string;
+  store_address?: string;
+  store_description?: string;
+  store_logo_url?: string;
+  // Paramètres commerce
+  currency: string;
+  tax_rate: number;
+  shipping_fee: number;
+  free_shipping_threshold: number;
+  low_stock_threshold: number;
+  // Paramètres de notification
+  enable_notifications: boolean;
+  enable_email_notifications: boolean;
+  enable_sms_notifications: boolean;
+  notification_email?: string;
+  // Paramètres analytics
+  enable_analytics: boolean;
+  google_analytics_id?: string;
+  facebook_pixel_id?: string;
+  // Paramètres SEO
+  default_meta_title?: string;
+  default_meta_description?: string;
+  default_meta_keywords?: string;
+  // Paramètres sociaux
+  facebook_url?: string;
+  instagram_url?: string;
+  twitter_url?: string;
+  linkedin_url?: string;
+  // Paramètres de maintenance
+  maintenance_mode: boolean;
+  maintenance_message: string;
+  // Paramètres de catalogue
+  auto_publish_products: boolean;
+  require_product_approval: boolean;
+  enable_product_reviews: boolean;
+  enable_wishlist: boolean;
+  // Paramètres de paiement
+  enable_stripe: boolean;
+  stripe_public_key?: string;
+  enable_paypal: boolean;
+  paypal_client_id?: string;
+  // Métadonnées
+  created_at: string;
+  updated_at: string;
+};
+
