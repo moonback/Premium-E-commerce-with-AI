@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hors ligne - Véridian</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: #F9F7F2;
+      color: #1C2B21;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 500px;
+    }
+
+    .icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 2rem;
+      background: #E8EDE8;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      font-weight: 400;
+    }
+
+    p {
+      font-size: 1.125rem;
+      line-height: 1.75;
+      color: rgba(28, 43, 33, 0.7);
+      margin-bottom: 2rem;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: #1C2B21;
+      color: #F9F7F2;
+      text-decoration: none;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.75rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .button:hover {
+      background: rgba(28, 43, 33, 0.9);
+      transform: translateY(-2px);
+    }
+
+    .features {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(28, 43, 33, 0.1);
+    }
+
+    .features h2 {
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: rgba(28, 43, 33, 0.5);
+    }
+
+    .features ul {
+      list-style: none;
+      text-align: left;
+    }
+
+    .features li {
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+      color: rgba(28, 43, 33, 0.7);
+    }
+
+    .features li::before {
+      content: "✓";
+      margin-right: 0.5rem;
+      color: #B08D57;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>Vous êtes hors ligne</h1>
+    <p>
+      Il semble que vous n'ayez pas de connexion internet. 
+      Certaines fonctionnalités sont limitées en mode hors ligne.
+    </p>
+    <a href="/" class="button" onclick="window.location.reload(); return false;">
+      Réessayer
+    </a>
+
+    <div class="features">
+      <h2>Disponible hors ligne</h2>
+      <ul>
+        <li>Consultation du catalogue en cache</li>
+        <li>Visualisation de votre panier</li>
+        <li>Accès à votre profil</li>
+        <li>Navigation dans l'application</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Vérifier la connexion toutes les 5 secondes
+    setInterval(() => {
+      if (navigator.onLine) {
+        window.location.reload();
+      }
+    }, 5000);
+
+    // Écouter le retour de la connexion
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

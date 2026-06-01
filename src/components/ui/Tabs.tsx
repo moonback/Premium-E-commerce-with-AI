@@ -1,44 +1,89 @@
 // src/components/ui/Tabs.tsx
-import React, { createContext, useContext, useId } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
 
 interface TabsContextValue {
-  value: string;
-  onChange: (v: string) => void;
-  layoutId: string;
+  activeTab: string;
+  setActiveTab: (value: string) => void;
+  orientation: 'horizontal' | 'vertical';
 }
 
-const TabsContext = createContext<TabsContextValue | null>(null);
+const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
-function useTabsContext() {
-  const ctx = useContext(TabsContext);
-  if (!ctx) throw new Error('Tabs sub-components must be used inside <Tabs>');
-  return ctx;
-}
+const useTabs = () => {
+  const context = useContext(TabsContext);
+  if (!context) {
+    throw new Error('Tabs components must be used within Tabs');
+  }
+  return context;
+};
 
+// ─── Root Component ────────────────────────────────────────────────────────
 export interface TabsProps {
-  value: string;
-  onChange: (v: string) => void;
-  children: React.ReactNode;
+  defaultValue: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  orientation?: 'horizontal' | 'vertical';
   className?: string;
+  children: React.ReactNode;
 }
 
-export function Tabs({ value, onChange, children, className }: TabsProps) {
-  const layoutId = useId();
+export function Tabs({
+  defaultValue,
+  value: controlledValue,
+  onValueChange,
+  orientation = 'horizontal',
+  className,
+  children,
+}: TabsProps) {
+  const [internalValue, setInternalValue] = useState(defaultValue);
+  const value = controlledValue ?? internalValue;
+
+  const handleValueChange = (newValue: string) => {
+    if (!controlledValue) {
+      setInternalValue(newValue);
+    }
+    onValueChange?.(newValue);
+  };
+
   return (
-    <TabsContext.Provider value={{ value, onChange, layoutId }}>
-      <div className={cn('flex flex-col', className)}>{children}</div>
+    <TabsContext.Provider
+      value={{
+        activeTab: value,
+        setActiveTab: handleValueChange,
+        orientation,
+      }}
+    >
+      <div
+        className={cn(
+          'flex',
+          orientation === 'vertical' ? 'flex-row gap-6' : 'flex-col gap-4',
+          className
+        )}
+      >
+        {children}
+      </div>
     </TabsContext.Provider>
   );
 }
 
-export function TabsList({ children, className }: { children: React.ReactNode; className?: string }) {
+// ─── TabsList Component ────────────────────────────────────────────────────
+export interface TabsListProps {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export function TabsList({ className, children }: TabsListProps) {
+  const { orientation } = useTabs();
+
   return (
     <div
       role="tablist"
+      aria-orientation={orientation}
       className={cn(
-        'flex gap-1 border-b border-ink/10 overflow-x-auto scrollbar-hide',
+        'relative inline-flex gap-1 p-1 bg-ink/5 rounded-xl',
+        orientation === 'vertical' ? 'flex-col' : 'flex-row',
         className
       )}
     >
@@ -47,54 +92,76 @@ export function TabsList({ children, className }: { children: React.ReactNode; c
   );
 }
 
-export interface TabTriggerProps {
+// ─── TabsTrigger Component ─────────────────────────────────────────────────
+export interface TabsTriggerProps {
   value: string;
-  children: React.ReactNode;
+  disabled?: boolean;
   className?: string;
+  children: React.ReactNode;
 }
 
-export function TabTrigger({ value, children, className }: TabTriggerProps) {
-  const { value: active, onChange, layoutId } = useTabsContext();
-  const isActive = active === value;
+export function TabsTrigger({
+  value,
+  disabled = false,
+  className,
+  children,
+}: TabsTriggerProps) {
+  const { activeTab, setActiveTab } = useTabs();
+  const isActive = activeTab === value;
 
   return (
     <button
       role="tab"
       aria-selected={isActive}
-      onClick={() => onChange(value)}
+      aria-controls={`panel-${value}`}
+      disabled={disabled}
+      onClick={() => setActiveTab(value)}
       className={cn(
-        'relative px-4 py-3 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1',
-        isActive ? 'text-ink' : 'text-ink/40 hover:text-ink/70',
+        'relative px-4 py-2 text-sm font-bold uppercase tracking-widest transition-colors',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+        'disabled:opacity-40 disabled:cursor-not-allowed',
+        isActive ? 'text-ink' : 'text-ink/50 hover:text-ink/70',
         className
       )}
     >
-      {children}
       {isActive && (
-        <motion.span
-          layoutId={`tab-indicator-${layoutId}`}
-          className="absolute inset-x-0 bottom-0 h-0.5 bg-ink"
+        <motion.div
+          layoutId="tab-indicator"
+          className="absolute inset-0 bg-bg rounded-lg shadow-sm"
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         />
       )}
+      <span className="relative z-10">{children}</span>
     </button>
   );
 }
 
-export function TabPanel({
-  value,
-  children,
-  className,
-}: {
+// ─── TabsContent Component ─────────────────────────────────────────────────
+export interface TabsContentProps {
   value: string;
-  children: React.ReactNode;
   className?: string;
-}) {
-  const { value: active } = useTabsContext();
-  if (active !== value) return null;
+  children: React.ReactNode;
+}
+
+export function TabsContent({ value, className, children }: TabsContentProps) {
+  const { activeTab } = useTabs();
+  const isActive = activeTab === value;
+
+  if (!isActive) return null;
+
   return (
-    <div role="tabpanel" className={cn('pt-4', className)}>
+    <motion.div
+      id={`panel-${value}`}
+      role="tabpanel"
+      aria-labelledby={`tab-${value}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+      className={cn('focus:outline-none', className)}
+      tabIndex={0}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }

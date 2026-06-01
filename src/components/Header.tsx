@@ -6,10 +6,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
-import SearchDrawer from './SearchDrawer';
+import MegaMenu from './MegaMenu';
+import AdvancedSearchModal from './AdvancedSearchModal';
 
 export default function Header() {
-  const { cart, user, loyaltyPoints, setUser, setAuthModalOpen, setCartOpen, searchQuery, setSearchQuery } = useStore();
+  const { cart, user, loyaltyPoints, setUser, setAuthModalOpen, setCartOpen } = useStore();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -43,42 +44,27 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="flex justify-between items-center h-16 md:h-20">
 
-            {/* Left — logo + nav */}
+            {/* Left — logo */}
             <div className="flex items-center gap-4 lg:gap-8">
               <Link to="/" className="text-2xl font-bold tracking-tighter font-serif italic text-ink">
-                Boutique
+                Véridian
               </Link>
-              <nav className="hidden md:flex gap-6 text-xs uppercase tracking-widest font-bold opacity-70" aria-label="Navigation principale">
-                <Link to="/" className="hover:opacity-100 transition-opacity">Catalogue</Link>
-                <Link to="/" className="hover:opacity-100 transition-opacity">Nouveautés</Link>
-                <Link to="/" className="hover:opacity-100 transition-opacity">À Propos</Link>
-              </nav>
             </div>
 
             {/* Right — search, loyalty, account, cart */}
             <div className="flex items-center gap-3 md:gap-5">
 
-              {/* Desktop search bar */}
-              <div className="hidden md:flex relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" aria-hidden="true" />
-                <input
-                  type="text"
-                  placeholder="Rechercher…"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onFocus={() => setIsSearchOpen(true)}
-                  className="w-56 pl-10 pr-4 py-2 bg-transparent border border-ink/10 text-xs focus:bg-ink/5 focus:border-ink/30 focus:ring-0 transition-all outline-none uppercase tracking-widest font-bold placeholder:text-ink/30"
-                  aria-label="Rechercher un produit"
-                />
-              </div>
-
-              {/* Mobile search button */}
+              {/* Search button */}
               <button
                 onClick={() => setIsSearchOpen(true)}
-                aria-label="Ouvrir la recherche"
-                className="md:hidden p-2 text-ink/60 hover:text-ink transition-colors"
+                aria-label="Rechercher"
+                className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest text-ink/60 hover:text-ink hover:bg-ink/5 rounded-lg transition-colors"
               >
-                <Search className="w-5 h-5" />
+                <Search className="w-4 h-4" />
+                <span className="hidden md:inline">Rechercher</span>
+                <kbd className="hidden lg:inline-block px-2 py-0.5 text-[10px] font-mono bg-ink/5 rounded">
+                  /
+                </kbd>
               </button>
 
               {/* Loyalty points — desktop only */}
@@ -166,11 +152,16 @@ export default function Header() {
               </motion.button>
             </div>
           </div>
+
+          {/* Mega Menu - Desktop only */}
+          <div className="hidden lg:block pb-4">
+            <MegaMenu />
+          </div>
         </div>
       </header>
 
-      {/* Full-screen search drawer */}
-      <SearchDrawer open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      {/* Advanced Search Modal */}
+      <AdvancedSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
 }

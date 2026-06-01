@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="144" height="144" viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="144" height="144" fill="#F9F7F2"/>
+  
+  <!-- Logo Circle -->
+  <circle cx="72" cy="72" r="50.4" fill="#1C2B21"/>
+  
+  <!-- Letter V -->
+  <text 
+    x="72" 
+    y="89.28" 
+    font-family="serif" 
+    font-size="57.6" 
+    font-weight="bold" 
+    fill="#F9F7F2" 
+    text-anchor="middle">V</text>
+</svg>

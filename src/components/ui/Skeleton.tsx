@@ -2,34 +2,93 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
+export type SkeletonVariant = 'text' | 'circular' | 'rectangular';
+
 export interface SkeletonProps {
+  variant?: SkeletonVariant;
+  width?: string | number;
+  height?: string | number;
   className?: string;
-  /** Rounded pill shape */
-  rounded?: boolean;
-  /** Circle shape */
-  circle?: boolean;
+  animation?: 'pulse' | 'wave' | 'none';
 }
 
-export function Skeleton({ className, rounded = false, circle = false }: SkeletonProps) {
+const variantClasses: Record<SkeletonVariant, string> = {
+  text: 'rounded h-4',
+  circular: 'rounded-full',
+  rectangular: 'rounded-lg',
+};
+
+export function Skeleton({
+  variant = 'text',
+  width,
+  height,
+  className,
+  animation = 'wave',
+}: SkeletonProps) {
+  const style: React.CSSProperties = {};
+  
+  if (width) {
+    style.width = typeof width === 'number' ? `${width}px` : width;
+  }
+  
+  if (height) {
+    style.height = typeof height === 'number' ? `${height}px` : height;
+  }
+
   return (
     <div
-      aria-hidden="true"
       className={cn(
-        'animate-pulse bg-ink/10',
-        circle ? 'rounded-full' : rounded ? 'rounded-full' : 'rounded',
+        'bg-ink/10 relative overflow-hidden',
+        variantClasses[variant],
+        animation === 'pulse' && 'animate-pulse',
+        animation === 'wave' && 'skeleton-wave',
         className
       )}
-    />
+      style={style}
+      aria-busy="true"
+      aria-live="polite"
+    >
+      {animation === 'wave' && (
+        <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      )}
+    </div>
   );
 }
 
-/** Convenience wrapper for a text line skeleton */
-export function SkeletonText({ lines = 1, className }: { lines?: number; className?: string }) {
+// Composants de composition
+export function SkeletonText({ lines = 3, className }: { lines?: number; className?: string }) {
   return (
-    <div className={cn('space-y-2', className)} aria-hidden="true">
+    <div className={cn('space-y-2', className)}>
       {Array.from({ length: lines }).map((_, i) => (
-        <div key={i} className={cn('animate-pulse rounded bg-ink/10 h-3', i === lines - 1 && lines > 1 ? 'w-3/4' : 'w-full')} />
+        <Skeleton
+          key={i}
+          variant="text"
+          width={i === lines - 1 ? '80%' : '100%'}
+        />
       ))}
     </div>
+  );
+}
+
+export function SkeletonCard({ className }: { className?: string }) {
+  return (
+    <div className={cn('space-y-4', className)}>
+      <Skeleton variant="rectangular" height={200} />
+      <div className="space-y-2">
+        <Skeleton variant="text" width="60%" />
+        <Skeleton variant="text" width="40%" />
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonAvatar({ size = 40, className }: { size?: number; className?: string }) {
+  return (
+    <Skeleton
+      variant="circular"
+      width={size}
+      height={size}
+      className={className}
+    />
   );
 }

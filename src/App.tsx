@@ -6,6 +6,10 @@ import PageTransition from './components/PageTransition';
 import VoiceAssistant from './components/VoiceAssistant';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
+import SkipLinks from './components/SkipLinks';
+import PWAInstallPrompt, { OfflineIndicator } from './components/PWAInstallPrompt';
+import ScrollProgress from './components/ScrollProgress';
+import { useServiceWorker } from './hooks/usePWA';
 import { ToastProvider } from './components/ui/Toast';
 import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
 import { useStore } from './store';
@@ -73,6 +77,9 @@ function AppContent() {
   const initSession = useStore(state => state.initSession);
   const fetchProducts = useStore(state => state.fetchProducts);
   const fetchCategories = useStore(state => state.fetchCategories);
+  
+  // Enregistrer le Service Worker
+  useServiceWorker();
 
   useEffect(() => {
     initSession();
@@ -82,6 +89,9 @@ function AppContent() {
 
   return (
     <div className="bg-bg min-h-screen font-sans text-ink selection:bg-accent/20">
+      <SkipLinks />
+      <ScrollProgress />
+      <OfflineIndicator />
       <AnimatePresence mode="wait">
         <Suspense fallback={<RouteFallback />}>
           <Routes location={location}>
@@ -102,6 +112,7 @@ function AppContent() {
       <EnvironmentSwitcher />
       <VoiceAssistant />
       <AuthModal />
+      <PWAInstallPrompt />
     </div>
   );
 }
