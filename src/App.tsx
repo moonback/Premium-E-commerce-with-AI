@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import StoreLayout from './components/StoreLayout';
 import { AnimatePresence } from 'motion/react';
 import PageTransition from './components/PageTransition';
@@ -11,7 +11,6 @@ import PWAInstallPrompt, { OfflineIndicator } from './components/PWAInstallPromp
 import ScrollProgress from './components/ScrollProgress';
 import { useServiceWorker } from './hooks/usePWA';
 import { ToastProvider } from './components/ui/Toast';
-import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
 import { useStore } from './store';
 
 const StoreFront = lazy(() => import('./pages/StoreFront'));
@@ -28,46 +27,6 @@ function RouteFallback() {
   return (
     <div className="min-h-[50vh] flex items-center justify-center bg-bg text-ink" role="status" aria-live="polite">
       <span className="text-xs uppercase tracking-[0.35em] text-ink/50">Chargement Véridian...</span>
-    </div>
-  );
-}
-
-function EnvironmentSwitcher() {
-  const { user } = useStore();
-  const location = useLocation();
-  if (!user || user.role !== 'admin') return null;
-  if (location.pathname === '/screen') return null;
-
-  return (
-    <div className="fixed bottom-6 left-6 z-50 bg-white shadow-xl border border-ink/10 rounded-full flex p-1.5 gap-1 glass">
-      <Link
-        to="/"
-        className={`p-2.5 flex items-center justify-center rounded-full transition-all ${location.pathname === '/' ? 'bg-ink text-white' : 'text-ink/60 hover:bg-ink/5 hover:text-ink'}`}
-        title="Client Store"
-      >
-        <Store className="w-5 h-5" />
-      </Link>
-      <Link
-        to="/pos"
-        className={`p-2.5 flex items-center justify-center rounded-full transition-all ${location.pathname === '/pos' ? 'bg-ink text-white' : 'text-ink/60 hover:bg-ink/5 hover:text-ink'}`}
-        title="Cash Register (POS)"
-      >
-        <TerminalSquare className="w-5 h-5" />
-      </Link>
-      <Link
-        to="/admin"
-        className={`p-2.5 flex items-center justify-center rounded-full transition-all ${location.pathname === '/admin' ? 'bg-ink text-white' : 'text-ink/60 hover:bg-ink/5 hover:text-ink'}`}
-        title="Admin Dashboard"
-      >
-        <LayoutDashboard className="w-5 h-5" />
-      </Link>
-      <Link
-        to="/screen"
-        className={`p-2.5 flex items-center justify-center rounded-full transition-all ${location.pathname === '/screen' ? 'bg-ink text-white' : 'text-ink/60 hover:bg-ink/5 hover:text-ink'}`}
-        title="In-Store Screen"
-      >
-        <Monitor className="w-5 h-5" />
-      </Link>
     </div>
   );
 }
@@ -119,7 +78,6 @@ function AppContent() {
           </Routes>
         </Suspense>
       </AnimatePresence>
-      <EnvironmentSwitcher />
       <VoiceAssistant />
       <AuthModal />
       <PWAInstallPrompt />
