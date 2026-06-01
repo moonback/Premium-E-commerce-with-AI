@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard, TrendingUp, Warehouse, Activity, Tag, Menu, DollarSign } from 'lucide-react';
+import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard, TrendingUp, Warehouse, Activity, Tag, Menu, DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../store';
 import { Category, Product, Spec } from '../types';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ import AdminDiscounts from '../components/AdminDiscounts';
 import AdminMarginAnalysis from '../components/AdminMarginAnalysis';
 import MegaMenuManager from '../components/admin/MegaMenuManager';
 import CategoryModal from '../components/CategoryModal';
+import SEOFields from '../components/SEOFields';
 import { getErrorMessage } from '../lib/errors';
 
 type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
@@ -51,6 +52,9 @@ export default function Admin() {
   // Category Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  // SEO State for Products
+  const [showProductSEO, setShowProductSEO] = useState(false);
 
   const [todaySales, setTodaySales] = React.useState(0);
   const [activeOrdersCount, setActiveOrdersCount] = React.useState(0);
@@ -122,6 +126,7 @@ export default function Admin() {
         categories: editingProduct.categories || [],
         effects: parseListField(editingProduct.effects),
         specs: parseSpecsField(editingProduct.specs),
+        seo: editingProduct.seo || null,
       } satisfies ProductUpsertPayload;
 
       // Remove legacy field if it still exists in state
@@ -523,6 +528,29 @@ export default function Admin() {
                 <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Effets (séparés par virgule)</label>
                 <input type="text" value={editingEffectsValue} onChange={e => setEditingProduct({...editingProduct, effects: e.target.value})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
               </div>
+
+              {/* SEO Section */}
+              <div className="border-t border-ink/10 pt-6 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowProductSEO(!showProductSEO)}
+                  className="flex items-center justify-between w-full px-4 py-3 bg-soft-green/10 hover:bg-soft-green/20 transition-colors rounded"
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest">
+                    Optimisation SEO (Optionnel)
+                  </span>
+                  {showProductSEO ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showProductSEO && (
+                  <div className="mt-4">
+                    <SEOFields 
+                      seo={editingProduct.seo || {}} 
+                      onChange={(seo) => setEditingProduct({...editingProduct, seo})} 
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4 mt-8 pt-4 border-t border-ink/10 text-xs font-bold uppercase tracking-widest">
                 <button type="button" onClick={() => setIsEditing(false)} className="px-6 py-4 border border-ink hover:bg-ink hover:text-white transition-colors">Annuler</button>
                 <button type="submit" className="px-6 py-4 bg-ink text-white hover:bg-ink/90 transition-colors">Enregistrer</button>

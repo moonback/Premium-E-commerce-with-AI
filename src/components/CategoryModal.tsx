@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Loader2 } from 'lucide-react';
+import { X, Upload, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Category } from '../types';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../lib/errors';
 import { useStore } from '../store';
+import SEOFields from './SEOFields';
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export default function CategoryModal({ isOpen, onClose, editingCategory, catego
   const [catFormParent, setCatFormParent] = useState('');
   const [catFormImageUrl, setCatFormImageUrl] = useState('');
   const [catImageUploading, setCatImageUploading] = useState(false);
+  const [seoData, setSeoData] = useState(editingCategory?.seo || {});
+  const [showSEO, setShowSEO] = useState(false);
 
   // Populate form when editing
   useEffect(() => {
@@ -25,11 +28,13 @@ export default function CategoryModal({ isOpen, onClose, editingCategory, catego
       setCatFormName(editingCategory.name);
       setCatFormParent(editingCategory.parent_id || '');
       setCatFormImageUrl(editingCategory.image_url || '');
+      setSeoData(editingCategory.seo || {});
     } else {
       // Reset form when adding new
       setCatFormName('');
       setCatFormParent('');
       setCatFormImageUrl('');
+      setSeoData({});
     }
   }, [editingCategory, isOpen]);
 
@@ -84,6 +89,7 @@ export default function CategoryModal({ isOpen, onClose, editingCategory, catego
              parent_id: catFormParent || null,
              level: newLevel,
              image_url: catFormImageUrl || null,
+             seo: Object.keys(seoData).length > 0 ? seoData : null,
          }).eq('id', editingCategory.id);
          
          if (error) throw error;
@@ -107,6 +113,7 @@ export default function CategoryModal({ isOpen, onClose, editingCategory, catego
             parent_id: catFormParent || null,
             level: newLevel,
             image_url: catFormImageUrl || null,
+            seo: Object.keys(seoData).length > 0 ? seoData : null,
          }]);
          if (error) throw error;
          toast.success("Catégorie ajoutée");
@@ -260,6 +267,25 @@ export default function CategoryModal({ isOpen, onClose, editingCategory, catego
               <li>Vous pouvez créer jusqu'à 3 niveaux de catégories</li>
               <li>L'image est optionnelle mais recommandée pour une meilleure présentation</li>
             </ul>
+          </div>
+
+          {/* SEO Section */}
+          <div className="border-t border-ink/10 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowSEO(!showSEO)}
+              className="flex items-center justify-between w-full px-4 py-3 bg-soft-green/10 hover:bg-soft-green/20 transition-colors rounded"
+            >
+              <span className="text-xs font-bold uppercase tracking-widest">
+                Optimisation SEO (Optionnel)
+              </span>
+              {showSEO ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {showSEO && (
+              <div className="mt-4">
+                <SEOFields seo={seoData} onChange={setSeoData} />
+              </div>
+            )}
           </div>
 
           {/* Actions */}

@@ -1,9 +1,20 @@
+export type SEOData = {
+  meta_title?: string | null;
+  meta_description?: string | null;
+  meta_keywords?: string | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  canonical_url?: string | null;
+};
+
 export type Category = {
   id: string;
   name: string;
   parent_id: string | null;
   level: number;
   image_url?: string | null;
+  seo?: SEOData | null;
 };
 
 export type Spec = {
@@ -27,6 +38,7 @@ export type Product = {
   is_batch_product?: boolean; // Produit vendu en lots
   batch_size?: number; // Taille du lot (ex: 6 pour un pack de 6)
   batch_unit?: string; // Unité du lot (ex: "pièces", "unités", "bouteilles")
+  seo?: SEOData | null;
 };
 
 export type CartItem = {
