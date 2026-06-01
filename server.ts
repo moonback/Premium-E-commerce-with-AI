@@ -440,6 +440,137 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  // ── Amélioration IA des descriptions produits (OpenRouter) ────────────────
+
+  /**
+   * POST /api/products/enhance-description
+   * Améliore la description d'un produit via OpenRouter (modèle gratuit).
+   * Body JSON : { name, description, categories?, effects?, price? }
+   * Auth : admin/staff uniquement
+   */
+  app.post("/api/products/enhance-description", async (req, res) => {
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openRouterKey) {
+      res.status(503).json({ error: "OPENROUTER_API_KEY non configurée. Ajoutez-la dans votre .env." });
+      return;
+    }
+    if (!supabaseAuth) {
+      res.status(503).json({ error: "Supabase non configuré" });
+      return;
+    }
+
+    // Auth admin/staff
+    const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      res.status(401).json({ error: "Authentification requise" });
+      return;
+    }
+    const { data: userData, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !userData.user) {
+      res.status(401).json({ error: "Token invalide" });
+      return;
+    }
+    const catalogClient = supabaseAdmin || supabaseAuth;
+    const { data: profile } = await catalogClient
+      .from("profiles").select("role").eq("id", userData.user.id).single();
+    if (!profile || !["admin", "staff"].includes(profile.role)) {
+      res.status(403).json({ error: "Accès réservé aux administrateurs" });
+      return;
+    }
+
+    // Validation du body
+    const { name, description, categories, effects, price } = req.body as {
+      name?: string;
+      description?: string;
+      categories?: string[];
+      effects?: string[];
+      price?: number;
+    };
+
+    if (!name?.trim() || !description?.trim()) {
+      res.status(400).json({ error: "name et description sont requis" });
+      return;
+    }
+    if (description.length > 3000) {
+      res.status(400).json({ error: "Description trop longue (max 3000 caractères)" });
+      return;
+    }
+
+    const requestId = (req as Request & { requestId?: string }).requestId;
+
+    // Construction du prompt
+    const context = [
+      categories?.length ? `Catégories : ${categories.join(", ")}` : null,
+      effects?.length ? `Caractéristiques : ${effects.join(", ")}` : null,
+      price ? `Prix : ${price.toFixed(2)}€` : null,
+    ].filter(Boolean).join("\n");
+
+    const systemPrompt = `Tu es un expert en rédaction e-commerce premium pour la boutique Véridian.
+Tu améliores les descriptions produits en respectant ces normes :
+- Longueur : 80 à 150 mots, ni trop court ni trop long
+- Ton : premium, élégant, persuasif mais honnête
+- Structure : accroche forte (1 phrase), bénéfices clés (2-3 phrases), appel à l'action implicite (1 phrase)
+- SEO : intègre naturellement les mots-clés du nom et des catégories
+- Langue : français impeccable, pas de jargon technique excessif
+- Interdits : superlatifs vides ("le meilleur", "incroyable"), majuscules abusives, emojis
+- Retourne UNIQUEMENT la description améliorée, sans commentaire ni explication.`;
+
+    const userPrompt = `Produit : ${name.trim()}
+${context ? context + "\n" : ""}Description actuelle :
+${description.trim()}
+
+Améliore cette description en respectant les normes Véridian.`;
+
+    try {
+      log("info", "enhance_description_start", { requestId, productName: name });
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openRouterKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+          "X-Title": "Véridian Admin",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-120b:free",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: 300,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({})) as { error?: { message?: string } };
+        const msg = errBody?.error?.message ?? `OpenRouter error ${response.status}`;
+        log("warn", "enhance_description_api_error", { requestId, status: response.status, msg });
+        res.status(response.status >= 500 ? 502 : response.status).json({ error: msg });
+        return;
+      }
+
+      const data = await response.json() as {
+        choices?: Array<{ message?: { content?: string } }>;
+        error?: { message?: string };
+      };
+
+      const enhanced = data.choices?.[0]?.message?.content?.trim();
+      if (!enhanced) {
+        res.status(502).json({ error: "Réponse vide du modèle IA" });
+        return;
+      }
+
+      log("info", "enhance_description_ok", { requestId, productName: name, chars: enhanced.length });
+      res.json({ enhanced });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      log("error", "enhance_description_failed", { requestId, message });
+      res.status(500).json({ error: message });
+    }
+  });
+
   // ── Vectorisation des produits avec pgvector ───────────────────────────────
 
   /**

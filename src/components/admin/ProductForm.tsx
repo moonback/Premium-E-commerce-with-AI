@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, X, Sparkles, Loader2, Check, RotateCcw } from 'lucide-react';
 import { Product, Category, Spec } from '../../types';
 import SEOFields from '../SEOFields';
 import ProductBadgesManager from '../ProductBadgesManager';
 import ProductPromotionManager from '../ProductPromotionManager';
+import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
   effects?: string[] | string;
@@ -30,6 +32,70 @@ export default function ProductForm({
   const [showSEO, setShowSEO] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
   const [showPromotion, setShowPromotion] = useState(false);
+
+  // ── IA description enhancement ──────────────────────────────────────────
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [enhancedDescription, setEnhancedDescription] = useState<string | null>(null);
+  const [originalDescription, setOriginalDescription] = useState<string | null>(null);
+
+  const handleEnhanceDescription = async () => {
+    const name = editingProduct.name?.trim();
+    const description = editingProduct.description?.trim();
+    if (!name || !description) {
+      toast.error('Renseignez le nom et la description avant d\'améliorer');
+      return;
+    }
+    if (!supabase) { toast.error('Supabase non configuré'); return; }
+
+    setIsEnhancing(true);
+    setEnhancedDescription(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) { toast.error('Session expirée'); return; }
+
+      const effects = Array.isArray(editingProduct.effects)
+        ? editingProduct.effects
+        : editingProduct.effects?.split(',').map(e => e.trim()).filter(Boolean) ?? [];
+
+      const res = await fetch('/api/products/enhance-description', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          name,
+          description,
+          categories: editingProduct.categories ?? [],
+          effects,
+          price: editingProduct.price,
+        }),
+      });
+
+      const json = await res.json() as { enhanced?: string; error?: string };
+      if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
+
+      setOriginalDescription(description);
+      setEnhancedDescription(json.enhanced!);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur IA');
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  const acceptEnhancement = () => {
+    if (!enhancedDescription) return;
+    setEditingProduct(p => ({ ...p, description: enhancedDescription }));
+    setEnhancedDescription(null);
+    setOriginalDescription(null);
+    toast.success('Description améliorée appliquée');
+  };
+
+  const rejectEnhancement = () => {
+    setEnhancedDescription(null);
+    setOriginalDescription(null);
+  };
 
   const editingSpecs = Array.isArray(editingProduct.specs) ? editingProduct.specs : [];
   const editingEffectsValue = Array.isArray(editingProduct.effects)
@@ -77,16 +143,91 @@ export default function ProductForm({
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-widest font-bold mb-2 text-ink/70">
-              Description *
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs uppercase tracking-widest font-bold text-ink/70">
+                Description *
+              </label>
+              <button
+                type="button"
+                onClick={handleEnhanceDescription}
+                disabled={isEnhancing || !editingProduct.name?.trim() || !editingProduct.description?.trim()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-widest border border-ink/20 rounded-lg hover:bg-ink hover:text-white hover:border-ink transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Améliorer avec l'IA (Llama 3.3 70B via OpenRouter)"
+              >
+                {isEnhancing
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Sparkles className="w-3.5 h-3.5" />
+                }
+                {isEnhancing ? 'Génération…' : 'Améliorer avec l\'IA'}
+              </button>
+            </div>
+
             <textarea
               required
               value={editingProduct.description || ''}
-              onChange={e => setEditingProduct({...editingProduct, description: e.target.value})}
+              onChange={e => {
+                setEditingProduct({...editingProduct, description: e.target.value});
+                // Annuler le diff si l'utilisateur modifie manuellement
+                if (enhancedDescription) rejectEnhancement();
+              }}
               className="w-full border border-ink/20 rounded-lg px-4 py-3 focus:outline-none focus:border-ink focus:ring-2 focus:ring-ink/20 bg-white transition-all min-h-[120px] resize-y"
               placeholder="Description détaillée du produit..."
             />
+
+            {/* ── Diff avant/après ── */}
+            {enhancedDescription && (
+              <div className="mt-3 border border-ink/10 rounded-xl overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-ink to-ink/90">
+                  <Sparkles className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-white">
+                    Suggestion IA — Llama 3.3 70B
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-ink/10">
+                  {/* Avant */}
+                  <div className="p-4 bg-red-50/50">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-2">Avant</p>
+                    <p className="text-sm text-ink/60 leading-relaxed">{originalDescription}</p>
+                  </div>
+                  {/* Après */}
+                  <div className="p-4 bg-emerald-50/50">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-2">Après</p>
+                    <p className="text-sm text-ink leading-relaxed">{enhancedDescription}</p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 p-3 bg-ink/3 border-t border-ink/10">
+                  <button
+                    type="button"
+                    onClick={acceptEnhancement}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Appliquer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEnhanceDescription}
+                    disabled={isEnhancing}
+                    className="flex items-center gap-1.5 px-4 py-2 border border-ink/20 text-ink text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-ink/5 transition-colors disabled:opacity-40"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Regénérer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={rejectEnhancement}
+                    className="flex items-center gap-1.5 px-4 py-2 border border-red-200 text-red-500 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-red-50 transition-colors ml-auto"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Ignorer
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
