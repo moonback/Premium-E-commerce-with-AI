@@ -159,34 +159,7 @@ export default function StoreFront() {
       {/* ── Trust Badges Section ── */}
       <TrustBadges />
 
-      {/* ── Features Section ── */}
-      <section className="bg-white border-y border-ink/10 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {[
-              { icon: Truck, title: 'Livraison Gratuite', desc: 'Sur toutes les commandes de plus de 100€' },
-              { icon: Shield, title: 'Paiement Sécurisé', desc: 'Transactions 100% sécurisées' },
-              { icon: Headphones, title: 'Support 24/7', desc: 'Assistance dédiée à votre service' },
-              { icon: Award, title: 'Qualité Premium', desc: 'Produits sélectionnés avec soin' },
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-                whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="text-center group"
-              >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-ink/5 mb-4 group-hover:bg-ink/10 transition-colors">
-                  <feature.icon className="w-7 h-7 text-ink" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-sm font-bold uppercase tracking-widest mb-2">{feature.title}</h3>
-                <p className="text-xs text-ink/60 font-light">{feature.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      
 
       {/* ── Featured Products Section ── */}
       {!isLoadingProducts && featuredProducts.length > 0 && (

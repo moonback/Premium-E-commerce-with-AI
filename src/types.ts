@@ -12,6 +12,7 @@ export type Spec = {
 };
 
 export type Product = {
+  rating: number;
   id: string;
   name: string;
   description: string;

@@ -71,7 +71,7 @@ export default function ProductCard({ product }: { product: Product }) {
           N°{product.id.replace('prod_', '').padStart(3, '0')}
         </div>
 
-        <Link to={productPath} className="relative aspect-[4/5] overflow-hidden bg-soft-green rounded-t-full mb-6 block">
+        <Link to={productPath} className="relative aspect-[4/5] overflow-hidden bg-soft-green mb-6 block">
           {/* Badges dynamiques */}
           <ProductBadges
             isNew={product.isNew}
