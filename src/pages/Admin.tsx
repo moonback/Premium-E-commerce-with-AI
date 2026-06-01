@@ -15,6 +15,7 @@ import AdminDashboard from '../components/AdminDashboard';
 import AdminDiscounts from '../components/AdminDiscounts';
 import AdminMarginAnalysis from '../components/AdminMarginAnalysis';
 import MegaMenuManager from '../components/admin/MegaMenuManager';
+import CategoryModal from '../components/CategoryModal';
 import { getErrorMessage } from '../lib/errors';
 
 type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
@@ -47,12 +48,9 @@ export default function Admin() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EditableProduct>({});
   
-  // Category Form
-  const [catFormName, setCatFormName] = useState('');
-  const [catFormParent, setCatFormParent] = useState('');
-  const [catFormImageUrl, setCatFormImageUrl] = useState('');
-  const [catImageUploading, setCatImageUploading] = useState(false);
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  // Category Modal State
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const [todaySales, setTodaySales] = React.useState(0);
   const [activeOrdersCount, setActiveOrdersCount] = React.useState(0);
@@ -177,109 +175,6 @@ export default function Admin() {
      }
   };
 
-  const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !supabase) return;
-    try {
-      setCatImageUploading(true);
-      toast.loading("Upload de l'image...", { id: "cat-upload" });
-      const fileExt = file.name.split('.').pop();
-      const fileName = `cat_${crypto.randomUUID()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file);
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-      setCatFormImageUrl(publicUrl);
-      toast.success("Image uploadée", { id: "cat-upload" });
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Erreur upload"), { id: "cat-upload" });
-    } finally {
-      setCatImageUploading(false);
-    }
-  };
-
-  const handleSaveCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!supabase) return toast.error("Supabase requis");
-    try {
-      const parent = categories.find(c => c.id === catFormParent);
-      const newLevel = parent ? parent.level + 1 : 1;
-      
-      if (editingCategoryId) {
-         if (catFormParent === editingCategoryId) return toast.error("Une catégorie ne peut être son propre parent.");
-         
-         const children = categories.filter(c => c.parent_id === editingCategoryId);
-         const grandchildren = categories.filter(c => children.some(child => child.id === c.parent_id));
-         
-         if (children.some(c => c.id === catFormParent) || grandchildren.some(c => c.id === catFormParent)) {
-             return toast.error("Impossible de déplacer dans l'une de ses sous-catégories.");
-         }
-         
-         const maxDepthAdded = grandchildren.length > 0 ? 2 : (children.length > 0 ? 1 : 0);
-         if (newLevel + maxDepthAdded > 3) {
-             return toast.error("Action impossible : le déplacement ferait dépasser la limite de 3 niveaux.");
-         }
-         
-         const { error } = await supabase.from('categories').update({
-             name: catFormName,
-             parent_id: catFormParent || null,
-             level: newLevel,
-             image_url: catFormImageUrl || null,
-         }).eq('id', editingCategoryId);
-         
-         if (error) throw error;
-         
-         const oldCategory = categories.find(c => c.id === editingCategoryId);
-         if (oldCategory && oldCategory.level !== newLevel) {
-            const levelDiff = newLevel - oldCategory.level;
-            for (const child of children) {
-               await supabase.from('categories').update({ level: child.level + levelDiff }).eq('id', child.id);
-            }
-            for (const gc of grandchildren) {
-               await supabase.from('categories').update({ level: gc.level + levelDiff }).eq('id', gc.id);
-            }
-         }
-         toast.success("Catégorie modifiée");
-      } else {
-         if (newLevel > 3) return toast.error("Maximum 3 niveaux de catégories");
-         const { error } = await supabase.from('categories').insert([{
-            id: `cat_${Date.now()}`,
-            name: catFormName,
-            parent_id: catFormParent || null,
-            level: newLevel,
-            image_url: catFormImageUrl || null,
-         }]);
-         if (error) throw error;
-         toast.success("Catégorie ajoutée");
-      }
-      
-      setCatFormName('');
-      setCatFormParent('');
-      setCatFormImageUrl('');
-      setEditingCategoryId(null);
-      useStore.getState().fetchCategories();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    }
-  };
-
-  const handleEditCategoryClick = (cat: Category) => {
-    setEditingCategoryId(cat.id);
-    setCatFormName(cat.name);
-    setCatFormParent(cat.parent_id || '');
-    setCatFormImageUrl(cat.image_url || '');
-  };
-
-  const handleCancelCategoryEdit = () => {
-    setCatFormName('');
-    setCatFormParent('');
-    setCatFormImageUrl('');
-    setEditingCategoryId(null);
-  };
-
   const handleDeleteCategory = async (id: string) => {
     if (!window.confirm("Supprimer cette catégorie ? (Les sous-catégories seront aussi supprimées)")) return;
     if (!supabase) return;
@@ -291,6 +186,21 @@ export default function Admin() {
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
+  };
+
+  const handleEditCategoryClick = (cat: Category) => {
+    setEditingCategory(cat);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleAddCategoryClick = () => {
+    setEditingCategory(null);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleCloseCategoryModal = () => {
+    setIsCategoryModalOpen(false);
+    setEditingCategory(null);
   };
 
   const editingSpecs = Array.isArray(editingProduct.specs) ? editingProduct.specs : [];
@@ -621,12 +531,23 @@ export default function Admin() {
           </div>
         )}
         {activeTab === 'Categories' && (
-          <div className="bg-transparent border border-ink/10 p-8 max-w-2xl">
-            <h2 className="text-2xl font-serif mb-6">Gestion des Catégories (3 Niveaux)</h2>
-            <div className="space-y-4 text-sm mb-8">
-              <p className="text-ink/60">Gérez l'arborescence des catégories de votre boutique de manière indépendante.</p>
-              
-              <ul className="space-y-2 mt-4 font-mono text-xs">
+          <div className="bg-transparent border border-ink/10 p-8 max-w-4xl">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-serif">Gestion des Catégories (3 Niveaux)</h2>
+                <p className="text-ink/60 text-sm mt-2">Gérez l'arborescence des catégories de votre boutique de manière indépendante.</p>
+              </div>
+              <button
+                onClick={handleAddCategoryClick}
+                className="px-6 py-4 bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Ajouter une Catégorie
+              </button>
+            </div>
+            
+            <div className="space-y-4 text-sm">
+              <ul className="space-y-2 font-mono text-xs">
                 {categories.filter(c => c.level === 1).map(c1 => (
                    <li key={c1.id}>
                      <div className="font-bold border-b border-ink/10 pb-1 mb-1 flex justify-between items-center gap-2">
@@ -676,72 +597,6 @@ export default function Admin() {
                 ))}
               </ul>
             </div>
-            
-            <div className="bg-soft-green/10 p-6 border border-ink/10 mt-8">
-              <h3 className="font-bold text-sm uppercase tracking-widest mb-4">
-                {editingCategoryId ? 'Modifier la Catégorie' : 'Ajouter une Catégorie'}
-              </h3>
-              <form onSubmit={handleSaveCategory} className="space-y-4">
-                <div>
-                  <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Nom</label>
-                  <input required type="text" value={catFormName} onChange={e => setCatFormName(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Catégorie Parente (Optionnel)</label>
-                  <select value={catFormParent} onChange={e => setCatFormParent(e.target.value)} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent uppercase text-xs">
-                    <option value="">Aucune (Niveau 1)</option>
-                    {categories.filter(c => c.level < 3).map(c => (
-                      <option key={c.id} value={c.id} disabled={editingCategoryId === c.id}>{c.name} (Niveau {c.level})</option>
-                    ))}
-                  </select>
-                </div>
-                {/* ── Image de la catégorie ── */}
-                <div>
-                  <label className="block text-xs uppercase tracking-widest font-bold mb-2 opacity-50">
-                    Image de la catégorie (optionnel)
-                  </label>
-                  <div className="flex gap-3 items-end">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="URL de l'image..."
-                        value={catFormImageUrl}
-                        onChange={e => setCatFormImageUrl(e.target.value)}
-                        className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent text-sm"
-                      />
-                    </div>
-                    <label className={`cursor-pointer px-4 py-2 border border-ink/20 hover:bg-ink/5 transition-colors text-xs font-bold uppercase tracking-widest flex-shrink-0 flex items-center gap-1 ${catImageUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                      {catImageUploading ? 'Upload...' : 'Upload'}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleCategoryImageUpload} disabled={catImageUploading} />
-                    </label>
-                  </div>
-                  {catFormImageUrl && (
-                    <div className="mt-3 flex items-center gap-3">
-                      <img
-                        src={catFormImageUrl}
-                        alt="Aperçu"
-                        className="w-16 h-16 object-cover rounded-xl border border-ink/10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCatFormImageUrl('')}
-                        className="text-xs text-red-500 hover:underline"
-                      >
-                        Supprimer l'image
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                   {editingCategoryId && (
-                     <button type="button" onClick={handleCancelCategoryEdit} className="px-6 py-3 border border-ink text-ink hover:bg-ink hover:text-white transition-colors text-xs font-bold uppercase tracking-widest w-full">Annuler</button>
-                   )}
-                   <button type="submit" className="px-6 py-3 bg-ink text-white hover:bg-ink/90 transition-colors text-xs font-bold uppercase tracking-widest w-full">
-                     {editingCategoryId ? 'Enregistrer' : 'Ajouter'}
-                   </button>
-                </div>
-              </form>
-            </div>
 
             <div className="p-4 bg-soft-green/20 border border-ink/10 text-xs text-ink/70 mt-8">
               <p className="font-bold mb-2">Note sur la base de données :</p>
@@ -750,6 +605,14 @@ export default function Admin() {
           </div>
         )}
       </div>
+
+      {/* Category Modal */}
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={handleCloseCategoryModal}
+        editingCategory={editingCategory}
+        categories={categories}
+      />
     </div>
   );
 }
