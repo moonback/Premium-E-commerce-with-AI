@@ -99,13 +99,22 @@ export default function StoreFront() {
     alert('Merci pour votre inscription !');
   };
 
+  // Get active category SEO data
+  const activeCategoryObj = activeTab !== 'Tout' ? categoryMap[activeTab] : null;
+  const categoryTitle = activeTab === 'Tout' ? 'Collection premium e-commerce' : `${activeTab} - Collection Véridian`;
+  const categoryDescription = activeTab === 'Tout' 
+    ? 'Explorez la collection Véridian : produits premium, recommandations IA et expérience d\'achat élégante.'
+    : `Découvrez notre sélection de ${activeTab.toLowerCase()} premium avec livraison rapide et service client exceptionnel.`;
+
   return (
     <div className="bg-bg flex-1">
       <SEO
-        title="Collection premium e-commerce"
-        description="Explorez la collection Véridian : produits premium, recommandations IA et expérience d'achat élégante."
+        title={categoryTitle}
+        description={categoryDescription}
         path="/"
         jsonLd={buildStoreJsonLd()}
+        seoData={activeCategoryObj?.seo}
+        keywords={activeTab !== 'Tout' ? activeTab : 'e-commerce, boutique, premium'}
       />
       
       {/* Notification de preuve sociale */}

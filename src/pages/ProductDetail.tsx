@@ -139,6 +139,8 @@ export default function ProductDetail() {
         image={product.image}
         type="product"
         jsonLd={buildProductJsonLd(product)}
+        seoData={product.seo}
+        keywords={product.effects?.join(', ')}
       />
       <div className="max-w-7xl mx-auto w-full">
         {/* Breadcrumbs */}
