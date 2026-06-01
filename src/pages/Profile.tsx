@@ -55,6 +55,7 @@ export default function Profile() {
   const [orders, setOrders] = useState<ProfileOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const getTierInfo = (points: number) => {
     if (points < 1000) {
@@ -160,15 +161,28 @@ export default function Profile() {
   return (
     <div className="flex-1 bg-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-light font-serif text-ink mb-2">Mon Compte</h1>
-          <p className="text-ink/60">Gérez vos informations et vos préférences</p>
+        {/* Header with Mobile Menu Button */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-light font-serif text-ink mb-2">Mon Compte</h1>
+            <p className="text-ink/60">Gérez vos informations et vos préférences</p>
+          </div>
+          
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileSidebarOpen(true)}
+            className="lg:hidden p-3 rounded-xl bg-white border border-ink/10 hover:border-ink/20 transition-colors"
+            aria-label="Ouvrir le menu"
+          >
+            <svg className="w-6 h-6 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <aside className="lg:col-span-1">
+          {/* Desktop Sidebar */}
+          <aside className="hidden lg:block lg:col-span-1">
             <div className="bg-white border border-ink/10 rounded-2xl p-6 sticky top-24">
               {/* User Info */}
               <div className="text-center mb-6 pb-6 border-b border-ink/10">
@@ -219,6 +233,98 @@ export default function Profile() {
               </button>
             </div>
           </aside>
+
+          {/* Mobile Sidebar */}
+          <AnimatePresence>
+            {isMobileSidebarOpen && (
+              <>
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-40 lg:hidden"
+                />
+                
+                {/* Sidebar */}
+                <motion.aside
+                  initial={{ x: '-100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '-100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className="fixed left-0 top-0 bottom-0 w-80 bg-white shadow-2xl z-50 lg:hidden overflow-y-auto"
+                >
+                  <div className="p-6">
+                    {/* Close Button */}
+                    <button
+                      onClick={() => setIsMobileSidebarOpen(false)}
+                      className="absolute top-4 right-4 p-2 text-ink/60 hover:text-ink transition-colors"
+                      aria-label="Fermer le menu"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+
+                    {/* User Info */}
+                    <div className="text-center mb-6 pb-6 border-b border-ink/10 mt-8">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center text-white text-2xl font-bold">
+                        {user.email.charAt(0).toUpperCase()}
+                      </div>
+                      <h3 className="font-serif text-lg text-ink mb-1">{user.email.split('@')[0]}</h3>
+                      <p className="text-xs text-ink/50 truncate px-4">{user.email}</p>
+                      <div className={`inline-block mt-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r ${tier.color} text-white`}>
+                        {tier.current}
+                      </div>
+                    </div>
+
+                    {/* Navigation */}
+                    <nav className="space-y-2">
+                      {sidebarItems.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setIsMobileSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all ${
+                            activeTab === item.id
+                              ? 'bg-ink text-white'
+                              : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <item.icon className="w-5 h-5" />
+                            <span className="text-xs">{item.label}</span>
+                          </div>
+                          {item.badge !== undefined && item.badge > 0 && (
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              activeTab === item.id ? 'bg-white/20' : 'bg-accent text-white'
+                            }`}>
+                              {item.badge}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </nav>
+
+                    {/* Logout */}
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setIsMobileSidebarOpen(false);
+                      }}
+                      className="w-full mt-6 pt-6 border-t border-ink/10 flex items-center justify-center gap-2 text-sm font-bold uppercase tracking-wider text-red-600 hover:text-red-700 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Déconnexion
+                    </button>
+                  </div>
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Main Content */}
           <main className="lg:col-span-3">
