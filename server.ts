@@ -7,6 +7,7 @@ import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import { config as loadDotenv } from "dotenv";
 import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
+import { createSkillsEngine } from "./src/lib/skillsEngine";
 
 // Load .env before anything else (tsx doesn't auto-inject env files)
 loadDotenv({ path: ".env" });
@@ -169,6 +170,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   const server = createServer(app);
+
+  // ── Skills Engine — chargé une fois au démarrage ───────────────────────────
+  const skillsEngine = createSkillsEngine(process.cwd());
 
   // ── Observability middlewares ──────────────────────────────────────────────
   app.use(requestIdMiddleware);
@@ -512,7 +516,8 @@ async function startServer() {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
           },
-          systemInstruction: "Vous êtes Ava, une conseillère IA pour Véridian, une boutique e-commerce premium. Utilisez uniquement le contexte catalogue fourni par le client ou les outils pour recommander des produits existants. Soyez accueillante, experte, concise et confirmez toute action d'ajout au panier.",
+          // Prompt système chargé depuis prompts/ava-system.md
+          systemInstruction: skillsEngine.systemPrompt,
           tools: [{
             functionDeclarations: [{
               name: "addToCart",
@@ -552,7 +557,24 @@ async function startServer() {
               }
             });
           } else if (parsed.text) {
-             session.sendRealtimeInput({ text: parsed.text });
+            // ── Skills auto-injection ──────────────────────────────────────
+            // Détecte les skills pertinents et les injecte comme contexte
+            // avant le message du client (uniquement pour les messages texte
+            // non-système, i.e. pas le contexte catalogue initial)
+            const isCatalogContext = (parsed.text as string).startsWith('Contexte catalogue');
+            if (!isCatalogContext) {
+              const activeSkills = skillsEngine.getActiveSkills(parsed.text as string);
+              if (activeSkills.length > 0) {
+                const skillNames = activeSkills.map(s => s.name).join(', ');
+                log('info', 'skills_activated', { skills: skillNames });
+                const skillsContext = activeSkills
+                  .map(s => `[Skill actif: ${s.name}]\n${s.content}`)
+                  .join('\n\n');
+                // Injecte le contexte des skills comme instruction système juste avant le message
+                session.sendRealtimeInput({ text: `[Instructions contextuelles — ne pas lire à voix haute]\n${skillsContext}` });
+              }
+            }
+            session.sendRealtimeInput({ text: parsed.text });
           } else if (parsed.functionResponse) {
              session.sendToolResponse({ functionResponses: [parsed.functionResponse] });
           }
