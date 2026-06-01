@@ -5,7 +5,12 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createServer, type IncomingMessage } from "http";
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
+import { config as loadDotenv } from "dotenv";
 import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
+
+// Load .env before anything else (tsx doesn't auto-inject env files)
+loadDotenv({ path: ".env" });
+loadDotenv({ path: ".env.local", override: true }); // .env.local takes precedence
 import {
   calculatePaymentAmountCents,
   createStripeIdempotencyKey,
@@ -505,7 +510,7 @@ async function startServer() {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
           },
           systemInstruction: "Vous êtes Ava, une conseillère IA pour Véridian, une boutique e-commerce premium. Utilisez uniquement le contexte catalogue fourni par le client ou les outils pour recommander des produits existants. Soyez accueillante, experte, concise et confirmez toute action d'ajout au panier.",
           tools: [{

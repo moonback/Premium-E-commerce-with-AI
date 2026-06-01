@@ -50,7 +50,8 @@ export default function VoiceAssistant() {
   const [cartConfirmation, setCartConfirmation] = useState<CartConfirmation | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);   // 24 kHz — playback only
+  const micCtxRef = useRef<AudioContext | null>(null);     // 16 kHz — mic capture only
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const nextStartTimeRef = useRef(0);
@@ -134,7 +135,9 @@ export default function VoiceAssistant() {
         (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextCtor) throw new Error('AudioContext non disponible dans ce navigateur');
 
-      const audioCtx = new AudioContextCtor({ sampleRate: 16000 });
+      // Gemini Live outputs audio at 24 kHz — use a separate context for playback
+      // The mic capture context stays at 16 kHz (sent to the server)
+      const audioCtx = new AudioContextCtor({ sampleRate: 24000 });
       audioCtxRef.current = audioCtx;
       nextStartTimeRef.current = audioCtx.currentTime;
 
@@ -150,11 +153,15 @@ export default function VoiceAssistant() {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           streamRef.current = stream;
-          const source = audioCtx.createMediaStreamSource(stream);
-          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+          // Mic capture uses its own 16 kHz context — independent from the 24 kHz playback context
+          const micCtx = new AudioContextCtor({ sampleRate: 16000 });
+          micCtxRef.current = micCtx;
+          const source = micCtx.createMediaStreamSource(stream);
+          const processor = micCtx.createScriptProcessor(4096, 1, 1);
           processorRef.current = processor;
           source.connect(processor);
-          processor.connect(audioCtx.destination);
+          processor.connect(micCtx.destination);
 
           processor.onaudioprocess = e => {
             if (ws.readyState !== WebSocket.OPEN) return;
@@ -205,7 +212,7 @@ export default function VoiceAssistant() {
       const int16 = new Int16Array(bytes.buffer);
       const float32 = new Float32Array(int16.length);
       for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 0x7fff;
-      const buf = ctx.createBuffer(1, float32.length, 16000);
+      const buf = ctx.createBuffer(1, float32.length, 24000);
       buf.getChannelData(0).set(float32);
       const src = ctx.createBufferSource();
       src.buffer = buf;
@@ -226,6 +233,8 @@ export default function VoiceAssistant() {
     processorRef.current = null;
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
+    micCtxRef.current?.close();
+    micCtxRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
   };
