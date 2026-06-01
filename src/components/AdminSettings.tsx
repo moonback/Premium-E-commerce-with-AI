@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Save, Database, Bell, Shield, Globe,
-  TrendingUp, Package, CreditCard, Share2, Loader
+  TrendingUp, Package, CreditCard, Share2, Loader, Cpu, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -148,6 +148,12 @@ export default function AdminSettings() {
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [settings, setSettings] = useState<Partial<StoreSettings>>(DEFAULT_SETTINGS);
 
+  // ── Vectorisation state ──────────────────────────────────────────────────
+  const [isVectorizing, setIsVectorizing] = useState(false);
+  const [vectorizeResult, setVectorizeResult] = useState<{
+    success: number; failed: number; skipped: number;
+  } | null>(null);
+
   useEffect(() => { loadSettings(); }, []);
 
   const loadSettings = async () => {
@@ -192,6 +198,36 @@ export default function AdminSettings() {
 
   const set = <K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) =>
     setSettings(prev => ({ ...prev, [key]: value }));
+
+  // ── Vectorisation handler ────────────────────────────────────────────────
+  const handleVectorize = async (onlyMissing: boolean) => {
+    if (!supabase) { toast.error('Supabase non configuré'); return; }
+    setIsVectorizing(true);
+    setVectorizeResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Connectez-vous pour vectoriser');
+        return;
+      }
+      const res = await fetch('/api/products/vectorize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ onlyMissing }),
+      });
+      const json = await res.json() as { ok?: boolean; success?: number; failed?: number; skipped?: number; error?: string };
+      if (!res.ok) throw new Error(json.error || 'Erreur serveur');
+      setVectorizeResult({ success: json.success ?? 0, failed: json.failed ?? 0, skipped: json.skipped ?? 0 });
+      toast.success(`Vectorisation terminée : ${json.success} produit(s) traité(s)`);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Erreur vectorisation'));
+    } finally {
+      setIsVectorizing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -475,6 +511,61 @@ export default function AdminSettings() {
                   </div>
                 </div>
               )}
+            </div>
+          </SectionCard>
+
+          {/* ── Vectorisation pgvector ──────────────────────────────────── */}
+          <SectionCard icon={Cpu} title="Vectorisation IA (pgvector)">
+            <div className="space-y-4">
+              <p className="text-sm text-ink/60">
+                Génère les embeddings sémantiques des produits via Gemini <code className="bg-ink/5 px-1 rounded text-xs">text-embedding-004</code> (768 dims)
+                et les stocke dans Supabase avec pgvector. Permet à Ava de faire des recherches sémantiques précises.
+              </p>
+
+              {/* Résultat */}
+              {vectorizeResult && (
+                <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-emerald-800">
+                    <p className="font-semibold">Vectorisation terminée</p>
+                    <p className="mt-1 text-xs">
+                      ✅ {vectorizeResult.success} succès &nbsp;·&nbsp;
+                      ❌ {vectorizeResult.failed} échec(s) &nbsp;·&nbsp;
+                      ⏭ {vectorizeResult.skipped} ignoré(s)
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => handleVectorize(true)}
+                  disabled={isVectorizing}
+                  className="flex items-center gap-2 px-4 py-2 bg-ink text-white text-sm font-medium rounded hover:bg-ink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isVectorizing
+                    ? <Loader className="w-4 h-4 animate-spin" />
+                    : <Cpu className="w-4 h-4" />
+                  }
+                  Vectoriser les nouveaux produits
+                </button>
+                <button
+                  onClick={() => handleVectorize(false)}
+                  disabled={isVectorizing}
+                  className="flex items-center gap-2 px-4 py-2 border border-ink/20 text-ink text-sm font-medium rounded hover:bg-ink/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isVectorizing
+                    ? <Loader className="w-4 h-4 animate-spin" />
+                    : <AlertCircle className="w-4 h-4" />
+                  }
+                  Re-vectoriser tout le catalogue
+                </button>
+              </div>
+
+              <p className="text-xs text-ink/40">
+                "Nouveaux produits" ne traite que ceux sans embedding existant.
+                "Re-vectoriser tout" écrase tous les embeddings (utile après modification des descriptions).
+              </p>
             </div>
           </SectionCard>
 

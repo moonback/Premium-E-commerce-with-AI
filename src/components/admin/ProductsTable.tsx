@@ -1,6 +1,9 @@
-import React from 'react';
-import { Edit2, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit2, Trash2, Cpu, Loader2 } from 'lucide-react';
 import { Product } from '../../types';
+import VectorizationPanel from './VectorizationPanel';
+import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface ProductsTableProps {
   products: Product[];
@@ -9,6 +12,27 @@ interface ProductsTableProps {
 }
 
 export default function ProductsTable({ products, onEdit, onDelete }: ProductsTableProps) {
+  const [vectorizingId, setVectorizingId] = useState<string | null>(null);
+
+  const handleVectorizeOne = async (productId: string) => {
+    if (!supabase) return;
+    setVectorizingId(productId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) { toast.error('Session expirée'); return; }
+      const res = await fetch(`/api/products/${productId}/vectorize`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
+      toast.success('Produit vectorisé ✓');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur vectorisation');
+    } finally {
+      setVectorizingId(null);
+    }
+  };
   const getBadgeConfig = (badge: string) => {
     const configs: Record<string, { label: string; color: string; icon: string }> = {
       featured: { label: 'Vedette', color: 'bg-yellow-100 text-yellow-800', icon: '⭐' },
@@ -35,22 +59,26 @@ export default function ProductsTable({ products, onEdit, onDelete }: ProductsTa
   };
 
   return (
-    <div className="bg-white border border-ink/10 rounded-xl overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gradient-to-r from-soft-green/30 to-soft-green/10 text-ink/70">
-            <tr>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Image</th>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Produit</th>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Badges</th>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Catégories</th>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Prix</th>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Prix Achat</th>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Marge</th>
-              <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Stock</th>
-              <th className="px-6 py-4 text-right font-bold tracking-widest uppercase text-xs">Actions</th>
-            </tr>
-          </thead>
+    <div>
+      {/* Panneau de vectorisation globale */}
+      <VectorizationPanel />
+
+      <div className="bg-white border border-ink/10 rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gradient-to-r from-soft-green/30 to-soft-green/10 text-ink/70">
+              <tr>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Image</th>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Produit</th>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Badges</th>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Catégories</th>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Prix</th>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Prix Achat</th>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Marge</th>
+                <th className="px-6 py-4 text-left font-bold tracking-widest uppercase text-xs">Stock</th>
+                <th className="px-6 py-4 text-right font-bold tracking-widest uppercase text-xs">Actions</th>
+              </tr>
+            </thead>
           <tbody className="divide-y divide-ink/5">
             {products.map((product) => {
               const margin = product.purchase_price 
@@ -166,6 +194,17 @@ export default function ProductsTable({ products, onEdit, onDelete }: ProductsTa
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
                       <button
+                        onClick={() => handleVectorizeOne(product.id)}
+                        disabled={vectorizingId === product.id}
+                        className="p-2 rounded-lg border border-ink/10 text-ink/40 hover:bg-ink hover:text-white hover:border-ink transition-all duration-200 hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Vectoriser ce produit"
+                      >
+                        {vectorizingId === product.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Cpu className="w-4 h-4" />
+                        }
+                      </button>
+                      <button
                         onClick={() => onEdit(product)}
                         className="p-2 rounded-lg border border-ink/10 hover:bg-ink hover:text-white transition-all duration-200 hover:shadow-md"
                         title="Modifier"
@@ -187,7 +226,7 @@ export default function ProductsTable({ products, onEdit, onDelete }: ProductsTa
           </tbody>
         </table>
       </div>
-      
+
       {products.length === 0 && (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📦</div>
@@ -196,5 +235,6 @@ export default function ProductsTable({ products, onEdit, onDelete }: ProductsTa
         </div>
       )}
     </div>
+  </div>
   );
 }

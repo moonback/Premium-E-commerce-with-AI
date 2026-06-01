@@ -8,6 +8,12 @@ import { createClient } from "@supabase/supabase-js";
 import { config as loadDotenv } from "dotenv";
 import { DEFAULT_SITE_URL, getProductPath } from "./src/lib/seo";
 import { createSkillsEngine } from "./src/lib/skillsEngine";
+import {
+  vectorizeAllProducts,
+  vectorizeProduct,
+  semanticSearchProducts,
+  formatSemanticResultsForAva,
+} from "./src/lib/embeddingService";
 
 // Load .env before anything else (tsx doesn't auto-inject env files)
 loadDotenv({ path: ".env" });
@@ -434,6 +440,187 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  // ── Vectorisation des produits avec pgvector ───────────────────────────────
+
+  /**
+   * POST /api/products/vectorize
+   * Vectorise tous les produits (ou seulement ceux sans embedding).
+   * Body JSON : { onlyMissing?: boolean }
+   * Auth : admin uniquement (Bearer token)
+   */
+  app.post("/api/products/vectorize", async (req, res) => {
+    if (!geminiApiKey) {
+      res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
+      return;
+    }
+    if (!supabaseAuth) {
+      res.status(503).json({ error: "Supabase non configuré" });
+      return;
+    }
+
+    // Auth admin — on crée un client Supabase avec le token de l'admin
+    // pour que les opérations s'exécutent avec ses droits RLS
+    const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      res.status(401).json({ error: "Authentification requise" });
+      return;
+    }
+    const { data: userData, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !userData.user) {
+      res.status(401).json({ error: "Token invalide" });
+      return;
+    }
+
+    // Vérifier le rôle admin via le client anon (lecture publique du profil)
+    const catalogClient = supabaseAdmin || supabaseAuth;
+    const { data: profile } = await catalogClient
+      .from("profiles")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+    if (!profile || !["admin", "staff"].includes(profile.role)) {
+      res.status(403).json({ error: "Accès réservé aux administrateurs" });
+      return;
+    }
+
+    // Client authentifié avec le token admin pour les écritures
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+    const authedClient = supabaseAdmin || createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const onlyMissing = req.body?.onlyMissing !== false;
+    const requestId = (req as Request & { requestId?: string }).requestId;
+
+    log("info", "vectorize_start", { requestId, onlyMissing });
+
+    try {
+      const result = await vectorizeAllProducts(geminiApiKey, authedClient, {
+        onlyMissing,
+        onProgress: (done, total) => {
+          log("info", "vectorize_progress", { requestId, done, total });
+        },
+      });
+
+      log("info", "vectorize_complete", { requestId, ...result });
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      log("error", "vectorize_failed", { requestId, message });
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/products/:id/vectorize
+   * Vectorise un seul produit par son ID.
+   * Auth : admin uniquement
+   */
+  app.post("/api/products/:id/vectorize", async (req, res) => {
+    if (!geminiApiKey) {
+      res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
+      return;
+    }
+    if (!supabaseAuth) {
+      res.status(503).json({ error: "Supabase non configuré" });
+      return;
+    }
+
+    const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      res.status(401).json({ error: "Authentification requise" });
+      return;
+    }
+    const { data: userData, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !userData.user) {
+      res.status(401).json({ error: "Token invalide" });
+      return;
+    }
+
+    const catalogClient = supabaseAdmin || supabaseAuth;
+    const { data: profile } = await catalogClient
+      .from("profiles")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+    if (!profile || !["admin", "staff"].includes(profile.role)) {
+      res.status(403).json({ error: "Accès réservé aux administrateurs" });
+      return;
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+    const authedClient = supabaseAdmin || createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const productId = req.params.id;
+    const { data: product, error: fetchError } = await authedClient
+      .from("products")
+      .select("*")
+      .eq("id", productId)
+      .single();
+
+    if (fetchError || !product) {
+      res.status(404).json({ error: "Produit introuvable" });
+      return;
+    }
+
+    try {
+      await vectorizeProduct(geminiApiKey, authedClient, product);
+      log("info", "vectorize_product_ok", { productId });
+      res.json({ ok: true, productId });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      log("error", "vectorize_product_failed", { productId, message });
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * GET /api/products/search?q=...&limit=5&threshold=0.5
+   * Recherche sémantique dans le catalogue.
+   * Auth : utilisateur connecté
+   */
+  app.get("/api/products/search", async (req, res) => {
+    if (!geminiApiKey) {
+      res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
+      return;
+    }
+    const catalogClient = supabaseAdmin || supabaseAuth;
+    if (!catalogClient) {
+      res.status(503).json({ error: "Supabase non configuré" });
+      return;
+    }
+
+    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (!query || query.length < 2) {
+      res.status(400).json({ error: "Paramètre q requis (min 2 caractères)" });
+      return;
+    }
+
+    const limit = Math.min(Number(req.query.limit) || 5, 20);
+    const threshold = Math.min(Math.max(Number(req.query.threshold) || 0.5, 0), 1);
+
+    try {
+      const results = await semanticSearchProducts(geminiApiKey, catalogClient, query, {
+        matchCount: limit,
+        matchThreshold: threshold,
+        filterInStock: req.query.inStock !== "false",
+      });
+      res.json({ results, count: results.length });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      log("error", "semantic_search_failed", { query, message });
+      res.status(500).json({ error: message });
+    }
+  });
+
   // ---- WebSocket handler for Gemini Live API ----
   const wss = new WebSocketServer({ server, path: "/live" });
 
@@ -558,9 +745,6 @@ async function startServer() {
             });
           } else if (parsed.text) {
             // ── Skills auto-injection ──────────────────────────────────────
-            // Détecte les skills pertinents et les injecte comme contexte
-            // avant le message du client (uniquement pour les messages texte
-            // non-système, i.e. pas le contexte catalogue initial)
             const isCatalogContext = (parsed.text as string).startsWith('Contexte catalogue');
             if (!isCatalogContext) {
               const activeSkills = skillsEngine.getActiveSkills(parsed.text as string);
@@ -570,10 +754,37 @@ async function startServer() {
                 const skillsContext = activeSkills
                   .map(s => `[Skill actif: ${s.name}]\n${s.content}`)
                   .join('\n\n');
-                // Injecte le contexte des skills comme instruction système juste avant le message
                 session.sendRealtimeInput({ text: `[Instructions contextuelles — ne pas lire à voix haute]\n${skillsContext}` });
               }
+
+              // ── Semantic search injection ────────────────────────────────
+              // Si pgvector est disponible, enrichit le contexte avec les
+              // produits sémantiquement proches de la requête du client
+              const catalogClient = supabaseAdmin || supabaseAuth;
+              if (geminiApiKey && catalogClient) {
+                semanticSearchProducts(geminiApiKey, catalogClient, parsed.text as string, {
+                  matchCount: 6,
+                  matchThreshold: 0.45,
+                  filterInStock: true,
+                })
+                  .then(results => {
+                    if (results.length > 0) {
+                      const context = formatSemanticResultsForAva(results);
+                      log('info', 'semantic_context_injected', { count: results.length });
+                      session.sendRealtimeInput({
+                        text: `[Produits pertinents trouvés dans le catalogue — ne pas lire à voix haute, utiliser pour répondre]\n${context}`,
+                      });
+                    }
+                  })
+                  .catch(err => {
+                    // Silencieux : si pgvector n'est pas encore activé, on continue sans
+                    log('warn', 'semantic_search_unavailable', {
+                      reason: err instanceof Error ? err.message : String(err),
+                    });
+                  });
+              }
             }
+
             session.sendRealtimeInput({ text: parsed.text });
           } else if (parsed.functionResponse) {
              session.sendToolResponse({ functionResponses: [parsed.functionResponse] });
