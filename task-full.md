@@ -54,6 +54,17 @@ Une tâche est terminée uniquement si :
 - [x] Migration Supabase additive `20260629_restrict_sensitive_commerce_tables.sql` pour créer/restreindre `payments`, `shipments`, `events`, `ai_conversations` et `audit_events` avec RLS propriétaire/admin.
 - [x] Audit RLS documenté dans `docs/SUPABASE_RLS_AUDIT.md` et contrôles automatisés ajoutés sur les migrations Supabase.
 
+### Nouvelles fonctionnalités P1 implémentées (Juin 2026)
+
+- [x] **Wishlist serveur complète** : table `wishlist_items`, RLS, actions store avec optimistic updates, UI sur ProductCard/PDP, onglet favoris dans profil.
+- [x] **Système d'avis clients** : table `product_reviews`, modération `is_published`, composant `ProductReviews` avec formulaire soumission, composant `ProductRating` affichant moyenne/nombre sur cards et PDP.
+- [x] **Codes promo** : table `discounts`, RPC `validate_discount_code` avec validation serveur (montant min, max uses, dates validité), composant `DiscountCodeInput` intégré checkout, 3 codes de test (WELCOME10, PREMIUM20, SAVE5).
+- [x] **Recommandations produits** : composant `ProductRecommendations` avec logique catégorie/prix similaire, intégré dans CartDrawer et PDP.
+- [x] **Drawer mobile résumé panier** : ajouté au checkout avec bouton d'accès rapide dans la barre sticky mobile.
+- [x] **Performance catalogue** : dimensions images explicites (width/height), lazy loading, pagination 12 produits/page avec navigation.
+- [x] **Accessibilité animations** : hook `useReducedMotion` créé et intégré dans StoreFront et composants animés, respect `prefers-reduced-motion`.
+- [x] **Recherche avancée** : composant `AdvancedSearch` avec filtres catégorie, prix, tri (pertinence/prix/nom), réinitialisation filtres.
+
 ### Reste P0/P1 immédiat
 
 - [ ] Ajouter tests automatisés autour de `checkout()` et de la RPC Supabase.
@@ -524,9 +535,10 @@ Une tâche est terminée uniquement si :
   - [x] Composant `DiscountCodeInput` intégré au checkout.
   - [x] Affichage montant économisé dans le récapitulatif.
   - [x] Codes promo de test : WELCOME10, PREMIUM20, SAVE5.
-- [ ] Upsell/cross-sell.
-  - [ ] Suggestions dans panier.
-  - [ ] Recommandations PDP simples.
+- [x] Upsell/cross-sell.
+  - [x] Composant `ProductRecommendations` avec logique catégorie/prix similaire.
+  - [x] Suggestions dans panier (CartDrawer).
+  - [x] Recommandations PDP déjà présentes (section "S'accorde parfaitement avec").
 
 **Critères d'acceptation :**
 

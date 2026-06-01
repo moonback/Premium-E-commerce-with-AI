@@ -4,10 +4,11 @@ import { X, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import FreeShippingBar from './FreeShippingBar';
+import ProductRecommendations from './ProductRecommendations';
 
 
 export default function CartDrawer() {
-  const { cart, addToCart, removeFromCart, checkout, isCartOpen, setCartOpen } = useStore();
+  const { cart, addToCart, removeFromCart, checkout, isCartOpen, setCartOpen, products } = useStore();
 
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
@@ -65,43 +66,57 @@ export default function CartDrawer() {
                   <p className="text-ink/60">Your cart is empty.</p>
                 </div>
               ) : (
-                cart.map(item => (
-                  <div key={item.product.id} className="flex gap-4">
-                    <div className="w-20 h-20 bg-soft-green rounded-tl-3xl rounded-br-3xl overflow-hidden shrink-0">
-                      <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover mix-blend-overlay opacity-80" />
-                    </div>
-                    <div className="flex-1 flex flex-col justify-between">
-                      <div>
-                        <h4 className="font-serif font-medium">{item.product.name}</h4>
-                        <p className="text-ink/50 text-xs italic uppercase">{item.product.categories.join(', ')}</p>
+                <>
+                  {cart.map(item => (
+                    <div key={item.product.id} className="flex gap-4">
+                      <div className="w-20 h-20 bg-soft-green rounded-tl-3xl rounded-br-3xl overflow-hidden shrink-0">
+                        <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover mix-blend-overlay opacity-80" />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 bg-soft-green rounded-lg p-1">
-                          <button
-                            onClick={() => {
-                              if (item.quantity > 1) {
-                                addToCart(item.product, -1);
-                              } else {
-                                removeFromCart(item.product.id);
-                              }
-                            }}
-                            className="p-1 hover:bg-white rounded-md transition-colors text-ink/60"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
-                          <button
-                            onClick={() => addToCart(item.product, 1)}
-                            className="p-1 hover:bg-white rounded-md transition-colors text-ink/60"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <h4 className="font-serif font-medium">{item.product.name}</h4>
+                          <p className="text-ink/50 text-xs italic uppercase">{item.product.categories.join(', ')}</p>
                         </div>
-                        <span className="font-semibold text-sm">{(item.product.price * item.quantity).toFixed(2)}€</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 bg-soft-green rounded-lg p-1">
+                            <button
+                              onClick={() => {
+                                if (item.quantity > 1) {
+                                  addToCart(item.product, -1);
+                                } else {
+                                  removeFromCart(item.product.id);
+                                }
+                              }}
+                              className="p-1 hover:bg-white rounded-md transition-colors text-ink/60"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
+                            <button
+                              onClick={() => addToCart(item.product, 1)}
+                              className="p-1 hover:bg-white rounded-md transition-colors text-ink/60"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <span className="font-semibold text-sm">{(item.product.price * item.quantity).toFixed(2)}€</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+
+                  {/* Recommendations in cart */}
+                  {cart.length > 0 && products.length > 0 && (
+                    <div className="pt-6 border-t border-ink/10">
+                      <ProductRecommendations
+                        currentProduct={cart[0]?.product}
+                        products={products}
+                        title="Complétez votre panier"
+                        maxItems={2}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
