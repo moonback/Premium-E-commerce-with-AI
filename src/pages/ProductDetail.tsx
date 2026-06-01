@@ -6,12 +6,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Product } from '../types';
 import AccordionItem from '../components/AccordionItem';
+import ProductReviews from '../components/ProductReviews';
 import SEO from '../components/SEO';
 import { buildProductJsonLd, findProductByRouteParam, getProductPath } from '../lib/seo';
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const { products, addToCart, toggleFavorite, favorites, fetchProducts } = useStore();
+  const { products, addToCart, addToWishlist, removeFromWishlist, wishlist, user, fetchProducts } = useStore();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,18 +65,13 @@ export default function ProductDetail() {
     );
   }
 
-  const isFavorite = favorites.includes(product.id);
+  const isFavorite = wishlist.some(w => w.product_id === product.id);
 
   // Mocks pour les nouvelles fonctionnalités
   const mockGallery = [
     product.image,
     "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80",
     "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=600&q=80"
-  ];
-
-  const reviews = [
-    { id: 1, author: "Camille L.", rating: 5, date: "Il y a 2 jours", text: "Visuellement bluffant et gustativement exceptionnel. Une vraie expérience premium." },
-    { id: 2, author: "Marc D.", rating: 5, date: "Il y a 1 semaine", text: "Les textures sont incroyables, on sent la qualité des ingrédients. Je recommande vivement." },
   ];
 
   const suggestedProducts = products.filter(p => p.id !== product.id).slice(0, 3);
@@ -111,8 +107,18 @@ export default function ProductDetail() {
                 className="w-full h-full object-cover transition-all duration-500"
               />
               <button
-                onClick={() => toggleFavorite(product.id)}
+                onClick={() => {
+                  if (!user) {
+                    return;
+                  }
+                  if (isFavorite) {
+                    removeFromWishlist(product.id);
+                  } else {
+                    addToWishlist(product.id);
+                  }
+                }}
                 className="absolute top-8 right-8 p-3 rounded-full glass text-ink hover:bg-bg transition-colors z-20"
+                aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               >
                 <Heart className={cn("w-5 h-5", isFavorite && "fill-ink")} />
               </button>
@@ -233,38 +239,7 @@ export default function ProductDetail() {
 
         {/* Section Avis Clients */}
         <div className="mt-32 border-t border-ink/10 pt-16 pb-12">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-            <div>
-              <h3 className="text-3xl font-serif mb-2">Avis Vérifiés</h3>
-              <div className="flex items-center gap-2">
-                <div className="flex text-ink">
-                  {[1, 2, 3, 4, 5].map(i => <span key={i}>★</span>)}
-                </div>
-                <span className="text-sm font-bold uppercase tracking-widest text-ink/50">4.9/5 (128 avis)</span>
-              </div>
-            </div>
-            <button className="text-xs font-bold uppercase tracking-widest border-b border-ink pb-1 hover:text-ink/60 transition-colors">
-              Écrire un avis
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {reviews.map(review => (
-              <div key={review.id} className="p-8 border border-ink/10 bg-white/50 backdrop-blur-sm">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex text-ink text-sm">
-                    {[...Array(review.rating)].map((_, i) => <span key={i}>★</span>)}
-                  </div>
-                  <span className="text-xs text-ink/40 font-bold uppercase tracking-widest">{review.date}</span>
-                </div>
-                <p className="italic text-ink/80 mb-6 line-clamp-3">"{review.text}"</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-ink/10 flex items-center justify-center font-bold text-xs">{review.author.charAt(0)}</div>
-                  <span className="text-sm font-bold uppercase tracking-widest">{review.author}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ProductReviews productId={product.id} />
         </div>
       </div>
 

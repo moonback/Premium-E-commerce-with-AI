@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import SEO from '../components/SEO';
 import { buildStoreJsonLd } from '../lib/seo';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import {
   LayoutGrid,
   Shirt,
@@ -48,6 +49,9 @@ function getCategoryConfig(name: string) {
 export default function StoreFront() {
   const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
+  const [currentPage, setCurrentPage] = useState(1);
+  const prefersReducedMotion = useReducedMotion();
+  const PRODUCTS_PER_PAGE = 12;
 
   const categories = ['Tout', ...storeCategories.filter(c => c.level === 1).map(c => c.name)];
   // Map category name → full Category object for image_url access
@@ -57,6 +61,17 @@ export default function StoreFront() {
     (activeTab === 'Tout' || (p.categories || []).includes(activeTab)) &&
     (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.effects.some(e => e.toLowerCase().includes(searchQuery.toLowerCase())))
   );
+
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery]);
 
   return (
     <div className="bg-bg flex-1">
@@ -144,13 +159,13 @@ export default function StoreFront() {
               <ProductCardSkeleton key={i} />
             ))
           ) : (
-            filteredProducts.map((product, i) => (
+            paginatedProducts.map((product, i) => (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+                whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.5, delay: prefersReducedMotion ? 0 : i * 0.1 }}
               >
                 <ProductCard product={product} />
               </motion.div>
@@ -161,6 +176,43 @@ export default function StoreFront() {
         {!isLoadingProducts && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <p className="text-ink/50 italic text-xl">Aucun article ne correspond à votre recherche...</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoadingProducts && totalPages > 1 && (
+          <div className="mt-16 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-ink/20 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Précédent
+            </button>
+            
+            <div className="flex gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-10 h-10 text-xs font-bold uppercase tracking-widest transition-colors ${
+                    currentPage === page
+                      ? 'bg-ink text-bg'
+                      : 'border border-ink/20 text-ink hover:bg-ink/5'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-ink/20 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Suivant
+            </button>
           </div>
         )}
       </main>

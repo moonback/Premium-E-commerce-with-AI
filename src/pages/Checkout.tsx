@@ -3,13 +3,15 @@ import React, { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, RotateCcw, ShieldCheck } from "lucide-react";
+import { CheckCircle2, RotateCcw, ShieldCheck, ShoppingBag, X } from "lucide-react";
 
 import CheckoutStepper from "../components/CheckoutStepper";
 import CartReview from "../components/CartReview";
 import ClientDeliveryForm from "../components/ClientDeliveryForm";
 import PaymentForm from "../components/PaymentForm";
+import DiscountCodeInput from "../components/DiscountCodeInput";
 import { useStore } from "../store";
+import { Drawer } from "../components/ui/Drawer";
 
 const PAYMENT_FORM_ID = "checkout-payment-form";
 
@@ -36,7 +38,14 @@ function AssuranceBadges() {
   );
 }
 
-function OrderSummary({ total }: { total: number }) {
+function OrderSummary({ subtotal, discountAmount, total, onDiscountApplied, onDiscountRemoved, discountCode }: { 
+  subtotal: number;
+  discountAmount: number;
+  total: number;
+  onDiscountApplied: (code: string, amount: number) => void;
+  onDiscountRemoved: () => void;
+  discountCode?: string;
+}) {
   const { cart, checkoutInfo } = useStore();
   const deliveryLabel = checkoutInfo.deliveryMethod === "clickCollect" ? "Click & Collect" : "Coursier";
 
@@ -69,8 +78,14 @@ function OrderSummary({ total }: { total: number }) {
       <div className="my-6 space-y-3 border-y border-ink/10 py-5 text-sm">
         <div className="flex justify-between text-ink/60">
           <span>Sous-total</span>
-          <span>{formatPrice(total)}</span>
+          <span>{formatPrice(subtotal)}</span>
         </div>
+        {discountAmount > 0 && (
+          <div className="flex justify-between text-emerald-700">
+            <span>Réduction</span>
+            <span>-{formatPrice(discountAmount)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-ink/60">
           <span>Livraison</span>
           <span>{deliveryLabel}</span>
@@ -81,6 +96,16 @@ function OrderSummary({ total }: { total: number }) {
         </div>
       </div>
 
+      <div className="mb-6">
+        <DiscountCodeInput
+          orderTotal={subtotal}
+          onDiscountApplied={onDiscountApplied}
+          onDiscountRemoved={onDiscountRemoved}
+          appliedCode={discountCode}
+          appliedAmount={discountAmount}
+        />
+      </div>
+
       <AssuranceBadges />
     </aside>
   );
@@ -89,6 +114,9 @@ function OrderSummary({ total }: { total: number }) {
 export default function Checkout() {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+  const [discountCode, setDiscountCode] = useState<string | undefined>();
+  const [discountAmount, setDiscountAmount] = useState(0);
   const {
     checkout,
     resetCheckout,
@@ -98,7 +126,8 @@ export default function Checkout() {
     checkoutInfo,
   } = useStore();
   const navigate = useNavigate();
-  const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const total = subtotal - discountAmount;
   const paymentItems = useMemo(
     () => cart.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
     [cart]
@@ -218,12 +247,33 @@ export default function Checkout() {
           </AnimatePresence>
         </div>
 
-        <OrderSummary total={total} />
+        <OrderSummary 
+          subtotal={subtotal}
+          discountAmount={discountAmount}
+          total={total}
+          onDiscountApplied={(code, amount) => {
+            setDiscountCode(code);
+            setDiscountAmount(amount);
+          }}
+          onDiscountRemoved={() => {
+            setDiscountCode(undefined);
+            setDiscountAmount(0);
+          }}
+          discountCode={discountCode}
+        />
       </div>
 
       {step === 2 && cart.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-bg/95 p-4 shadow-[0_-12px_30px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden">
           <div className="mx-auto flex max-w-6xl items-center gap-4">
+            <button
+              onClick={() => setIsCartDrawerOpen(true)}
+              className="flex items-center gap-2 rounded-full border border-ink/20 bg-white/60 px-4 py-3 text-xs font-bold uppercase tracking-widest text-ink transition-colors hover:bg-white"
+              aria-label="Voir le résumé du panier"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              <span className="hidden sm:inline">{cart.length} article{cart.length > 1 ? 's' : ''}</span>
+            </button>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink/45">Total à payer</p>
               <p className="text-xl font-serif text-ink">{formatPrice(total)}</p>
@@ -239,6 +289,54 @@ export default function Checkout() {
           </div>
         </div>
       )}
+
+      {/* Mobile Cart Summary Drawer */}
+      <Drawer
+        isOpen={isCartDrawerOpen}
+        onClose={() => setIsCartDrawerOpen(false)}
+        title="Résumé du panier"
+      >
+        <div className="space-y-4 p-4">
+          {cart.map((item) => (
+            <div key={item.product.id} className="flex gap-3 border-b border-ink/10 pb-4">
+              <img 
+                src={item.product.image} 
+                alt="" 
+                className="h-20 w-20 rounded-2xl object-cover" 
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-serif text-base text-ink">{item.product.name}</p>
+                <p className="text-sm text-ink/60">Quantité: {item.quantity}</p>
+                <p className="mt-1 text-sm font-semibold text-ink">
+                  {formatPrice(item.product.price * item.quantity)}
+                </p>
+              </div>
+            </div>
+          ))}
+          
+          <div className="space-y-3 border-t border-ink/10 pt-4">
+            <div className="flex justify-between text-sm text-ink/60">
+              <span>Sous-total</span>
+              <span>{formatPrice(total)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-ink/60">
+              <span>Livraison</span>
+              <span>{checkoutInfo.deliveryMethod === "clickCollect" ? "Click & Collect" : "Coursier"}</span>
+            </div>
+            <div className="flex justify-between text-lg font-bold text-ink">
+              <span>Total</span>
+              <span>{formatPrice(total)}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsCartDrawerOpen(false)}
+            className="w-full rounded-full bg-ink px-6 py-4 text-xs font-bold uppercase tracking-widest text-bg transition-colors hover:bg-ink/90"
+          >
+            Continuer le paiement
+          </button>
+        </div>
+      </Drawer>
     </section>
   );
 }

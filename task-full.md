@@ -304,7 +304,7 @@ Une tâche est terminée uniquement si :
   - [ ] Paiement.
 - [x] Ajouter un récapitulatif sticky sur desktop.
 - [x] Ajouter une barre sticky mobile `Payer X€`.
-- [ ] Ajouter un drawer mobile de résumé panier.
+- [x] Ajouter un drawer mobile de résumé panier.
 - [x] Ajouter erreurs inline avec scroll vers la première erreur.
 - [x] Ajouter autocomplete HTML standard.
   - [x] `email`.
@@ -415,7 +415,7 @@ Une tâche est terminée uniquement si :
   - [x] `Skeleton`.
   - [ ] `Toast` (react-hot-toast utilisé directement).
 - [x] Garantir focus visible et labels accessibles (Dialog/Drawer piègent le focus, ESC ferme).
-- [ ] Ajouter gestion `prefers-reduced-motion`.
+- [x] Ajouter gestion `prefers-reduced-motion` (hook useReducedMotion).
 - [ ] Remplacer progressivement les composants ad hoc.
 
 **Critères d'acceptation :**
@@ -507,18 +507,23 @@ Une tâche est terminée uniquement si :
   - [x] Table `wishlist_items` (migration `20260701_add_wishlist_and_reviews.sql`).
   - [x] RLS propriétaire.
   - [x] Actions store `fetchWishlist`, `addToWishlist`, `removeFromWishlist` avec optimistic update.
-  - [ ] UI ajout/retrait accessible sur PDP et ProductCard.
+  - [x] UI ajout/retrait accessible sur PDP et ProductCard.
+  - [x] Page profil avec onglet favoris.
 - [x] Avis clients.
   - [x] Table `product_reviews` (migration `20260701_add_wishlist_and_reviews.sql`).
   - [x] Modération `is_published`.
-  - [ ] Moyenne et nombre d'avis sur PDP/card (UI à connecter à la vraie table).
+  - [x] Moyenne et nombre d'avis sur PDP/card (composant ProductRating).
+  - [x] Formulaire de soumission d'avis sur PDP (composant ProductReviews).
+  - [x] Affichage des avis publiés sur PDP.
 - [x] Livraison gratuite dynamique.
   - [x] Seuil configurable via `FreeShippingBar`.
   - [x] Progress bar panier dans `CartDrawer`.
-- [ ] Codes promo.
-  - [ ] Table `discounts`.
-  - [ ] Validation serveur.
-  - [ ] Affichage montant économisé.
+- [x] Codes promo.
+  - [x] Table `discounts` avec migration `20260702_add_discounts_table.sql`.
+  - [x] RPC `validate_discount_code` pour validation serveur.
+  - [x] Composant `DiscountCodeInput` intégré au checkout.
+  - [x] Affichage montant économisé dans le récapitulatif.
+  - [x] Codes promo de test : WELCOME10, PREMIUM20, SAVE5.
 - [ ] Upsell/cross-sell.
   - [ ] Suggestions dans panier.
   - [ ] Recommandations PDP simples.
@@ -526,8 +531,8 @@ Une tâche est terminée uniquement si :
 **Critères d'acceptation :**
 
 - [x] Les favoris persistent entre appareils (wishlist serveur Supabase).
-- [ ] Les avis publiés s'affichent sur les produits (UI à connecter).
-- [ ] Les promotions sont calculées côté serveur.
+- [x] Les avis publiés s'affichent sur les produits (composant ProductReviews intégré).
+- [x] Les promotions sont calculées côté serveur (RPC validate_discount_code).
 
 **Impact :** élevé.  
 **Complexité :** moyenne.
@@ -540,9 +545,22 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Définir dimensions image explicites.
-- [ ] Ajouter lazy loading et placeholders.
+- [x] Définir dimensions image explicites (width/height sur ProductCard).
+- [x] Ajouter lazy loading et placeholders (loading="lazy" sur images).
 - [ ] Remplacer les images Unsplash directes par stratégie CDN/image proxy.
+- [x] Ajouter pagination ou infinite scroll (pagination 12 produits/page).
+- [x] Ajouter code splitting route-level avec `React.lazy`.
+- [ ] Ajouter cache query, recommandé : TanStack Query ou service cache dédié.
+- [ ] Optimiser admin polling vers realtime/RPC ciblées.
+
+**Critères d'acceptation :**
+
+- [x] Les images n'entraînent pas de CLS majeur (dimensions explicites).
+- [x] Le bundle initial est réduit par lazy routes et vendor chunks dédiés.
+- [x] Le catalogue ne charge pas indéfiniment toutes les données sans pagination.
+
+**Impact :** moyen à élevé.  
+**Complexité :** moyenne.
 - [ ] Ajouter pagination ou infinite scroll.
 - [x] Ajouter code splitting route-level avec `React.lazy`.
 - [ ] Ajouter cache query, recommandé : TanStack Query ou service cache dédié.

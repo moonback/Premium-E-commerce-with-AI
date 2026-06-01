@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
-import { User as UserIcon, Package, Star, LogOut, CheckCircle, Clock } from 'lucide-react';
+import { User as UserIcon, Package, Star, LogOut, CheckCircle, Clock, Heart } from 'lucide-react';
 import ProfileInfo from '../components/ProfileInfo';
 import AddressBook from '../components/AddressBook';
 import { supabase } from '../lib/supabase';
 import { getErrorMessage } from '../lib/errors';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { Product } from '../types';
 
 type ProfileOrder = {
   id: string;
@@ -17,10 +18,11 @@ type ProfileOrder = {
 };
 
 export default function Profile() {
-  const { user, setUser, loyaltyPoints } = useStore();
+  const { user, setUser, loyaltyPoints, wishlist, fetchWishlist, removeFromWishlist, addToCart, products } = useStore();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<ProfileOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist'>('orders');
 
   const getTierInfo = (points: number) => {
     if (points < 1000) {
@@ -70,10 +72,11 @@ export default function Profile() {
         }
       };
       fetchOrders();
+      fetchWishlist();
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchWishlist]);
 
   const handleLogout = async () => {
     if (supabase) {
@@ -149,65 +152,156 @@ export default function Profile() {
           <div className="col-span-2">
             <ProfileInfo />
             <AddressBook />
-            <div className="p-8 border border-ink/10 bg-transparent min-h-[400px] mt-6">
-              <h2 className="text-2xl font-serif mb-6 flex items-center gap-2">
-                Historique des commandes
-              </h2>
-
-              {loading ? (
-                <div className="animate-pulse flex flex-col gap-4">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-24 bg-ink/5 w-full"></div>
-                  ))}
-                </div>
-              ) : orders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-center h-64 border-2 border-dashed border-ink/10">
-                  <Package className="w-8 h-8 text-ink/20 mb-4" />
-                  <p className="text-sm uppercase tracking-widest font-bold text-ink/40 mb-2">Aucune commande</p>
-                  <p className="text-xs text-ink/60 italic max-w-sm">
-                    Vous n'avez pas encore passé de commande. Découvrez notre sélection d'articles exclusifs.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {orders.map(order => (
-                    <div key={order.id} className="border border-ink/10 p-6 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:border-ink/20 transition-colors">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-xs font-bold uppercase tracking-widest">Commande #{order.order_number || order.id.slice(0, 8)}</span>
-                          {order.status === 'Nouvelle' ? (
-                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
-                               <Clock className="w-3 h-3" /> Nouvelle
-                             </span>
-                           ) : order.status === 'En préparation' ? (
-                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
-                               <Clock className="w-3 h-3" /> En préparation
-                             </span>
-                           ) : order.status === 'Prête' ? (
-                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 border border-ink/20 bg-ink">
-                               <CheckCircle className="w-3 h-3" /> Prête
-                             </span>
-                           ) : order.status === 'Livrée' ? (
-                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 border border-ink/20 bg-ink">
-                               <CheckCircle className="w-3 h-3" /> Livrée
-                             </span>
-                           ) : (
-                             <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
-                               <Clock className="w-3 h-3" /> {order.status}
-                             </span>
-                           )}
-                        </div>
-                        <p className="text-xs text-ink/60 italic">Passée le {new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
-                        <p className="text-xs text-ink/50 mt-1">{getOrderNextStep(order.status)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-serif font-bold">{order.total.toFixed(2)}€</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            
+            {/* Tabs for Orders and Wishlist */}
+            <div className="mt-6 mb-4 flex gap-4 border-b border-ink/10">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`pb-3 px-2 text-sm font-bold uppercase tracking-widest transition-colors ${
+                  activeTab === 'orders'
+                    ? 'border-b-2 border-ink text-ink'
+                    : 'text-ink/40 hover:text-ink/60'
+                }`}
+              >
+                <Package className="w-4 h-4 inline mr-2" />
+                Commandes
+              </button>
+              <button
+                onClick={() => setActiveTab('wishlist')}
+                className={`pb-3 px-2 text-sm font-bold uppercase tracking-widest transition-colors ${
+                  activeTab === 'wishlist'
+                    ? 'border-b-2 border-ink text-ink'
+                    : 'text-ink/40 hover:text-ink/60'
+                }`}
+              >
+                <Heart className="w-4 h-4 inline mr-2" />
+                Favoris ({wishlist.length})
+              </button>
             </div>
+
+            {activeTab === 'orders' && (
+              <div className="p-8 border border-ink/10 bg-transparent min-h-[400px]">
+                <h2 className="text-2xl font-serif mb-6 flex items-center gap-2">
+                  Historique des commandes
+                </h2>
+
+                {loading ? (
+                  <div className="animate-pulse flex flex-col gap-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-24 bg-ink/5 w-full"></div>
+                    ))}
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center h-64 border-2 border-dashed border-ink/10">
+                    <Package className="w-8 h-8 text-ink/20 mb-4" />
+                    <p className="text-sm uppercase tracking-widest font-bold text-ink/40 mb-2">Aucune commande</p>
+                    <p className="text-xs text-ink/60 italic max-w-sm">
+                      Vous n'avez pas encore passé de commande. Découvrez notre sélection d'articles exclusifs.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {orders.map(order => (
+                      <div key={order.id} className="border border-ink/10 p-6 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:border-ink/20 transition-colors">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-xs font-bold uppercase tracking-widest">Commande #{order.order_number || order.id.slice(0, 8)}</span>
+                            {order.status === 'Nouvelle' ? (
+                               <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
+                                 <Clock className="w-3 h-3" /> Nouvelle
+                               </span>
+                             ) : order.status === 'En préparation' ? (
+                               <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
+                                 <Clock className="w-3 h-3" /> En préparation
+                               </span>
+                             ) : order.status === 'Prête' ? (
+                               <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 border border-ink/20 bg-ink">
+                                 <CheckCircle className="w-3 h-3" /> Prête
+                               </span>
+                             ) : order.status === 'Livrée' ? (
+                               <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-soft-green py-1 px-2 border border-ink/20 bg-ink">
+                                 <CheckCircle className="w-3 h-3" /> Livrée
+                               </span>
+                             ) : (
+                               <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-ink py-1 px-2 border border-ink/20 bg-soft-green">
+                                 <Clock className="w-3 h-3" /> {order.status}
+                               </span>
+                             )}
+                          </div>
+                          <p className="text-xs text-ink/60 italic">Passée le {new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
+                          <p className="text-xs text-ink/50 mt-1">{getOrderNextStep(order.status)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-serif font-bold">{order.total.toFixed(2)}€</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'wishlist' && (
+              <div className="p-8 border border-ink/10 bg-transparent min-h-[400px]">
+                <h2 className="text-2xl font-serif mb-6 flex items-center gap-2">
+                  <Heart className="w-6 h-6" />
+                  Mes Favoris
+                </h2>
+
+                {wishlist.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center h-64 border-2 border-dashed border-ink/10">
+                    <Heart className="w-8 h-8 text-ink/20 mb-4" />
+                    <p className="text-sm uppercase tracking-widest font-bold text-ink/40 mb-2">Aucun favori</p>
+                    <p className="text-xs text-ink/60 italic max-w-sm">
+                      Ajoutez des produits à vos favoris pour les retrouver facilement.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {wishlist.map(item => {
+                      const product = products.find(p => p.id === item.product_id);
+                      if (!product) return null;
+                      
+                      return (
+                        <motion.div
+                          key={item.id}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="border border-ink/10 p-4 flex gap-4 hover:border-ink/20 transition-colors group"
+                        >
+                          <img 
+                            src={product.image} 
+                            alt={product.name} 
+                            className="w-20 h-20 object-cover rounded-lg"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-serif text-base text-ink truncate">{product.name}</h3>
+                            <p className="text-sm font-semibold text-ink/80 mt-1">{product.price.toFixed(2)}€</p>
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={() => {
+                                  addToCart(product);
+                                }}
+                                className="text-xs font-bold uppercase tracking-widest px-3 py-1.5 bg-ink text-bg hover:bg-ink/90 transition-colors"
+                              >
+                                Ajouter
+                              </button>
+                              <button
+                                onClick={() => removeFromWishlist(product.id)}
+                                className="text-xs font-bold uppercase tracking-widest px-3 py-1.5 border border-ink/20 text-ink hover:bg-ink/5 transition-colors"
+                              >
+                                Retirer
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

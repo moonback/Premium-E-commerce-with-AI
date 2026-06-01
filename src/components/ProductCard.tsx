@@ -6,11 +6,13 @@ import { cn } from '../lib/utils';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { getProductPath } from '../lib/seo';
+import ProductRating from './ProductRating';
+import toast from 'react-hot-toast';
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { addToCart, toggleFavorite, favorites } = useStore();
+  const { addToCart, addToWishlist, removeFromWishlist, wishlist, user } = useStore();
   const productPath = getProductPath(product);
-  const isFavorite = favorites.includes(product.id);
+  const isFavorite = wishlist.some(w => w.product_id === product.id);
 
   // hover state for AnimatePresence overlay
   const [isHover, setIsHover] = useState(false);
@@ -54,14 +56,26 @@ export default function ProductCard({ product }: { product: Product }) {
         <img
           src={product.image}
           alt={product.name}
+          width="400"
+          height="500"
+          loading="lazy"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <button
           onClick={(e) => {
             e.preventDefault();
-            toggleFavorite(product.id);
+            if (!user) {
+              toast.error('Connectez-vous pour sauvegarder vos favoris');
+              return;
+            }
+            if (isFavorite) {
+              removeFromWishlist(product.id);
+            } else {
+              addToWishlist(product.id);
+            }
           }}
           className="absolute top-4 right-4 p-2 rounded-full glass text-ink hover:bg-bg transition-colors z-20"
+          aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
           <Heart className={cn('w-4 h-4', isFavorite && 'fill-ink')} />
         </button>
@@ -76,6 +90,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </Link>
           <span className="font-semibold">{product.price.toFixed(2)}€</span>
         </div>
+        <ProductRating productId={product.id} />
         <p className="text-ink/60 text-xs opacity-50 italic uppercase mb-3 line-clamp-2">
           {product.description}
         </p>
