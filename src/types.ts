@@ -37,20 +37,22 @@ export type Product = {
   name: string;
   description: string;
   price: number;
-  purchase_price?: number; // Prix d'achat
+  purchase_price?: number;
   image: string;
   categories: string[];
   effects: string[];
   stock: number;
-  isNew?: boolean; // Indicates if the product is newly added
+  isNew?: boolean;
   specs: Spec[];
-  is_batch_product?: boolean; // Produit vendu en lots
-  batch_size?: number; // Taille du lot (ex: 6 pour un pack de 6)
-  batch_unit?: string; // Unité du lot (ex: "pièces", "unités", "bouteilles")
+  is_batch_product?: boolean;
+  batch_size?: number;
+  batch_unit?: string;
   seo?: SEOData | null;
-  badges?: ProductBadge[]; // Badges du produit
-  promotion?: ProductPromotion | null; // Promotion active
-  total_sales?: number; // Nombre total de ventes (pour calculer les meilleures ventes)
+  badges?: ProductBadge[];
+  promotion?: ProductPromotion | null;
+  total_sales?: number;
+  // Vectorisation IA
+  embedding_updated_at?: string | null; // null = pas encore vectorisé
 };
 
 export type CartItem = {
