@@ -1,29 +1,35 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Migration : pgvector — embeddings sémantiques des produits
--- Modèle    : gemini-embedding-2 (Google Gemini) — 1536 dimensions (outputDimensionality tronqué)
--- Note      : pgvector limite l'index HNSW à 2000 dims max
+-- Migration corrective : passer embedding à vector(1536)
+-- Modèle : gemini-embedding-2 avec outputDimensionality=1536
+-- Raison : pgvector limite l'index HNSW à 2000 dimensions max
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- 1. Activer l'extension pgvector (nécessite Supabase ≥ 1.0 ou pg_vector installé)
-CREATE EXTENSION IF NOT EXISTS vector;
+-- 1. Supprimer les index existants
+DROP INDEX IF EXISTS products_embedding_hnsw_idx;
+DROP INDEX IF EXISTS products_embedding_not_null_idx;
 
--- 2. Ajouter la colonne embedding sur la table products
+-- 2. Supprimer l'ancienne fonction (signature incompatible)
+DROP FUNCTION IF EXISTS public.match_products(vector, float, int, boolean);
+
+-- 3. Vider les embeddings existants (dimensions incompatibles)
+UPDATE public.products SET embedding = NULL, embedding_updated_at = NULL;
+
+-- 4. Modifier la colonne en vector(1536)
 ALTER TABLE public.products
-  ADD COLUMN IF NOT EXISTS embedding vector(1536);
+  ALTER COLUMN embedding TYPE vector(1536)
+  USING NULL;
 
--- 3. Index HNSW pour la recherche ANN (Approximate Nearest Neighbor)
---    ef_construction=64, m=16 : bon équilibre vitesse/précision pour < 100k produits
-CREATE INDEX IF NOT EXISTS products_embedding_hnsw_idx
+-- 5. Recréer l'index HNSW (1536 < 2000 : OK)
+CREATE INDEX products_embedding_hnsw_idx
   ON public.products
   USING hnsw (embedding vector_cosine_ops)
   WITH (m = 16, ef_construction = 64);
 
--- 4. Index partiel pour ne chercher que les produits vectorisés
-CREATE INDEX IF NOT EXISTS products_embedding_not_null_idx
+CREATE INDEX products_embedding_not_null_idx
   ON public.products (id)
   WHERE embedding IS NOT NULL;
 
--- 5. Fonction de recherche sémantique
+-- 6. Recréer match_products avec vector(1536)
 CREATE OR REPLACE FUNCTION public.match_products(
   query_embedding  vector(1536),
   match_threshold  float    DEFAULT 0.5,
@@ -63,14 +69,11 @@ AS $$
   LIMIT match_count;
 $$;
 
--- 6. Permissions
 GRANT EXECUTE ON FUNCTION public.match_products TO authenticated, service_role;
 
--- 7. Colonne updated_at pour tracker la fraîcheur des embeddings
-ALTER TABLE public.products
-  ADD COLUMN IF NOT EXISTS embedding_updated_at timestamp with time zone;
-
-COMMENT ON COLUMN public.products.embedding IS
-  'Vecteur sémantique 1536 dims (gemini-embedding-2 + outputDimensionality). Mis à jour via /api/products/vectorize.';
-COMMENT ON COLUMN public.products.embedding_updated_at IS
-  'Timestamp de la dernière vectorisation.';
+-- Vérification finale
+SELECT
+  column_name,
+  udt_name
+FROM information_schema.columns
+WHERE table_name = 'products' AND column_name = 'embedding';

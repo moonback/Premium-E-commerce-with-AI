@@ -285,7 +285,7 @@ Pour ajouter un skill : créer un fichier `.md` dans `prompts/skills/` — aucun
 
 Ava utilise automatiquement la recherche sémantique dès que les embeddings sont générés. Si pgvector n'est pas encore configuré, Ava continue de fonctionner normalement avec le catalogue brut.
 
-**Modèle :** `gemini-embedding-2` · **Dimensions :** 3072 · **Index :** HNSW cosinus
+**Modèle :** `gemini-embedding-2` · **Dimensions :** 1536 (`outputDimensionality` tronqué) · **Index :** HNSW cosinus
 
 ---
 

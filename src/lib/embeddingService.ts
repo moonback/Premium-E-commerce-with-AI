@@ -13,9 +13,9 @@ import type { Product } from '../types';
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 export const EMBEDDING_MODEL = 'gemini-embedding-2';
-export const EMBEDDING_DIMENSIONS = 3072;
-const BATCH_SIZE = 10;   // Requêtes parallèles par batch
-const BATCH_DELAY_MS = 300; // Délai entre batches
+export const EMBEDDING_DIMENSIONS = 1536; // Tronqué via outputDimensionality — max HNSW pgvector = 2000
+const BATCH_SIZE = 10;
+const BATCH_DELAY_MS = 300;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface VectorizationResult {
@@ -63,6 +63,7 @@ export async function generateEmbedding(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       content: { parts: [{ text }] },
+      outputDimensionality: EMBEDDING_DIMENSIONS, // Tronque à 1536 (limite HNSW pgvector)
     }),
   });
 
