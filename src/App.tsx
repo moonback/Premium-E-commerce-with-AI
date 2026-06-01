@@ -6,6 +6,7 @@ import PageTransition from './components/PageTransition';
 import VoiceAssistant from './components/VoiceAssistant';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ToastProvider } from './components/ui/Toast';
 import { Store, Monitor, LayoutDashboard, TerminalSquare } from 'lucide-react';
 import { useStore } from './store';
 
@@ -106,5 +107,10 @@ function AppContent() {
 }
 
 export default function App() {
-  return <AppContent />;
+  return (
+    <>
+      <AppContent />
+      <ToastProvider />
+    </>
+  );
 }

@@ -25,3 +25,8 @@ export type { DrawerProps, DrawerSide } from './Drawer';
 
 export { Tabs, TabsList, TabTrigger, TabPanel } from './Tabs';
 export type { TabsProps, TabTriggerProps } from './Tabs';
+
+export { ToastProvider, toast } from './Toast';
+export { Tooltip } from './Tooltip';
+export { Loading, LoadingDots, LoadingSpinner } from './Loading';
+
