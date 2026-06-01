@@ -30,6 +30,19 @@ export default function ProductCard({ product }: { product: Product }) {
     setTimeout(() => setAdded(false), 300);
   };
 
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error('Connectez-vous pour ajouter aux favoris');
+      return;
+    }
+    if (isFavorite) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product.id);
+    }
+  };
+
   return (
     <>
       <motion.div
@@ -102,24 +115,20 @@ export default function ProductCard({ product }: { product: Product }) {
           </AnimatePresence>
 
           {/* Favoris button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              if (!user) {
-                toast.error('Connectez-vous pour sauvegarder vos favoris');
-                return;
-              }
-              if (isFavorite) {
-                removeFromWishlist(product.id);
-              } else {
-                addToWishlist(product.id);
-              }
-            }}
-            className="absolute top-4 right-4 p-2 rounded-full glass text-ink hover:bg-bg transition-colors z-20"
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleWishlistToggle}
+            className={cn(
+              "absolute top-4 right-4 p-2 rounded-full transition-all z-20 shadow-lg",
+              isFavorite 
+                ? "bg-accent text-white" 
+                : "glass text-ink hover:bg-bg"
+            )}
             aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
-            <Heart className={cn('w-4 h-4', isFavorite && 'fill-ink')} />
-          </button>
+            <Heart className={cn('w-4 h-4 transition-all', isFavorite && 'fill-white')} />
+          </motion.button>
         </Link>
 
         <div>

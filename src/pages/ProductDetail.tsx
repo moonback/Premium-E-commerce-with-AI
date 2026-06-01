@@ -9,10 +9,11 @@ import AccordionItem from '../components/AccordionItem';
 import ProductReviews from '../components/ProductReviews';
 import SEO from '../components/SEO';
 import { buildProductJsonLd, findProductByRouteParam, getProductPath } from '../lib/seo';
+import toast from 'react-hot-toast';
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const { products, addToCart, addToWishlist, removeFromWishlist, wishlist, user, fetchProducts } = useStore();
+  const { products, addToCart, addToWishlist, removeFromWishlist, wishlist, user, fetchProducts, setAuthModalOpen } = useStore();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +22,19 @@ export default function ProductDetail() {
   // Sticky CTA — all hooks must be declared before any early return
   const addBtnRef = useRef<HTMLButtonElement>(null);
   const [showStickyAdd, setShowStickyAdd] = useState(false);
+
+  const handleWishlistToggle = () => {
+    if (!user) {
+      toast.error('Connectez-vous pour ajouter aux favoris');
+      setAuthModalOpen(true);
+      return;
+    }
+    if (isFavorite) {
+      removeFromWishlist(product!.id);
+    } else {
+      addToWishlist(product!.id);
+    }
+  };
 
   useEffect(() => {
     if (products.length === 0) {
@@ -106,22 +120,20 @@ export default function ProductDetail() {
                 alt={product.name}
                 className="w-full h-full object-cover transition-all duration-500"
               />
-              <button
-                onClick={() => {
-                  if (!user) {
-                    return;
-                  }
-                  if (isFavorite) {
-                    removeFromWishlist(product.id);
-                  } else {
-                    addToWishlist(product.id);
-                  }
-                }}
-                className="absolute top-8 right-8 p-3 rounded-full glass text-ink hover:bg-bg transition-colors z-20"
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleWishlistToggle}
+                className={cn(
+                  "absolute top-8 right-8 p-3 rounded-full transition-all z-20 shadow-lg",
+                  isFavorite 
+                    ? "bg-accent text-white" 
+                    : "glass text-ink hover:bg-bg"
+                )}
                 aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               >
-                <Heart className={cn("w-5 h-5", isFavorite && "fill-ink")} />
-              </button>
+                <Heart className={cn("w-5 h-5 transition-all", isFavorite && "fill-white")} />
+              </motion.button>
               <div className="absolute top-8 left-8 text-xs font-bold uppercase tracking-widest opacity-40 z-10 bg-bg/50 px-3 py-1 rounded-full backdrop-blur-md">
                 N°{product.id.replace('prod_', '').padStart(3, '0')}
               </div>

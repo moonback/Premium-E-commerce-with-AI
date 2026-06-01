@@ -87,6 +87,16 @@ function AppContent() {
     fetchCategories();
   }, [initSession, fetchProducts, fetchCategories]);
 
+  // Fetch wishlist when user logs in
+  const user = useStore(state => state.user);
+  const fetchWishlist = useStore(state => state.fetchWishlist);
+  
+  useEffect(() => {
+    if (user) {
+      fetchWishlist();
+    }
+  }, [user, fetchWishlist]);
+
   return (
     <div className="bg-bg min-h-screen font-sans text-ink selection:bg-accent/20">
       <SkipLinks />
