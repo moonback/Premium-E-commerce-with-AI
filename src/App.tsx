@@ -22,6 +22,10 @@ const StoreScreen = lazy(() => import('./pages/StoreScreen'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Contact = lazy(() => import('./pages/Contact'));
+const MentionsLegales = lazy(() => import('./pages/MentionsLegales'));
+const CGV = lazy(() => import('./pages/CGV'));
+const Livraison = lazy(() => import('./pages/Livraison'));
 
 function RouteFallback() {
   return (
@@ -70,6 +74,10 @@ function AppContent() {
               <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
               <Route path="/order-confirmation" element={<PageTransition><OrderConfirmation /></PageTransition>} />
               <Route path="/profile" element={<PageTransition><ProtectedRoute><Profile /></ProtectedRoute></PageTransition>} />
+              <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
+              <Route path="/mentions-legales" element={<PageTransition><MentionsLegales /></PageTransition>} />
+              <Route path="/cgv" element={<PageTransition><CGV /></PageTransition>} />
+              <Route path="/livraison" element={<PageTransition><Livraison /></PageTransition>} />
             </Route>
             <Route path="/pos" element={<PageTransition><ProtectedRoute role={["staff", "admin"]}><POS /></ProtectedRoute></PageTransition>} />
             <Route path="/admin" element={<PageTransition><ProtectedRoute role="admin"><Admin /></ProtectedRoute></PageTransition>} />
