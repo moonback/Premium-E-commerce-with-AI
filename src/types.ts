@@ -22,6 +22,15 @@ export type Spec = {
   content: string;
 };
 
+export type ProductPromotion = {
+  promo_price: number;
+  promo_start_date: string;
+  promo_end_date: string;
+  promo_label?: string; // Ex: "Soldes", "Black Friday", "-30%"
+};
+
+export type ProductBadge = 'featured' | 'bestseller' | 'top_sales' | 'new' | 'limited';
+
 export type Product = {
   rating: number;
   id: string;
@@ -39,6 +48,9 @@ export type Product = {
   batch_size?: number; // Taille du lot (ex: 6 pour un pack de 6)
   batch_unit?: string; // Unité du lot (ex: "pièces", "unités", "bouteilles")
   seo?: SEOData | null;
+  badges?: ProductBadge[]; // Badges du produit
+  promotion?: ProductPromotion | null; // Promotion active
+  total_sales?: number; // Nombre total de ventes (pour calculer les meilleures ventes)
 };
 
 export type CartItem = {

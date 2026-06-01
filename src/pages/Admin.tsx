@@ -17,6 +17,8 @@ import AdminMarginAnalysis from '../components/AdminMarginAnalysis';
 import MegaMenuManager from '../components/admin/MegaMenuManager';
 import CategoryModal from '../components/CategoryModal';
 import SEOFields from '../components/SEOFields';
+import ProductBadgesManager from '../components/ProductBadgesManager';
+import ProductPromotionManager from '../components/ProductPromotionManager';
 import { getErrorMessage } from '../lib/errors';
 
 type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
@@ -55,6 +57,8 @@ export default function Admin() {
 
   // SEO State for Products
   const [showProductSEO, setShowProductSEO] = useState(false);
+  const [showProductBadges, setShowProductBadges] = useState(false);
+  const [showProductPromotion, setShowProductPromotion] = useState(false);
 
   const [todaySales, setTodaySales] = React.useState(0);
   const [activeOrdersCount, setActiveOrdersCount] = React.useState(0);
@@ -127,6 +131,8 @@ export default function Admin() {
         effects: parseListField(editingProduct.effects),
         specs: parseSpecsField(editingProduct.specs),
         seo: editingProduct.seo || null,
+        badges: editingProduct.badges || [],
+        promotion: editingProduct.promotion || null,
       } satisfies ProductUpsertPayload;
 
       // Remove legacy field if it still exists in state
@@ -304,8 +310,9 @@ export default function Admin() {
                 <tr>
                   <th className="px-6 py-3 font-bold tracking-widest">Image</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Nom</th>
+                  <th className="px-6 py-3 font-bold tracking-widest">Badges</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Catégorie</th>
-                  <th className="px-6 py-3 font-bold tracking-widest">Prix Vente</th>
+                  <th className="px-6 py-3 font-bold tracking-widest">Prix</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Prix Achat</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Marge</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Stock</th>
@@ -328,8 +335,53 @@ export default function Admin() {
                         </div>
                       )}
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {(p.badges || []).map((badge) => {
+                          const badgeConfig: Record<string, { label: string; color: string; icon: string }> = {
+                            featured: { label: 'Vedette', color: 'bg-yellow-100 text-yellow-800', icon: '⭐' },
+                            bestseller: { label: 'Best', color: 'bg-purple-100 text-purple-800', icon: '🏆' },
+                            top_sales: { label: 'Top', color: 'bg-green-100 text-green-800', icon: '📈' },
+                            new: { label: 'Nouveau', color: 'bg-blue-100 text-blue-800', icon: '✨' },
+                            limited: { label: 'Limité', color: 'bg-red-100 text-red-800', icon: '⏰' },
+                          };
+                          const config = badgeConfig[badge] || { label: badge, color: 'bg-gray-100 text-gray-800', icon: '🏷️' };
+                          return (
+                            <span key={badge} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${config.color}`}>
+                              {config.icon} {config.label}
+                            </span>
+                          );
+                        })}
+                        {p.promotion && (() => {
+                          const now = new Date();
+                          const start = new Date(p.promotion.promo_start_date);
+                          const end = new Date(p.promotion.promo_end_date);
+                          const isActive = now >= start && now <= end;
+                          return isActive ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-800">
+                              🔥 {p.promotion.promo_label || 'Promo'}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-xs tracking-widest uppercase">{(p.categories || []).join(', ')}</td>
-                    <td className="px-6 py-4 font-semibold">{p.price.toFixed(2)}€</td>
+                    <td className="px-6 py-4">
+                      {p.promotion && (() => {
+                        const now = new Date();
+                        const start = new Date(p.promotion.promo_start_date);
+                        const end = new Date(p.promotion.promo_end_date);
+                        const isActive = now >= start && now <= end;
+                        return isActive ? (
+                          <div>
+                            <div className="font-bold text-red-600">{p.promotion.promo_price.toFixed(2)}€</div>
+                            <div className="text-xs text-ink/40 line-through">{p.price.toFixed(2)}€</div>
+                          </div>
+                        ) : (
+                          <div className="font-semibold">{p.price.toFixed(2)}€</div>
+                        );
+                      })() || <div className="font-semibold">{p.price.toFixed(2)}€</div>}
+                    </td>
                     <td className="px-6 py-4">
                       {p.purchase_price ? (
                         <span className="text-ink/60">{p.purchase_price.toFixed(2)}€</span>
@@ -546,6 +598,51 @@ export default function Admin() {
                     <SEOFields 
                       seo={editingProduct.seo || {}} 
                       onChange={(seo) => setEditingProduct({...editingProduct, seo})} 
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Badges Section */}
+              <div className="border-t border-ink/10 pt-6 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowProductBadges(!showProductBadges)}
+                  className="flex items-center justify-between w-full px-4 py-3 bg-soft-green/10 hover:bg-soft-green/20 transition-colors rounded"
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest">
+                    Badges Produit (Optionnel)
+                  </span>
+                  {showProductBadges ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showProductBadges && (
+                  <div className="mt-4">
+                    <ProductBadgesManager 
+                      badges={editingProduct.badges || []} 
+                      onChange={(badges) => setEditingProduct({...editingProduct, badges})} 
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Promotion Section */}
+              <div className="border-t border-ink/10 pt-6 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowProductPromotion(!showProductPromotion)}
+                  className="flex items-center justify-between w-full px-4 py-3 bg-soft-green/10 hover:bg-soft-green/20 transition-colors rounded"
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest">
+                    Prix Promotionnel (Optionnel)
+                  </span>
+                  {showProductPromotion ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showProductPromotion && (
+                  <div className="mt-4">
+                    <ProductPromotionManager 
+                      promotion={editingProduct.promotion} 
+                      originalPrice={editingProduct.price || 0}
+                      onChange={(promotion) => setEditingProduct({...editingProduct, promotion})} 
                     />
                   </div>
                 )}
