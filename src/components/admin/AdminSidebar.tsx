@@ -21,19 +21,19 @@ interface AdminSidebarProps {
 }
 
 const navigationItems = [
-  { icon: BarChart3, label: "Overview", description: "Vue d'ensemble" },
-  { icon: TrendingUp, label: "Analytics", description: "Analyses" },
-  { icon: DollarSign, label: "Marges", description: "Rentabilité" },
-  { icon: Package, label: "Products", description: "Catalogue" },
-  { icon: Warehouse, label: "Inventory", description: "Stock" },
-  { icon: LayoutDashboard, label: "Categories", description: "Hiérarchie" },
-  { icon: Menu, label: "Mega Menu", description: "Navigation" },
-  { icon: ShoppingCart, label: "Orders", description: "Commandes" },
-  { icon: Users, label: "Customers", description: "Clients" },
-  { icon: Tag, label: "Discounts", description: "Promotions" },
-  { icon: Truck, label: "Shipping", description: "Transporteurs" },
-  { icon: Activity, label: "Activity", description: "Logs" },
-  { icon: Settings, label: "Settings", description: "Configuration" },
+  { icon: BarChart3,     label: "Overview",   display: "Tableau de bord", description: "Vue d'ensemble"  },
+  { icon: TrendingUp,   label: "Analytics",  display: "Analytiques",     description: "Analyses"         },
+  { icon: DollarSign,   label: "Marges",     display: "Marges",          description: "Rentabilité"      },
+  { icon: Package,      label: "Products",   display: "Produits",        description: "Catalogue"        },
+  { icon: Warehouse,    label: "Inventory",  display: "Inventaire",      description: "Stock"            },
+  { icon: LayoutDashboard, label: "Categories", display: "Catégories",   description: "Hiérarchie"       },
+  { icon: Menu,         label: "Mega Menu",  display: "Mega Menu",       description: "Navigation"       },
+  { icon: ShoppingCart, label: "Orders",     display: "Commandes",       description: "Gestion commandes"},
+  { icon: Users,        label: "Customers",  display: "Clients",         description: "Base clients"     },
+  { icon: Tag,          label: "Discounts",  display: "Promotions",      description: "Codes & remises"  },
+  { icon: Truck,        label: "Shipping",   display: "Livraison",       description: "Transporteurs"    },
+  { icon: Activity,     label: "Activity",   display: "Activité",        description: "Journaux"         },
+  { icon: Settings,     label: "Settings",   display: "Paramètres",      description: "Configuration"    },
 ];
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
@@ -86,7 +86,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                     text-sm font-bold tracking-wide
                     ${isActive ? 'text-white' : 'text-ink/80'}
                   `}>
-                    {item.label}
+                    {item.display}
                   </div>
                   <div className={`
                     text-xs tracking-wide
