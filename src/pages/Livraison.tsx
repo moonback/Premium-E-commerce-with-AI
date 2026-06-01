@@ -1,9 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Truck, Package, RefreshCw, MapPin, Clock, Shield, Loader } from 'lucide-react';
+import { Truck, Package, RefreshCw, MapPin, Zap, Globe, Shield, Loader, CheckCircle2 } from 'lucide-react';
 import SEO from '../components/SEO';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useStoreSettings } from '../hooks/useStoreSettings';
+import { useShippingCarriers } from '../hooks/useShippingCarriers';
+import { CarrierType } from '../types';
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 20 },
@@ -12,48 +14,34 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] },
 });
 
-function formatPrice(amount: number, currency = 'EUR') {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(amount);
+const CARRIER_TYPE_CONFIG: Record<CarrierType, { label: string; icon: React.ElementType; color: string; bg: string }> = {
+  home:          { label: 'Domicile',      icon: Truck,  color: 'text-blue-600',    bg: 'bg-blue-50'    },
+  relay:         { label: 'Point Relais',  icon: MapPin, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  express:       { label: 'Express',       icon: Zap,    color: 'text-amber-600',   bg: 'bg-amber-50'   },
+  international: { label: 'International', icon: Globe,  color: 'text-purple-600',  bg: 'bg-purple-50'  },
+};
+
+function formatPrice(n: number, currency = 'EUR') {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(n);
+}
+
+function delayLabel(min: number, max: number) {
+  if (min === max) return `${min} jour${min > 1 ? 's' : ''} ouvré${min > 1 ? 's' : ''}`;
+  return `${min} – ${max} jours ouvrés`;
 }
 
 export default function Livraison() {
   const reduced = useReducedMotion();
   const anim = (delay = 0) => reduced ? {} : fadeUp(delay);
-  const { settings, isLoading } = useStoreSettings();
+  const { settings, isLoading: settingsLoading } = useStoreSettings();
+  const { carriers, isLoading: carriersLoading } = useShippingCarriers();
 
-  const currency = settings.currency || 'EUR';
-  const shippingFee = settings.shipping_fee ?? 5.99;
-  const freeThreshold = settings.free_shipping_threshold ?? 50;
   const storeName = settings.store_name || 'Véridian';
   const storeEmail = settings.store_email || 'contact@veridian.fr';
   const retourEmail = `retours@${storeEmail.split('@')[1] || 'veridian.fr'}`;
+  const currency = settings.currency || 'EUR';
 
-  const shippingOptions = [
-    {
-      name: 'Livraison Standard',
-      delay: '3 – 5 jours ouvrés',
-      price: formatPrice(shippingFee, currency),
-      free: freeThreshold > 0 ? `Offerte dès ${formatPrice(freeThreshold, currency)}` : 'Toujours offerte',
-      icon: Truck,
-      description: 'Livraison à domicile ou en point relais via Colissimo / Mondial Relay.',
-    },
-    {
-      name: 'Livraison Express',
-      delay: '1 – 2 jours ouvrés',
-      price: formatPrice(shippingFee * 2, currency),
-      free: freeThreshold > 0 ? `Offerte dès ${formatPrice(freeThreshold * 2, currency)}` : 'Toujours offerte',
-      icon: Clock,
-      description: 'Expédition prioritaire, suivi en temps réel, livraison avant 13 h.',
-    },
-    {
-      name: 'Livraison Internationale',
-      delay: '5 – 10 jours ouvrés',
-      price: `À partir de ${formatPrice(shippingFee * 2.5, currency)}`,
-      free: `Offerte dès ${formatPrice(freeThreshold * 4, currency)}`,
-      icon: MapPin,
-      description: 'Disponible dans plus de 30 pays. Délais variables selon la destination.',
-    },
-  ];
+  const isLoading = settingsLoading || carriersLoading;
 
   return (
     <>
@@ -62,7 +50,7 @@ export default function Livraison() {
         description={`Tout savoir sur les options de livraison, délais, frais et politique de retour de ${storeName}.`}
       />
 
-      {/* Hero */}
+      {/* ── Hero ── */}
       <section className="bg-ink text-bg py-16 px-4 sm:px-10">
         <div className="max-w-3xl mx-auto">
           <motion.p {...anim(0)} className="text-[9px] uppercase tracking-[0.35em] text-accent mb-3">
@@ -73,8 +61,13 @@ export default function Livraison() {
           </motion.h1>
           <motion.p {...anim(0.2)} className="mt-3 text-bg/60 text-sm max-w-xl leading-relaxed">
             Nous expédions vos commandes avec soin depuis notre entrepôt.
-            {freeThreshold > 0 && (
-              <> Livraison offerte à partir de <strong className="text-bg">{formatPrice(freeThreshold, currency)}</strong> d'achat en France métropolitaine.</>
+            {carriers.some(c => c.free_above != null) && (
+              <> Livraison offerte à partir de{' '}
+                <strong className="text-bg">
+                  {formatPrice(Math.min(...carriers.filter(c => c.free_above != null).map(c => c.free_above!)), currency)}
+                </strong>{' '}
+                d'achat.
+              </>
             )}
           </motion.p>
         </div>
@@ -86,49 +79,82 @@ export default function Livraison() {
         </div>
       ) : (
         <>
-          {/* Options de livraison */}
+          {/* ── Transporteurs ── */}
           <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <motion.p {...anim(0)} className="text-[9px] uppercase tracking-[0.35em] text-ink/40 mb-2">
-              Nos options
+              Nos transporteurs
             </motion.p>
             <motion.h2 {...anim(0.05)} className="font-serif text-2xl font-light mb-10">
-              Modes de livraison
+              Modes de livraison disponibles
             </motion.h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {shippingOptions.map(({ name, delay, price, free, icon: Icon, description }, i) => (
-                <motion.div
-                  key={name}
-                  {...anim(i * 0.1)}
-                  className="border border-ink/10 p-6 space-y-4 hover:border-accent/40 transition-colors"
-                >
-                  <div className="w-10 h-10 bg-accent/10 flex items-center justify-center">
-                    <Icon size={18} className="text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-ink text-sm">{name}</h3>
-                    <p className="text-xs text-ink/50 mt-0.5">{description}</p>
-                  </div>
-                  <div className="space-y-1 pt-2 border-t border-ink/10">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-ink/50">Délai</span>
-                      <span className="font-medium text-ink">{delay}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-ink/50">Tarif</span>
-                      <span className="font-medium text-ink">{price}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-ink/50">Gratuit</span>
-                      <span className="text-accent font-medium">{free}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            {carriers.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-12 border border-dashed border-ink/20 text-ink/40">
+                <Package size={28} />
+                <p className="text-sm">Aucun mode de livraison configuré pour le moment.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {carriers.map((carrier, i) => {
+                  const cfg = CARRIER_TYPE_CONFIG[carrier.carrier_type] ?? CARRIER_TYPE_CONFIG.home;
+                  const Icon = cfg.icon;
+                  return (
+                    <motion.div
+                      key={carrier.id}
+                      {...anim(i * 0.08)}
+                      className="border border-ink/10 p-6 space-y-4 hover:border-accent/40 transition-colors"
+                    >
+                      {/* Header */}
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${cfg.bg}`}>
+                          <Icon size={18} className={cfg.color} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-medium text-ink text-sm">{carrier.name}</h3>
+                            <span className={`text-[9px] uppercase tracking-[0.15em] px-1.5 py-0.5 ${cfg.bg} ${cfg.color}`}>
+                              {cfg.label}
+                            </span>
+                          </div>
+                          {carrier.description && (
+                            <p className="text-xs text-ink/50 mt-0.5">{carrier.description}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Details */}
+                      <div className="space-y-1.5 pt-3 border-t border-ink/10">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-ink/50">Délai</span>
+                          <span className="font-medium text-ink">{delayLabel(carrier.min_days, carrier.max_days)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-ink/50">Tarif</span>
+                          <span className="font-medium text-ink">{formatPrice(carrier.base_price, currency)}</span>
+                        </div>
+                        {carrier.free_above != null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-ink/50">Livraison gratuite</span>
+                            <span className="text-accent font-medium">
+                              Dès {formatPrice(carrier.free_above, currency)}
+                            </span>
+                          </div>
+                        )}
+                        {carrier.available_countries && carrier.available_countries.length > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-ink/50">Pays</span>
+                            <span className="text-ink/70">{carrier.available_countries.join(', ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
-          {/* Processus */}
+          {/* ── Processus ── */}
           <section className="bg-soft-green/30 py-16 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
               <motion.p {...anim(0)} className="text-[9px] uppercase tracking-[0.35em] text-ink/40 mb-2">
@@ -137,7 +163,6 @@ export default function Livraison() {
               <motion.h2 {...anim(0.05)} className="font-serif text-2xl font-light mb-10">
                 Votre commande, étape par étape
               </motion.h2>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                   { step: '01', title: 'Commande validée', text: 'Vous recevez un email de confirmation avec le récapitulatif de votre commande.' },
@@ -155,7 +180,7 @@ export default function Livraison() {
             </div>
           </section>
 
-          {/* Retours */}
+          {/* ── Retours ── */}
           <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
               <div>
@@ -202,11 +227,7 @@ export default function Livraison() {
                     text: 'Tous nos produits bénéficient de la garantie légale de conformité de 2 ans. En cas de défaut, nous prenons en charge les frais de retour.',
                   },
                 ].map(({ icon: Icon, title, text }, i) => (
-                  <motion.div
-                    key={title}
-                    {...anim(i * 0.08)}
-                    className="flex gap-4 p-5 border border-ink/10"
-                  >
+                  <motion.div key={title} {...anim(i * 0.08)} className="flex gap-4 p-5 border border-ink/10">
                     <div className="w-9 h-9 bg-accent/10 flex items-center justify-center shrink-0">
                       <Icon size={16} className="text-accent" />
                     </div>
@@ -220,7 +241,7 @@ export default function Livraison() {
             </div>
           </section>
 
-          {/* FAQ */}
+          {/* ── FAQ ── */}
           <section className="bg-ink text-bg py-14 px-4 sm:px-6">
             <div className="max-w-3xl mx-auto">
               <motion.h2 {...anim(0)} className="font-serif text-2xl font-light mb-8 text-center">

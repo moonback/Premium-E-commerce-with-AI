@@ -106,7 +106,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-transparent p-6 border border-ink/10">
           <div className="flex items-center justify-between mb-2">
             <p className="text-ink/50 text-xs font-bold uppercase tracking-widest">Ventes du Jour</p>
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
             {stats.lowStockCount} stock faible
           </p>
         </div>
-      </div>
+      </div> */}
 
       {/* Alerts */}
       {(stats.lowStockCount > 0 || stats.pendingOrders > 0) && (

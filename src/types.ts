@@ -159,6 +159,31 @@ export interface MegaMenuItem {
   updated_at: string;
 }
 
+// ── Shipping Carrier Types ────────────────────────────────────────────────
+
+export type CarrierType = 'home' | 'relay' | 'express' | 'international';
+
+export type ShippingCarrier = {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  carrier_type: CarrierType;
+  description?: string | null;
+  base_price: number;
+  free_above?: number | null;
+  extra_kg_price?: number;
+  min_days: number;
+  max_days: number;
+  is_active: boolean;
+  available_countries: string[];
+  max_weight_kg?: number;
+  tracking_url_template?: string | null;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 // Store Settings Types
 export type StoreSettings = {
   id: string;

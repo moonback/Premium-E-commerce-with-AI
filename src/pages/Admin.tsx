@@ -13,6 +13,7 @@ import AdminDashboard from '../components/AdminDashboard';
 import AdminDiscounts from '../components/AdminDiscounts';
 import AdminMarginAnalysis from '../components/AdminMarginAnalysis';
 import MegaMenuManager from '../components/admin/MegaMenuManager';
+import AdminShipping from '../components/admin/AdminShipping';
 import CategoryModal from '../components/CategoryModal';
 import AdminSidebar from '../components/admin/AdminSidebar';
 import AdminHeader from '../components/admin/AdminHeader';
@@ -260,6 +261,7 @@ export default function Admin() {
           {activeTab === 'Customers' && <AdminCustomers />}
           {activeTab === 'Discounts' && <AdminDiscounts />}
           {activeTab === 'Inventory' && <AdminInventory />}
+          {activeTab === 'Shipping' && <AdminShipping />}
           {activeTab === 'Activity' && <AdminActivityLog />}
           {activeTab === 'Settings' && <AdminSettings />}
           {activeTab === 'Mega Menu' && <MegaMenuManager />}

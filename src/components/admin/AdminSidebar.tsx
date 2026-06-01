@@ -11,7 +11,8 @@ import {
   Tag, 
   Menu, 
   DollarSign, 
-  LayoutDashboard 
+  LayoutDashboard,
+  Truck,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -30,6 +31,7 @@ const navigationItems = [
   { icon: ShoppingCart, label: "Orders", description: "Commandes" },
   { icon: Users, label: "Customers", description: "Clients" },
   { icon: Tag, label: "Discounts", description: "Promotions" },
+  { icon: Truck, label: "Shipping", description: "Transporteurs" },
   { icon: Activity, label: "Activity", description: "Logs" },
   { icon: Settings, label: "Settings", description: "Configuration" },
 ];
