@@ -1,0 +1,9 @@
+id,name,parent_id,level,image_url,seo_meta_title,seo_meta_description
+cat_vetements,Vêtements,,1,https://images.unsplash.com/photo-1489987707025-afc232f7ea0f,Vêtements Premium — Véridian,Découvrez notre collection de vêtements premium
+cat_vetements_tshirts,T-Shirts,cat_vetements,2,,T-Shirts Bio — Véridian,Collection de t-shirts en coton bio
+cat_vetements_pantalons,Pantalons,cat_vetements,2,,,
+cat_accessoires,Accessoires,,1,https://images.unsplash.com/photo-1553062407-98eeb64c6a62,Accessoires Premium — Véridian,Sacs maroquinerie et accessoires de qualité
+cat_accessoires_sacs,Sacs & Maroquinerie,cat_accessoires,2,,,
+cat_accessoires_gourdes,Gourdes & Hydratation,cat_accessoires,2,,,
+cat_maison,Maison,,1,,Décoration & Maison — Véridian,Art de vivre et décoration intérieure premium
+cat_maison_cuisine,Cuisine & Table,cat_maison,2,,,

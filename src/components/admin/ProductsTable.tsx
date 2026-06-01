@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Edit2, Trash2, Cpu, Loader2, CheckCircle, Clock } from 'lucide-react';
 import { Product } from '../../types';
 import VectorizationPanel from './VectorizationPanel';
+import CsvImportExport from './CsvImportExport';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -90,6 +91,9 @@ export default function ProductsTable({ products, onEdit, onDelete }: ProductsTa
 
   return (
     <div>
+      {/* Import / Export CSV */}
+      <CsvImportExport />
+
       {/* Panneau de vectorisation globale */}
       <VectorizationPanel />
 
