@@ -1,353 +1,313 @@
-# 🛍️ Véridian - E-commerce Premium avec IA
+# Véridian — Premium E-commerce with AI
 
-## Pitch
-
-**Véridian** est une plateforme e-commerce premium full-stack construite avec React, TypeScript et Supabase. Elle offre une expérience d'achat moderne avec recommandations IA (Google Gemini), gestion avancée des commandes, programme de fidélité gamifié, et interface d'administration complète. Conçue pour les boutiques haut de gamme recherchant une solution professionnelle, scalable et sécurisée avec paiements Stripe intégrés.
-
-**Public cible** : Boutiques premium, marques de luxe, retailers omnicanal nécessitant une plateforme e-commerce moderne avec IA, multi-rôles (client, staff, admin, kiosk) et expérience utilisateur exceptionnelle.
+Boutique e-commerce premium full-stack avec assistante vocale IA, recherche sémantique pgvector, et back-office complet. Construit sur React 19, Express, Supabase et Gemini AI.
 
 ---
 
-## 📊 Badges
+## Stack technique
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)
-![React](https://img.shields.io/badge/React-19.0-61dafb)
-![Supabase](https://img.shields.io/badge/Supabase-2.106-3ecf8e)
-
----
-
-## 🛠️ Stack Technique
-
-| Technologie | Rôle | Version |
-|-------------|------|---------|
-| **React** | Framework UI | 19.0.1 |
-| **TypeScript** | Langage | 5.8.2 |
-| **Vite** | Build tool & dev server | 6.2.3 |
-| **Tailwind CSS** | Styling | 4.1.14 |
-| **Framer Motion** | Animations | 12.23.24 |
-| **Zustand** | State management | 5.0.13 |
-| **React Router** | Routing | 7.15.1 |
-| **Supabase** | Backend (PostgreSQL + Auth + Storage) | 2.106.2 |
-| **Express** | Server HTTP/WebSocket | 4.21.2 |
-| **Stripe** | Paiements | API v2024 |
-| **Google Gemini** | IA recommandations | 2.4.0 |
-| **Lucide React** | Icônes | 0.546.0 |
-| **React Hot Toast** | Notifications | 2.6.0 |
+| Couche | Technologie |
+|---|---|
+| Frontend | React 19, TypeScript, Tailwind CSS v4, Motion |
+| Routing | React Router v7 |
+| State | Zustand v5 (persist) |
+| Backend | Express 4 + Node.js (tsx) |
+| Base de données | Supabase (PostgreSQL + pgvector) |
+| Auth | Supabase Auth (JWT) |
+| IA vocale | Gemini Live API (`gemini-3.1-flash-live-preview`) via WebSocket |
+| Embeddings | Gemini REST API (`gemini-embedding-2`, 3072 dims) |
+| Paiement | Stripe (Payment Intents) |
+| Build | Vite 6 + esbuild |
+| PWA | Service Worker, manifest, install prompt |
 
 ---
 
-## ✨ Fonctionnalités Principales
+## Fonctionnalités
 
-### 🛒 **Expérience Client**
-- **Catalogue produits** avec filtres avancés, recherche, catégories hiérarchiques
-- **Fiches produits enrichies** : galerie photos, spécifications, avis clients, recommandations IA
-- **Panier intelligent** avec sauvegarde automatique et codes promo
-- **Checkout optimisé** : paiement Stripe (cartes, Apple Pay, Google Pay), Click & Collect
-- **Wishlist** synchronisée avec compte utilisateur
-- **Programme de fidélité** : points, paliers (Bronze/Silver/Gold/Platinum), récompenses
-- **Avis produits** avec modération admin
-- **Notifications temps réel** : commandes, promotions, stock
-- **PWA** : installation, mode offline, notifications push
+### Vitrine client
+- Catalogue produits avec filtres avancés, recherche, comparaison
+- Fiches produit détaillées avec avis, badges, promotions
+- Panier persistant, codes de réduction, barre livraison gratuite
+- Checkout multi-étapes (livraison + paiement Stripe)
+- Confirmation de commande, historique profil
+- Wishlist serveur, carnet d'adresses
+- Mega menu configurable, navigation mobile
+- Pages légales (CGV, mentions légales, livraison, contact)
+- SEO : balises meta, Open Graph, sitemap XML dynamique, robots.txt
+- PWA : installable, mode hors-ligne, Service Worker
 
-### 👤 **Espace Utilisateur**
-- **Authentification** Supabase (email/password, OAuth)
-- **Profil complet** : informations personnelles, adresses multiples
-- **Historique commandes** avec suivi détaillé
-- **Gestion wishlist** et favoris
-- **Tableau de bord fidélité** : points, palier, avantages
-- **Paramètres** : préférences, notifications, sécurité (2FA)
+### Assistante vocale Ava
+- Conversation vocale temps réel via Gemini Live (WebSocket)
+- Voix féminine naturelle (`Aoede`, 24 kHz)
+- Mode texte en fallback (si micro refusé)
+- Ajout au panier par la voix (`addToCart` function calling)
+- Suggestions rapides, confirmation visuelle panier
+- **Skills automatiques** : détection par mots-clés, injection contextuelle dynamique
+- **Recherche sémantique** : pgvector enrichit le contexte Ava à chaque message
+- Prompt système chargé depuis `prompts/ava-system.md`
+- Rate limiting par IP (5 sessions/10 min, 2 simultanées max)
 
-### 🎯 **Administration**
-- **Dashboard analytics** : CA, commandes, clients, KPIs temps réel
-- **Gestion produits** : CRUD complet, stock, catégories, images
-- **Gestion commandes** : statuts, suivi, facturation
-- **Gestion clients** : profils, historique, segmentation
-- **Codes promo** : création, règles, validité
-- **Modération avis** : publication, suppression
-- **Logs d'activité** : audit trail complet
-- **Paramètres système** : configuration globale
+### Back-office admin
+- Dashboard KPIs temps réel (ventes, commandes, clients)
+- Gestion produits : CRUD, upload image, badges, promotions, lots
+- **Vectorisation IA** : panneau de suivi avec barre de progression par produit
+- Gestion catégories avec arborescence
+- Mega Menu builder visuel
+- Gestion commandes avec statuts
+- Gestion clients et profils
+- Codes de réduction et promotions
+- Transporteurs et règles de livraison
+- Analyse des marges
+- Journal d'activité
+- Paramètres boutique complets (SEO, paiement, notifications, réseaux sociaux)
+- Mode maintenance
 
-### 🏪 **Point de Vente (POS)**
-- **Interface caisse** optimisée tactile
-- **Scan produits** rapide
-- **Paiements multiples** : espèces, carte, mobile
-- **Tickets de caisse** imprimables
-- **Gestion stock** temps réel
-
-### 📺 **Écran Magasin (Kiosk)**
-- **Affichage produits** en boucle
-- **Promotions** dynamiques
-- **Mode autonome** sans interaction
-
-### 🤖 **Intelligence Artificielle**
-- **Recommandations produits** personnalisées (Google Gemini)
-- **Assistant vocal** pour navigation
-- **Analyse comportementale** pour suggestions
-- **Chatbot** support client (à venir)
-
-### 🔒 **Sécurité & Conformité**
-- **Row Level Security (RLS)** Supabase sur toutes les tables
-- **Authentification JWT** avec refresh tokens
-- **Rôles utilisateurs** : admin, staff, kiosk, customer
-- **Chiffrement** des données sensibles
-- **Audit logs** complets
-- **RGPD** : export données, droit à l'oubli
-- **PCI DSS** : tokenisation Stripe
+### Modes d'accès
+| Route | Rôle requis | Description |
+|---|---|---|
+| `/` | Public | Vitrine |
+| `/product/:id` | Public | Fiche produit |
+| `/checkout` | Public | Tunnel d'achat |
+| `/profile` | `customer`+ | Profil & commandes |
+| `/admin` | `admin` | Back-office complet |
+| `/pos` | `staff`, `admin` | Point de vente |
+| `/screen` | `kiosk`, `admin` | Écran kiosque |
 
 ---
 
-## 📋 Prérequis
-
-### Versions minimales
-- **Node.js** : ≥ 18.0.0
-- **npm** : ≥ 9.0.0
-- **Git** : ≥ 2.30.0
-
-### Comptes requis
-- **Supabase** : [supabase.com](https://supabase.com) (gratuit)
-- **Stripe** : [stripe.com](https://stripe.com) (mode test gratuit)
-- **Google AI Studio** : [aistudio.google.com](https://aistudio.google.com) (API Gemini gratuite)
-
-### Outils recommandés
-- **VS Code** avec extensions : ESLint, Prettier, Tailwind CSS IntelliSense
-- **Postman** ou **Insomnia** pour tester l'API
-- **Supabase CLI** : `npm install -g supabase` (optionnel)
-
----
-
-## 🚀 Installation
-
-### 1. Cloner le repository
-```bash
-git clone https://github.com/votre-username/veridian-ecommerce.git
-cd veridian-ecommerce
-```
-
-### 2. Installer les dépendances
-```bash
-npm install
-```
-
-### 3. Configurer Supabase
-
-#### a. Créer un projet Supabase
-1. Aller sur [supabase.com](https://supabase.com)
-2. Créer un nouveau projet
-3. Noter l'URL et la clé anonyme (Settings → API)
-
-#### b. Exécuter les migrations
-```bash
-# Copier les fichiers SQL depuis supabase/migrations/
-# Les exécuter dans l'ordre dans le SQL Editor de Supabase
-```
-
-**Ordre des migrations** :
-1. `20260627_create_orders.sql`
-2. `20260628_harden_profiles_roles.sql`
-3. `20260629_restrict_sensitive_commerce_tables.sql`
-4. `20260629_secure_sensitive_tables.sql`
-5. `20260630_add_stripe_payment_reconciliation.sql`
-6. `20260701_add_wishlist_and_reviews.sql`
-7. `20260701_fix_discounts_schema.sql`
-8. `20260702_add_discounts_table.sql`
-9. `create_addresses_table.sql`
-10. `20260531_add_image_url_to_categories.sql`
-
-### 4. Configurer Stripe
-
-1. Créer un compte sur [stripe.com](https://stripe.com)
-2. Activer le mode test
-3. Récupérer les clés API (Developers → API keys)
-4. Configurer le webhook :
-   - URL : `https://votre-domaine.com/api/stripe/webhook`
-   - Événements : `payment_intent.succeeded`, `payment_intent.payment_failed`
-
-### 5. Configurer Google Gemini
-
-1. Aller sur [aistudio.google.com](https://aistudio.google.com)
-2. Créer une clé API
-3. Activer l'API Gemini
-
-### 6. Configuration des variables d'environnement
-
-Copier `.env.example` vers `.env` et `.env.local` :
-
-```bash
-cp .env.example .env
-cp .env.example .env.local
-```
-
-Éditer les fichiers avec vos valeurs (voir section Configuration ci-dessous).
-
----
-
-## ⚙️ Configuration
-
-### Variables d'environnement
-
-| Variable | Description | Exemple | Obligatoire |
-|----------|-------------|---------|-------------|
-| `VITE_SUPABASE_URL` | URL du projet Supabase | `https://xxx.supabase.co` | ✅ |
-| `VITE_SUPABASE_ANON_KEY` | Clé anonyme Supabase (client) | `eyJhbGc...` | ✅ |
-| `SUPABASE_URL` | URL Supabase (serveur) | `https://xxx.supabase.co` | ✅ |
-| `SUPABASE_ANON_KEY` | Clé anonyme Supabase (serveur) | `eyJhbGc...` | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clé service role (admin) | `eyJhbGc...` | ✅ |
-| `VITE_STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe | `pk_test_...` | ✅ |
-| `STRIPE_SECRET_KEY` | Clé secrète Stripe | `sk_test_...` | ✅ |
-| `STRIPE_WEBHOOK_SECRET` | Secret webhook Stripe | `whsec_...` | ✅ |
-| `GEMINI_API_KEY` | Clé API Google Gemini | `AIza...` | ✅ |
-| `APP_URL` | URL de l'application | `http://localhost:5173` | ✅ |
-
-> ⚠️ **Sécurité** : Ne jamais committer les fichiers `.env` ou `.env.local`. Ils sont dans `.gitignore`.
-
----
-
-## 🎬 Lancement
-
-### Mode Développement
-
-```bash
-npm run dev
-```
-
-L'application sera accessible sur :
-- **Frontend** : http://localhost:5173
-- **Backend** : http://localhost:3000
-- **WebSocket** : ws://localhost:3000
-
-### Mode Production
-
-#### 1. Build
-```bash
-npm run build
-```
-
-#### 2. Démarrer le serveur
-```bash
-npm start
-```
-
-L'application sera accessible sur le port configuré (défaut : 3000).
-
-### Scripts disponibles
-
-| Commande | Description |
-|----------|-------------|
-| `npm run dev` | Démarre le serveur de développement |
-| `npm run build` | Build pour production |
-| `npm start` | Démarre le serveur de production |
-| `npm run lint` | Vérifie les erreurs TypeScript |
-| `npm test` | Lance les tests unitaires |
-| `npm run clean` | Nettoie le dossier dist |
-
----
-
-## 📁 Structure du Projet
+## Architecture
 
 ```
-veridian-ecommerce/
-├── public/                    # Assets statiques
-│   ├── icons/                # Icônes PWA
-│   ├── screenshots/          # Screenshots pour PWA
-│   ├── manifest.json         # Manifest PWA
-│   ├── sw.js                 # Service Worker
-│   └── robots.txt            # SEO
+├── server.ts              # Serveur Express + WebSocket Gemini Live
 ├── src/
-│   ├── components/           # Composants React réutilisables
-│   │   ├── ui/              # Composants UI de base
-│   │   ├── ProductCard.tsx  # Carte produit
-│   │   ├── Header.tsx       # En-tête navigation
-│   │   ├── Cart.tsx         # Panier
-│   │   └── ...
-│   ├── pages/               # Pages/Routes principales
-│   │   ├── StoreFront.tsx   # Page d'accueil boutique
-│   │   ├── ProductDetail.tsx # Détail produit
-│   │   ├── Checkout.tsx     # Tunnel d'achat
-│   │   ├── Profile.tsx      # Profil utilisateur
-│   │   ├── Admin.tsx        # Dashboard admin
-│   │   ├── POS.tsx          # Point de vente
-│   │   └── StoreScreen.tsx  # Écran magasin
-│   ├── services/            # Services métier
-│   │   ├── checkoutService.ts    # Logique checkout
-│   │   ├── paymentSecurity.ts    # Sécurité paiements
-│   │   └── ...
-│   ├── hooks/               # Custom React hooks
-│   │   ├── usePWA.ts        # Hook PWA
-│   │   ├── useReducedMotion.ts
-│   │   └── ...
-│   ├── lib/                 # Utilitaires & helpers
-│   │   ├── supabase.ts      # Client Supabase
-│   │   ├── stripe.ts        # Client Stripe
-│   │   ├── seo.ts           # Helpers SEO
-│   │   └── utils.ts         # Utilitaires généraux
-│   ├── styles/              # Styles globaux
-│   │   └── index.css        # CSS principal
-│   ├── App.tsx              # Composant racine
-│   ├── main.tsx             # Point d'entrée React
-│   ├── store.ts             # Store Zustand global
-│   └── types.ts             # Types TypeScript
-├── supabase/
-│   ├── migrations/          # Migrations SQL
-│   └── backup.sql           # Backup schéma
-├── scripts/                 # Scripts utilitaires
-│   ├── generate-icons.mjs   # Génération icônes PWA
-│   └── validate-migrations.mjs
-├── docs/                    # Documentation
-├── server.ts                # Serveur Express + WebSocket
-├── vite.config.ts           # Configuration Vite
-├── tsconfig.json            # Configuration TypeScript
-├── tailwind.config.js       # Configuration Tailwind
-├── package.json             # Dépendances npm
-└── README.md                # Ce fichier
+│   ├── App.tsx            # Routing, lazy loading, init session
+│   ├── store.ts           # État global Zustand
+│   ├── types.ts           # Types TypeScript partagés
+│   ├── pages/             # Pages (StoreFront, Admin, Checkout, Profile…)
+│   ├── components/        # Composants UI
+│   │   ├── admin/         # Composants back-office
+│   │   └── ui/            # Design system (Button, Dialog, Input…)
+│   ├── lib/
+│   │   ├── supabase.ts    # Client Supabase browser
+│   │   ├── embeddingService.ts  # Vectorisation + recherche sémantique
+│   │   ├── skillsEngine.ts      # Moteur de skills Ava
+│   │   ├── seo.ts         # Helpers SEO
+│   │   ├── promotions.ts  # Logique promotions
+│   │   └── utils.ts       # Utilitaires
+│   ├── services/
+│   │   ├── checkoutService.ts   # Création commandes
+│   │   └── paymentSecurity.ts   # Validation paiements Stripe
+│   ├── hooks/
+│   │   ├── usePWA.ts
+│   │   ├── useShippingCarriers.ts
+│   │   └── useStoreSettings.ts
+│   └── styles/tokens/     # Design tokens (couleurs, typo, motion)
+├── prompts/
+│   ├── ava-system.md      # Prompt système d'Ava
+│   └── skills/            # Skills auto-déclenchés par mots-clés
+│       ├── recommandation.md
+│       ├── panier.md
+│       ├── prix.md
+│       ├── stock.md
+│       └── description.md
+└── supabase/migrations/   # Migrations SQL versionnées
 ```
 
 ---
 
-## 🤝 Contribuer
+## API Routes
 
-Nous accueillons les contributions ! Consultez [CONTRIBUTING.md](./CONTRIBUTING.md) pour :
-- Workflow Git (branches, commits, PR)
-- Standards de code
-- Processus de review
-- Comment lancer les tests
+### Paiement
+| Méthode | Route | Description |
+|---|---|---|
+| `POST` | `/api/payments/create-intent` | Crée un Stripe PaymentIntent |
+| `POST` | `/api/payments/webhook` | Webhook Stripe (réconciliation) |
 
----
+### Produits & Vectorisation
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/products/vectorize` | Admin | Vectorise tout le catalogue |
+| `POST` | `/api/products/:id/vectorize` | Admin | Vectorise un produit |
+| `GET` | `/api/products/search?q=...` | Connecté | Recherche sémantique |
 
-## 📄 Licence
-
-Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](./LICENSE) pour plus de détails.
-
----
-
-## 📚 Documentation Complémentaire
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture système détaillée
-- [API_DOCS.md](./API_DOCS.md) - Documentation API complète
-- [DB_SCHEMA.md](./DB_SCHEMA.md) - Schéma de base de données
-- [ROADMAP.md](./ROADMAP.md) - Feuille de route produit
-- [CHANGELOG.md](./CHANGELOG.md) - Historique des versions
-
----
-
-## 🆘 Support
-
-- **Issues** : [GitHub Issues](https://github.com/votre-username/veridian-ecommerce/issues)
-- **Discussions** : [GitHub Discussions](https://github.com/votre-username/veridian-ecommerce/discussions)
-- **Email** : support@veridian.com
+### Système
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/health` | Statut serveur + dépendances |
+| `POST` | `/api/events` | Tracking événements e-commerce |
+| `GET` | `/sitemap.xml` | Sitemap dynamique |
+| `GET` | `/robots.txt` | Robots |
+| `WS` | `/live` | Session vocale Gemini Live |
 
 ---
 
-## 🙏 Remerciements
+## Schéma base de données
 
-- [Supabase](https://supabase.com) pour le backend
-- [Stripe](https://stripe.com) pour les paiements
-- [Google](https://ai.google.dev) pour l'API Gemini
-- [Unsplash](https://unsplash.com) pour les images
-- La communauté open-source
+### Tables principales
+| Table | Description |
+|---|---|
+| `products` | Catalogue avec `embedding vector(3072)` |
+| `categories` | Arborescence catégories |
+| `orders` | Commandes clients |
+| `order_items` | Lignes de commande |
+| `profiles` | Profils utilisateurs (rôles) |
+| `addresses` | Carnet d'adresses |
+| `payments` | Paiements Stripe |
+| `shipments` | Expéditions |
+| `discounts` | Codes de réduction |
+| `wishlist_items` | Favoris |
+| `product_reviews` | Avis produits |
+| `shipping_carriers` | Transporteurs |
+| `store_settings` | Paramètres boutique |
+| `mega_menu_items` | Navigation mega menu |
+| `events` | Tracking comportemental |
+| `ai_conversations` | Historique sessions Ava |
+| `audit_events` | Journal d'audit |
+
+### Fonction SQL
+```sql
+match_products(query_embedding vector(3072), match_threshold float, match_count int, filter_in_stock boolean)
+-- Recherche ANN via index HNSW (cosinus)
+```
 
 ---
 
-**Fait avec ❤️ par l'équipe Véridian**
+## Variables d'environnement
+
+Copier `.env.example` en `.env` et renseigner :
+
+```env
+# Gemini AI (obligatoire)
+GEMINI_API_KEY=AIza...
+
+# Supabase (obligatoire)
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_ANON_KEY=eyJ...
+
+# Stripe (optionnel — requis pour les paiements réels)
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Supabase Service Role (optionnel — améliore la vectorisation)
+# Dashboard → Settings → API → service_role
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# Divers
+APP_URL=https://votre-domaine.com
+```
+
+---
+
+## Installation & démarrage
+
+```bash
+# Installer les dépendances
+npm install
+
+# Développement (Express + Vite en un seul process)
+npm run dev
+
+# Build production
+npm run build
+
+# Démarrer en production
+npm start
+
+# Vérification TypeScript
+npm run lint
+
+# Tests
+npm test
+```
+
+> En développement, le serveur Express tourne sur le port **3000** et Vite proxifie automatiquement `/api` et `/live` vers lui.
+
+---
+
+## Migrations Supabase
+
+Appliquer dans l'ordre depuis le **SQL Editor** de Supabase Dashboard :
+
+```
+supabase/migrations/
+├── create_addresses_table.sql
+├── 20260531_add_image_url_to_categories.sql
+├── 20260601_create_mega_menu_tables.sql
+├── 20260627_create_orders.sql
+├── 20260628_harden_profiles_roles.sql
+├── 20260629_restrict_sensitive_commerce_tables.sql
+├── 20260629_secure_sensitive_tables.sql
+├── 20260630_add_stripe_payment_reconciliation.sql
+├── 20260701_add_wishlist_and_reviews.sql
+├── 20260701_fix_discounts_schema.sql
+├── 20260702_add_discounts_table.sql
+├── 20260702_add_pgvector_products.sql       ← Active pgvector, vector(3072), index HNSW
+└── 20260702_allow_admin_update_embedding.sql ← RLS pour la vectorisation sans service_role
+```
+
+> La migration `add_pgvector_products` nécessite l'extension `vector` activée dans Supabase (disponible par défaut sur tous les projets Supabase).
+
+---
+
+## Système de Skills Ava
+
+Les skills sont des fichiers Markdown dans `prompts/skills/` avec un frontmatter YAML. Ils s'activent automatiquement selon les mots-clés du message client.
+
+```markdown
+---
+name: recommandation
+triggers: [recommande, conseil, cadeau, meilleur]
+priority: 1
+---
+# Instructions contextuelles pour ce skill...
+```
+
+**Skills inclus :**
+- `recommandation` — conseils produits, cadeaux
+- `panier` — ajout, gestion du panier
+- `prix` — budget, promotions, comparaison de prix
+- `stock` — disponibilité, délais
+- `description` — détails produit, composition
+
+Pour ajouter un skill : créer un fichier `.md` dans `prompts/skills/` — aucune modification du code nécessaire.
+
+---
+
+## Vectorisation pgvector
+
+1. Appliquer les migrations `20260702_*.sql`
+2. Aller dans **Admin → Produits**
+3. Cliquer sur le panneau **"Vectorisation IA"** (en haut de la liste)
+4. Cliquer **"Vectoriser les nouveaux produits"**
+
+Ava utilise automatiquement la recherche sémantique dès que les embeddings sont générés. Si pgvector n'est pas encore configuré, Ava continue de fonctionner normalement avec le catalogue brut.
+
+**Modèle :** `gemini-embedding-2` · **Dimensions :** 3072 · **Index :** HNSW cosinus
+
+---
+
+## Rôles utilisateurs
+
+| Rôle | Accès |
+|---|---|
+| `customer` | Vitrine, profil, commandes |
+| `staff` | + POS (point de vente) |
+| `kiosk` | Écran kiosque |
+| `admin` | Tout + back-office complet |
+
+Les rôles sont assignés côté serveur uniquement (table `profiles`, colonne `role`). Un nouveau compte est toujours créé avec le rôle `customer`.
+
+---
+
+## PWA
+
+L'application est installable sur mobile et desktop. Elle fonctionne hors-ligne pour la navigation de base grâce au Service Worker (`public/sw.js`).
+
+---
+
+## Licence
+
+Projet privé — tous droits réservés.
