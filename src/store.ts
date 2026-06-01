@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product, CartItem, User, Category, Address, UserRole, CheckoutClientInfo, CheckoutDeliveryMethod, CheckoutInfo } from './types';
+import { Product, CartItem, User, Category, Address, UserRole, CheckoutClientInfo, CheckoutDeliveryMethod, CheckoutInfo, WishlistItem } from './types';
 import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
 import { createCheckoutOrder } from './services/checkoutService';
@@ -84,6 +84,7 @@ export interface AppState {
   cart: CartItem[];
   addresses: Address[];
   favorites: string[];
+  wishlist: WishlistItem[];
   loyaltyPoints: number;
   searchQuery: string;
   isLoadingProducts: boolean;
@@ -113,6 +114,10 @@ export interface AppState {
   updateAddress: (id: string, data: Partial<Address>) => Promise<void>;
   deleteAddress: (id: string) => Promise<void>;
   setDefaultAddress: (id: string) => Promise<void>;
+  // Wishlist (server-side)
+  fetchWishlist: () => Promise<void>;
+  addToWishlist: (productId: string) => Promise<void>;
+  removeFromWishlist: (productId: string) => Promise<void>;
 }
 
 export const useStore = create<AppState>()(
@@ -123,6 +128,7 @@ export const useStore = create<AppState>()(
       cart: [],
       addresses: [],
       favorites: [],
+      wishlist: [],
       loyaltyPoints: 1250,
       searchQuery: "",
       isLoadingProducts: true,
@@ -451,7 +457,81 @@ export const useStore = create<AppState>()(
           console.error("Error syncing products:", err);
           toast.error('Erreur de synchronisation : ' + getErrorMessage(err));
         }
-      }
+      },
+
+      // ── Wishlist (server-side) ──────────────────────────────────────────────
+      fetchWishlist: async () => {
+        const user = get().user;
+        if (!supabase || !user) return;
+        try {
+          const { data, error } = await supabase
+            .from('wishlist_items')
+            .select('*')
+            .eq('user_id', user.id);
+          if (error) throw error;
+          set({ wishlist: (data ?? []) as WishlistItem[] });
+        } catch (e) {
+          console.error('Failed to fetch wishlist', e);
+        }
+      },
+
+      addToWishlist: async (productId: string) => {
+        const user = get().user;
+        if (!supabase || !user) {
+          toast.error('Connectez-vous pour sauvegarder vos favoris.');
+          return;
+        }
+        // Optimistic update
+        const tempItem: WishlistItem = {
+          id: `temp_${productId}`,
+          user_id: user.id,
+          product_id: productId,
+          created_at: new Date().toISOString(),
+        };
+        set(state => ({ wishlist: [...state.wishlist, tempItem] }));
+        try {
+          const { data, error } = await supabase
+            .from('wishlist_items')
+            .insert({ user_id: user.id, product_id: productId })
+            .select()
+            .single();
+          if (error) throw error;
+          // Replace temp with real row
+          set(state => ({
+            wishlist: state.wishlist.map(w =>
+              w.id === tempItem.id ? (data as WishlistItem) : w
+            ),
+          }));
+          toast.success('Ajouté aux favoris');
+        } catch (e) {
+          // Rollback
+          set(state => ({ wishlist: state.wishlist.filter(w => w.id !== tempItem.id) }));
+          console.error('Add to wishlist failed', e);
+          toast.error('Impossible d\'ajouter aux favoris');
+        }
+      },
+
+      removeFromWishlist: async (productId: string) => {
+        const user = get().user;
+        if (!supabase || !user) return;
+        const prev = get().wishlist;
+        // Optimistic update
+        set(state => ({ wishlist: state.wishlist.filter(w => w.product_id !== productId) }));
+        try {
+          const { error } = await supabase
+            .from('wishlist_items')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('product_id', productId);
+          if (error) throw error;
+          toast.success('Retiré des favoris');
+        } catch (e) {
+          // Rollback
+          set({ wishlist: prev });
+          console.error('Remove from wishlist failed', e);
+          toast.error('Impossible de retirer des favoris');
+        }
+      },
     }), {
     name: 'store-session',
     partialize: (state) => ({ cart: state.cart, favorites: state.favorites })

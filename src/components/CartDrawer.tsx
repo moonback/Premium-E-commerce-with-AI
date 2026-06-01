@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { X, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
+import FreeShippingBar from './FreeShippingBar';
 
 
 export default function CartDrawer() {
@@ -107,12 +108,7 @@ export default function CartDrawer() {
             {cart.length > 0 && (
               <div className="p-6 border-t border-ink/10 bg-soft-green/30 space-y-4">
                 <div>
-                  <div className="h-1 w-full bg-ink/10 rounded-full overflow-hidden mb-2">
-                    <div className="h-full bg-accent transition-all" style={{ width: `${Math.min((finalTotal / 50) * 100, 100)}%` }} />
-                  </div>
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-ink/50 text-center">
-                    {finalTotal >= 50 ? '🎉 Livraison gratuite débloquée' : `Ajoutez ${(50 - finalTotal).toFixed(2)}€ pour la livraison gratuite`}
-                  </p>
+                  <FreeShippingBar currentAmount={finalTotal} threshold={50} />
                 </div>
 
                 {/* Promo Code Input */}

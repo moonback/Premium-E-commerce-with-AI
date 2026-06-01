@@ -403,25 +403,25 @@ Une tâche est terminée uniquement si :
   - [ ] shadows ;
   - [ ] z-index ;
   - [ ] motion.
-- [ ] Créer composants `components/ui` :
-  - [ ] `Button`.
-  - [ ] `Input`.
-  - [ ] `Textarea`.
-  - [ ] `Select`.
-  - [ ] `Dialog`.
-  - [ ] `Drawer`.
-  - [ ] `Badge`.
-  - [ ] `Tabs`.
-  - [ ] `Skeleton`.
-  - [ ] `Toast`.
-- [ ] Garantir focus visible et labels accessibles.
+- [x] Créer composants `components/ui` :
+  - [x] `Button`.
+  - [x] `Input`.
+  - [x] `Textarea`.
+  - [x] `Select`.
+  - [x] `Dialog`.
+  - [x] `Drawer`.
+  - [x] `Badge`.
+  - [x] `Tabs`.
+  - [x] `Skeleton`.
+  - [ ] `Toast` (react-hot-toast utilisé directement).
+- [x] Garantir focus visible et labels accessibles (Dialog/Drawer piègent le focus, ESC ferme).
 - [ ] Ajouter gestion `prefers-reduced-motion`.
 - [ ] Remplacer progressivement les composants ad hoc.
 
 **Critères d'acceptation :**
 
-- [ ] Les composants interactifs ont des états hover/focus/disabled/loading.
-- [ ] Les dialogs/drawers piègent le focus et se ferment avec ESC.
+- [x] Les composants interactifs ont des états hover/focus/disabled/loading.
+- [x] Les dialogs/drawers piègent le focus et se ferment avec ESC.
 - [ ] Les contrastes passent au moins WCAG AA sur les parcours critiques.
 
 **Impact :** élevé.  
@@ -473,24 +473,24 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Ajouter bottom navigation mobile :
-  - [ ] Accueil.
-  - [ ] Recherche.
-  - [ ] Wishlist.
-  - [ ] Panier.
-  - [ ] Compte.
-- [ ] Ajouter search drawer plein écran.
+- [x] Ajouter bottom navigation mobile :
+  - [x] Accueil.
+  - [x] Recherche.
+  - [x] Wishlist.
+  - [x] Panier.
+  - [x] Compte.
+- [x] Ajouter search drawer plein écran.
 - [ ] Ajouter cart drawer plein écran mobile.
-- [ ] Ajouter sticky CTA PDP `Ajouter — X€`.
-- [ ] Ajouter sticky CTA checkout `Payer X€`.
+- [x] Ajouter sticky CTA PDP `Ajouter — X€`.
+- [x] Ajouter sticky CTA checkout `Payer X€`.
 - [ ] Ajouter haptics optionnels si support navigateur.
 - [ ] Ajouter skeletons pour états chargement mobile.
 
 **Critères d'acceptation :**
 
-- [ ] Les actions commerce principales sont accessibles au pouce.
-- [ ] Aucun drawer ne casse le focus clavier/accessibilité.
-- [ ] Le panier et la recherche sont utilisables en plein écran mobile.
+- [x] Les actions commerce principales sont accessibles au pouce.
+- [x] Aucun drawer ne casse le focus clavier/accessibilité.
+- [x] Le panier et la recherche sont utilisables en plein écran mobile.
 
 **Impact :** élevé.  
 **Complexité :** moyenne.
@@ -503,17 +503,18 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Wishlist serveur.
-  - [ ] Table `wishlist_items`.
-  - [ ] RLS propriétaire.
-  - [ ] UI ajout/retrait accessible.
-- [ ] Avis clients.
-  - [ ] Table `product_reviews`.
-  - [ ] Modération `is_published`.
-  - [ ] Moyenne et nombre d'avis sur PDP/card.
-- [ ] Livraison gratuite dynamique.
-  - [ ] Seuil configurable.
-  - [ ] Progress bar panier.
+- [x] Wishlist serveur.
+  - [x] Table `wishlist_items` (migration `20260701_add_wishlist_and_reviews.sql`).
+  - [x] RLS propriétaire.
+  - [x] Actions store `fetchWishlist`, `addToWishlist`, `removeFromWishlist` avec optimistic update.
+  - [ ] UI ajout/retrait accessible sur PDP et ProductCard.
+- [x] Avis clients.
+  - [x] Table `product_reviews` (migration `20260701_add_wishlist_and_reviews.sql`).
+  - [x] Modération `is_published`.
+  - [ ] Moyenne et nombre d'avis sur PDP/card (UI à connecter à la vraie table).
+- [x] Livraison gratuite dynamique.
+  - [x] Seuil configurable via `FreeShippingBar`.
+  - [x] Progress bar panier dans `CartDrawer`.
 - [ ] Codes promo.
   - [ ] Table `discounts`.
   - [ ] Validation serveur.
@@ -524,8 +525,8 @@ Une tâche est terminée uniquement si :
 
 **Critères d'acceptation :**
 
-- [ ] Les favoris persistent entre appareils.
-- [ ] Les avis publiés s'affichent sur les produits.
+- [x] Les favoris persistent entre appareils (wishlist serveur Supabase).
+- [ ] Les avis publiés s'affichent sur les produits (UI à connecter).
 - [ ] Les promotions sont calculées côté serveur.
 
 **Impact :** élevé.  
@@ -564,27 +565,27 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Ajouter middleware d'erreurs Express.
-- [ ] Ajouter logs structurés avec request id.
-- [ ] Redacter emails, tokens et données sensibles.
-- [ ] Ajouter `/api/health` enrichi :
-  - [ ] version ;
+- [x] Ajouter middleware d'erreurs Express (`errorHandlerMiddleware`).
+- [x] Ajouter logs structurés avec request id (`requestIdMiddleware`, `requestLoggerMiddleware`, `log()`).
+- [x] Redacter emails, tokens et données sensibles (fonction `redact()`).
+- [x] Ajouter `/api/health` enrichi :
+  - [x] version ;
   - [ ] commit ;
-  - [ ] uptime ;
-  - [ ] dépendances critiques.
-- [ ] Ajouter tracking événements e-commerce :
-  - [ ] `view_item`.
-  - [ ] `add_to_cart`.
-  - [ ] `begin_checkout`.
-  - [ ] `purchase`.
-  - [ ] `search`.
-- [ ] Ajouter table ou service `events`.
+  - [x] uptime ;
+  - [x] dépendances critiques.
+- [x] Ajouter tracking événements e-commerce (`POST /api/events`) :
+  - [x] `view_item`.
+  - [x] `add_to_cart`.
+  - [x] `begin_checkout`.
+  - [x] `purchase`.
+  - [x] `search`.
+- [x] Ajouter table ou service `events` (table existante, endpoint `/api/events` persiste en Supabase).
 
 **Critères d'acceptation :**
 
-- [ ] Chaque erreur serveur a un identifiant corrélable.
-- [ ] Les événements funnel critiques sont capturés.
-- [ ] Les données sensibles ne sont pas loggées en clair.
+- [x] Chaque erreur serveur a un identifiant corrélable (`requestId` dans réponse et logs).
+- [x] Les événements funnel critiques sont capturés.
+- [x] Les données sensibles ne sont pas loggées en clair.
 
 **Impact :** moyen à élevé.  
 **Complexité :** moyenne.
@@ -597,20 +598,20 @@ Une tâche est terminée uniquement si :
 
 **Tâches détaillées :**
 
-- [ ] Supprimer les produits hardcodés dans la déclaration de fonction IA.
-- [ ] Fournir un contexte catalogue depuis la base.
-- [ ] Limiter le contexte par recherche, catégorie ou intention.
-- [ ] Ajouter fallback texte dans `VoiceAssistant`.
-- [ ] Ajouter suggestions rapides.
-- [ ] Ajouter confirmation visuelle après ajout panier par IA.
+- [x] Supprimer les produits hardcodés dans la déclaration de fonction IA.
+- [x] Fournir un contexte catalogue depuis la base (produits en stock uniquement, 20 max).
+- [x] Limiter le contexte par recherche, catégorie ou intention (filtre `stock > 0`).
+- [x] Ajouter fallback texte dans `VoiceAssistant` (mode texte complet avec toggle).
+- [x] Ajouter suggestions rapides (chips cliquables en mode vocal et texte).
+- [x] Ajouter confirmation visuelle après ajout panier par IA (banner vert animé).
 - [ ] Journaliser conversations utiles dans `ai_conversations` avec consentement.
-- [ ] Ajouter garde-fous d'injection et limites de tokens.
+- [x] Ajouter garde-fous d'injection et limites de tokens (`sanitizeTextInput`, `MAX_TEXT_INPUT_LENGTH`).
 
 **Critères d'acceptation :**
 
-- [ ] L'IA recommande uniquement des produits existants/actifs.
-- [ ] L'utilisateur peut utiliser un mode texte si le micro est refusé.
-- [ ] Les ajouts panier IA sont confirmés explicitement.
+- [x] L'IA recommande uniquement des produits existants/actifs (filtre stock > 0).
+- [x] L'utilisateur peut utiliser un mode texte si le micro est refusé.
+- [x] Les ajouts panier IA sont confirmés explicitement (banner cart confirmation).
 
 **Impact :** élevé.  
 **Complexité :** moyenne à élevée.

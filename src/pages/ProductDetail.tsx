@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../store';
-import { ChevronLeft, Heart, Plus, Minus } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ChevronLeft, Heart, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Product } from '../types';
 import AccordionItem from '../components/AccordionItem';
@@ -17,6 +17,9 @@ export default function ProductDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
+  // Sticky CTA — all hooks must be declared before any early return
+  const addBtnRef = useRef<HTMLButtonElement>(null);
+  const [showStickyAdd, setShowStickyAdd] = useState(false);
 
   useEffect(() => {
     if (products.length === 0) {
@@ -31,6 +34,17 @@ export default function ProductDetail() {
       setProduct(findProductByRouteParam(products, id));
     }
   }, [id, products]);
+
+  useEffect(() => {
+    const el = addBtnRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyAdd(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [product]);
 
   if (isLoading) {
     return (
@@ -169,6 +183,7 @@ export default function ProductDetail() {
               </div>
 
               <button
+                ref={addBtnRef}
                 onClick={() => addToCart(product, quantity)}
                 className="flex-1 py-4 bg-ink text-bg font-bold text-xs uppercase tracking-widest hover:bg-ink/90 transition-colors"
               >
@@ -252,6 +267,33 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Sticky CTA — visible on mobile when main button scrolls out of view */}
+      <AnimatePresence>
+        {showStickyAdd && product.stock > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="fixed inset-x-0 bottom-16 z-30 border-t border-ink/10 bg-bg/95 p-4 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur md:hidden"
+          >
+            <div className="mx-auto flex max-w-lg items-center gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-serif text-sm text-ink">{product.name}</p>
+                <p className="text-xs font-bold text-ink/60">{product.price.toFixed(2)}€</p>
+              </div>
+              <button
+                onClick={() => addToCart(product, quantity)}
+                className="flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-bg shadow-lg transition-colors hover:bg-ink/90"
+              >
+                <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+                Ajouter — {(product.price * quantity).toFixed(2)}€
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

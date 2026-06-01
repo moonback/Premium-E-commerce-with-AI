@@ -14,6 +14,8 @@ import {
   normalizeCheckoutAttemptId,
   toPaymentStatus,
 } from "./src/services/paymentSecurity";
+import type { Request, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
 
 const LIVE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const LIVE_MAX_CONNECTIONS_PER_WINDOW = 5;
@@ -42,6 +44,68 @@ type LiveRateRecord = {
 };
 
 const liveRateLimits = new Map<string, LiveRateRecord>();
+
+// ─── Structured logger ────────────────────────────────────────────────────────
+/** Redact sensitive fields before logging */
+function redact(obj: Record<string, unknown>): Record<string, unknown> {
+  const SENSITIVE = new Set(['email', 'token', 'password', 'authorization', 'secret', 'key', 'access_token']);
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    result[k] = SENSITIVE.has(k.toLowerCase()) ? '[REDACTED]' : v;
+  }
+  return result;
+}
+
+function log(level: 'info' | 'warn' | 'error', message: string, meta?: Record<string, unknown>) {
+  const entry = JSON.stringify({
+    ts: new Date().toISOString(),
+    level,
+    message,
+    ...(meta ? redact(meta) : {}),
+  });
+  if (level === 'error') {
+    console.error(entry);
+  } else if (level === 'warn') {
+    console.warn(entry);
+  } else {
+    console.log(entry);
+  }
+}
+
+// ─── Request ID middleware ────────────────────────────────────────────────────
+function requestIdMiddleware(req: Request, res: Response, next: NextFunction) {
+  const requestId = (req.headers['x-request-id'] as string) || randomUUID();
+  (req as Request & { requestId: string }).requestId = requestId;
+  res.setHeader('x-request-id', requestId);
+  next();
+}
+
+// ─── Request logger middleware ────────────────────────────────────────────────
+function requestLoggerMiddleware(req: Request, res: Response, next: NextFunction) {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const requestId = (req as Request & { requestId?: string }).requestId;
+    log(res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info', 'http_request', {
+      requestId,
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      durationMs: duration,
+    });
+  });
+  next();
+}
+
+// ─── Global error handler ─────────────────────────────────────────────────────
+function errorHandlerMiddleware(err: unknown, req: Request, res: Response, _next: NextFunction) {
+  const requestId = (req as Request & { requestId?: string }).requestId;
+  const message = err instanceof Error ? err.message : 'Internal server error';
+  log('error', 'unhandled_error', { requestId, message, path: req.path, method: req.method });
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error', requestId });
+  }
+}
 
 function getClientIp(request: IncomingMessage) {
   const forwardedFor = request.headers["x-forwarded-for"];
@@ -100,6 +164,10 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   const server = createServer(app);
+
+  // ── Observability middlewares ──────────────────────────────────────────────
+  app.use(requestIdMiddleware);
+  app.use(requestLoggerMiddleware);
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -307,10 +375,12 @@ async function startServer() {
   });
 
   app.get("/api/health", (req, res) => {
+    const requestId = (req as Request & { requestId?: string }).requestId;
     res.json({
       status: "ok",
       version: process.env.npm_package_version || "0.0.0",
       uptimeSeconds: Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
+      requestId,
       dependencies: {
         geminiLive: Boolean(process.env.GEMINI_API_KEY),
         supabaseAuth: Boolean(supabaseAuth),
@@ -318,6 +388,41 @@ async function startServer() {
         stripePayments: Boolean(stripeSecretKey),
       },
     });
+  });
+
+  // ── E-commerce event tracking endpoint (P1.9) ─────────────────────────────
+  const ALLOWED_EVENT_TYPES = new Set([
+    'view_item', 'add_to_cart', 'remove_from_cart',
+    'begin_checkout', 'purchase', 'search',
+  ]);
+
+  app.post("/api/events", async (req, res) => {
+    const { event_type, payload } = req.body as { event_type?: string; payload?: Record<string, unknown> };
+    if (!event_type || !ALLOWED_EVENT_TYPES.has(event_type)) {
+      res.status(400).json({ error: "Invalid or missing event_type" });
+      return;
+    }
+    const requestId = (req as Request & { requestId?: string }).requestId;
+    log('info', 'ecommerce_event', { requestId, event_type });
+
+    if (supabaseAdmin) {
+      const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
+      let userId: string | null = null;
+      if (token && supabaseAuth) {
+        const { data } = await supabaseAuth.auth.getUser(token);
+        userId = data.user?.id ?? null;
+      }
+      const { error } = await supabaseAdmin.from("events").insert({
+        event_type,
+        user_id: userId,
+        payload: payload ?? {},
+        created_at: new Date().toISOString(),
+      });
+      if (error) {
+        log('warn', 'event_persist_failed', { requestId, event_type, error: error.message });
+      }
+    }
+    res.json({ ok: true });
   });
 
   // ---- WebSocket handler for Gemini Live API ----
@@ -452,7 +557,7 @@ async function startServer() {
       });
 
       clientWs.on("close", () => {
-        console.log("Client disconnected", { clientIp });
+        log('info', 'ws_client_disconnected', { clientIp });
         cleanupLiveSession();
       });
     } catch (e) {
@@ -478,8 +583,11 @@ async function startServer() {
     });
   }
 
+  // ── Global error handler (must be last middleware) ────────────────────────
+  app.use(errorHandlerMiddleware);
+
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    log('info', 'server_started', { port: PORT, env: process.env.NODE_ENV || 'development' });
   });
 }
 

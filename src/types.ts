@@ -77,3 +77,20 @@ export type User = {
   phone?: string;
 };
 
+export type WishlistItem = {
+  id: string;
+  user_id: string;
+  product_id: string;
+  created_at: string;
+};
+
+export type ProductReview = {
+  id: string;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  body?: string;
+  is_published: boolean;
+  created_at: string;
+};
+

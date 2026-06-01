@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import CartDrawer from './CartDrawer';
+import BottomNav from './BottomNav';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -22,11 +23,13 @@ export default function StoreLayout() {
         }
       }} />
       <Header />
-      <main className="flex-1 flex flex-col">
+      {/* pb-16 on mobile to avoid content hidden behind bottom nav */}
+      <main className="flex-1 flex flex-col pb-16 md:pb-0">
         <Outlet />
       </main>
       <Footer />
       <CartDrawer />
+      <BottomNav />
     </div>
   );
 }
