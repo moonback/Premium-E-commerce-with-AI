@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard, TrendingUp, Warehouse, Activity, Tag, Menu } from 'lucide-react';
+import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard, TrendingUp, Warehouse, Activity, Tag, Menu, DollarSign } from 'lucide-react';
 import { useStore } from '../store';
 import { Category, Product, Spec } from '../types';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ import AdminSettings from '../components/AdminSettings';
 import AdminActivityLog from '../components/AdminActivityLog';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminDiscounts from '../components/AdminDiscounts';
+import AdminMarginAnalysis from '../components/AdminMarginAnalysis';
 import MegaMenuManager from '../components/admin/MegaMenuManager';
 import { getErrorMessage } from '../lib/errors';
 
@@ -309,6 +310,7 @@ export default function Admin() {
           {[ 
             { icon: BarChart3, label: "Overview" },
             { icon: TrendingUp, label: "Analytics" },
+            { icon: DollarSign, label: "Marges" },
             { icon: Package, label: "Products" },
             { icon: Warehouse, label: "Inventory" },
             { icon: LayoutDashboard, label: "Categories" },
@@ -360,6 +362,8 @@ export default function Admin() {
 
         {activeTab === 'Analytics' && <AdminAnalytics />}
 
+        {activeTab === 'Marges' && <AdminMarginAnalysis />}
+
         {activeTab === 'Customers' && <AdminCustomers />}
 
         {activeTab === 'Discounts' && <AdminDiscounts />}
@@ -386,27 +390,54 @@ export default function Admin() {
                   <th className="px-6 py-3 font-bold tracking-widest">Image</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Nom</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Catégorie</th>
-                  <th className="px-6 py-3 font-bold tracking-widest">Prix</th>
+                  <th className="px-6 py-3 font-bold tracking-widest">Prix Vente</th>
+                  <th className="px-6 py-3 font-bold tracking-widest">Prix Achat</th>
+                  <th className="px-6 py-3 font-bold tracking-widest">Marge</th>
                   <th className="px-6 py-3 font-bold tracking-widest">Stock</th>
                   <th className="px-6 py-3 font-bold tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink/5">
-                {products.map((p) => (
+                {products.map((p) => {
+                  const margin = p.purchase_price ? ((p.price - p.purchase_price) / p.price * 100).toFixed(1) : null;
+                  return (
                   <tr key={p.id} className="hover:bg-soft-green/30">
                     <td className="px-6 py-4">
                       <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded-full" />
                     </td>
-                    <td className="px-6 py-4 font-serif font-bold text-lg">{p.name}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-serif font-bold text-lg">{p.name}</div>
+                      {p.is_batch_product && (
+                        <div className="text-xs text-ink/60 mt-1">
+                          📦 Lot de {p.batch_size} {p.batch_unit}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-xs tracking-widest uppercase">{(p.categories || []).join(', ')}</td>
                     <td className="px-6 py-4 font-semibold">{p.price.toFixed(2)}€</td>
-                    <td className="px-6 py-4">{p.stock} pcs</td>
+                    <td className="px-6 py-4">
+                      {p.purchase_price ? (
+                        <span className="text-ink/60">{p.purchase_price.toFixed(2)}€</span>
+                      ) : (
+                        <span className="text-ink/30 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {margin ? (
+                        <span className={`font-semibold ${Number(margin) > 30 ? 'text-green-600' : Number(margin) > 15 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {margin}%
+                        </span>
+                      ) : (
+                        <span className="text-ink/30 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">{p.stock} {p.is_batch_product ? 'lots' : 'pcs'}</td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
                        <button onClick={() => { setEditingProduct(p); setIsEditing(true); }} className="p-2 border border-ink/10 hover:bg-ink hover:text-white transition-colors"><Edit2 className="w-4 h-4"/></button>
                        <button onClick={() => handleDeleteProduct(p.id)} className="p-2 border border-ink/10 text-red-600 hover:bg-red-60 transition-colors"><Trash2 className="w-4 h-4"/></button>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
@@ -422,12 +453,48 @@ export default function Admin() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Prix (€)</label>
+                  <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Prix de vente (€)</label>
                   <input required type="number" step="0.01" value={editingProduct.price || ''} onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
                 </div>
                 <div>
+                  <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Prix d'achat (€)</label>
+                  <input type="number" step="0.01" value={editingProduct.purchase_price || ''} onChange={e => setEditingProduct({...editingProduct, purchase_price: e.target.value ? Number(e.target.value) : undefined})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" placeholder="Optionnel" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-xs uppercase tracking-widest font-bold mb-1 opacity-50">Stock</label>
                   <input required type="number" value={editingProduct.stock || ''} onChange={e => setEditingProduct({...editingProduct, stock: Number(e.target.value)})} className="w-full border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-xs uppercase tracking-widest font-bold mb-1 opacity-50 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editingProduct.is_batch_product || false} 
+                      onChange={e => setEditingProduct({...editingProduct, is_batch_product: e.target.checked, batch_size: e.target.checked ? (editingProduct.batch_size || 1) : undefined, batch_unit: e.target.checked ? (editingProduct.batch_unit || 'pièces') : undefined})} 
+                      className="accent-ink" 
+                    />
+                    Produit en lot
+                  </label>
+                  {editingProduct.is_batch_product && (
+                    <div className="flex gap-2">
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={editingProduct.batch_size || 1} 
+                        onChange={e => setEditingProduct({...editingProduct, batch_size: Number(e.target.value)})} 
+                        className="w-20 border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" 
+                        placeholder="Qté"
+                      />
+                      <input 
+                        type="text" 
+                        value={editingProduct.batch_unit || 'pièces'} 
+                        onChange={e => setEditingProduct({...editingProduct, batch_unit: e.target.value})} 
+                        className="flex-1 border-b border-ink/20 py-2 focus:outline-none focus:border-ink bg-transparent" 
+                        placeholder="Unité"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <div>

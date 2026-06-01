@@ -17,12 +17,16 @@ export type Product = {
   name: string;
   description: string;
   price: number;
+  purchase_price?: number; // Prix d'achat
   image: string;
   categories: string[];
   effects: string[];
   stock: number;
   isNew?: boolean; // Indicates if the product is newly added
   specs: Spec[];
+  is_batch_product?: boolean; // Produit vendu en lots
+  batch_size?: number; // Taille du lot (ex: 6 pour un pack de 6)
+  batch_unit?: string; // Unité du lot (ex: "pièces", "unités", "bouteilles")
 };
 
 export type CartItem = {

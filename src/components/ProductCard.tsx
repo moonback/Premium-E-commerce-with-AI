@@ -80,6 +80,13 @@ export default function ProductCard({ product }: { product: Product }) {
             isTrending={false}   // À implémenter avec analytics
           />
 
+          {/* Badge produit en lot */}
+          {product.is_batch_product && (
+            <div className="absolute top-4 left-4 z-20 bg-ink text-bg px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
+              📦 Lot de {product.batch_size}
+            </div>
+          )}
+
           {/* Image optimisée */}
           <OptimizedImage
             src={product.image}
@@ -138,7 +145,14 @@ export default function ProductCard({ product }: { product: Product }) {
                 {product.name}
               </h3>
             </Link>
-            <span className="font-semibold">{product.price.toFixed(2)}€</span>
+            <div className="text-right">
+              <span className="font-semibold">{product.price.toFixed(2)}€</span>
+              {product.is_batch_product && (
+                <div className="text-[10px] text-ink/60 uppercase tracking-wider">
+                  Lot de {product.batch_size}
+                </div>
+              )}
+            </div>
           </div>
           <ProductRating productId={product.id} />
           <p className="text-ink/60 text-xs opacity-50 italic uppercase mb-3 line-clamp-2">
