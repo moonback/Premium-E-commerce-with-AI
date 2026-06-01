@@ -74,9 +74,13 @@ export const SEED_PRODUCTS: Product[] = [
 
 export interface AppState {
   checkoutInfo: CheckoutInfo;
+  discountCode: string | null;
+  discountAmount: number;
   setClientInfo: (info: CheckoutClientInfo) => void;
   setDeliveryMethod: (method: CheckoutDeliveryMethod) => void;
   setPaymentStatus: (status: 'idle' | 'processing' | 'succeeded' | 'failed') => void;
+  setDiscount: (code: string, amount: number) => void;
+  removeDiscount: () => void;
   resetCheckout: () => void;
   // store slices
   products: Product[];
@@ -132,6 +136,8 @@ export const useStore = create<AppState>()(
       loyaltyPoints: 1250,
       searchQuery: "",
       isLoadingProducts: true,
+      discountCode: null,
+      discountAmount: 0,
       checkoutInfo: {
         clientInfo: { name: '', email: '', phone: '', address: '', addressLine1: '', addressLine2: '', city: '', postalCode: '', country: '' },
         deliveryMethod: 'courier',
@@ -151,8 +157,12 @@ export const useStore = create<AppState>()(
       setClientInfo: (info) => set(state => ({ ...state, checkoutInfo: { ...state.checkoutInfo, clientInfo: { ...state.checkoutInfo.clientInfo, ...info } } })),
       setDeliveryMethod: (method) => set(state => ({ ...state, checkoutInfo: { ...state.checkoutInfo, deliveryMethod: method } })),
       setPaymentStatus: (status) => set(state => ({ ...state, checkoutInfo: { ...state.checkoutInfo, paymentStatus: status } })),
+      setDiscount: (code, amount) => set({ discountCode: code, discountAmount: amount }),
+      removeDiscount: () => set({ discountCode: null, discountAmount: 0 }),
       resetCheckout: () => set(state => ({
         ...state,
+        discountCode: null,
+        discountAmount: 0,
         checkoutInfo: {
           clientInfo: {
             name: '',

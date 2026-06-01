@@ -11,6 +11,8 @@ type CreateCheckoutOrderInput = {
   cart: CartItem[];
   checkoutInfo: CheckoutInfo;
   user: User | null;
+  discountCode?: string | null;
+  discountAmount?: number;
 };
 
 type RpcOrderItem = {

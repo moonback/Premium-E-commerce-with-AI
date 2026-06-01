@@ -36,22 +36,22 @@ export default function DiscountCodeInput({
     try {
       const { data, error } = await supabase.rpc('validate_discount_code', {
         p_code: code.trim().toUpperCase(),
-        p_order_total: orderTotal,
+        p_order_amount: orderTotal,
       });
 
       if (error) throw error;
 
-      const result = data[0];
-      if (result.valid) {
-        onDiscountApplied(code.trim().toUpperCase(), result.discount_amount);
-        toast.success(result.message);
+      // The function returns a jsonb object directly
+      if (data.valid) {
+        onDiscountApplied(data.code, data.discount_amount);
+        toast.success(`Code ${data.code} appliqué ! -${data.discount_amount.toFixed(2)}€`);
         setCode('');
       } else {
-        toast.error(result.message);
+        toast.error(data.error || 'Code promo invalide');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to validate discount code', err);
-      toast.error('Impossible de valider le code promo');
+      toast.error(err.message || 'Impossible de valider le code promo');
     } finally {
       setIsValidating(false);
     }

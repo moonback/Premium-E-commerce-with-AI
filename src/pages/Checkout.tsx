@@ -115,15 +115,17 @@ export default function Checkout() {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
-  const [discountCode, setDiscountCode] = useState<string | undefined>();
-  const [discountAmount, setDiscountAmount] = useState(0);
   const {
     checkout,
     resetCheckout,
     setClientInfo,
     setDeliveryMethod,
+    setDiscount,
+    removeDiscount,
     cart,
     checkoutInfo,
+    discountCode,
+    discountAmount,
   } = useStore();
   const navigate = useNavigate();
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
@@ -251,15 +253,9 @@ export default function Checkout() {
           subtotal={subtotal}
           discountAmount={discountAmount}
           total={total}
-          onDiscountApplied={(code, amount) => {
-            setDiscountCode(code);
-            setDiscountAmount(amount);
-          }}
-          onDiscountRemoved={() => {
-            setDiscountCode(undefined);
-            setDiscountAmount(0);
-          }}
-          discountCode={discountCode}
+          onDiscountApplied={setDiscount}
+          onDiscountRemoved={removeDiscount}
+          discountCode={discountCode || undefined}
         />
       </div>
 

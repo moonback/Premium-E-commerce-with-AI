@@ -3,33 +3,80 @@ import { useStore } from '../store';
 import { X, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
 import FreeShippingBar from './FreeShippingBar';
 import ProductRecommendations from './ProductRecommendations';
 
 
 export default function CartDrawer() {
-  const { cart, addToCart, removeFromCart, checkout, isCartOpen, setCartOpen, products } = useStore();
+  const { 
+    cart, 
+    addToCart, 
+    removeFromCart, 
+    isCartOpen, 
+    setCartOpen, 
+    products,
+    discountCode,
+    discountAmount,
+    setDiscount,
+    removeDiscount
+  } = useStore();
 
   const [promoCode, setPromoCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [appliedCode, setAppliedCode] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
   const [promoError, setPromoError] = useState('');
 
-  const handleApplyPromo = (e: React.FormEvent) => {
+  const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.toUpperCase() === 'VERIDIAN10') {
-      setDiscount(10);
-      setAppliedCode(promoCode.toUpperCase());
-      setPromoError('');
-    } else {
-      setPromoError('Code invalide');
-      setDiscount(0);
-      setAppliedCode('');
+    
+    if (!promoCode.trim()) {
+      setPromoError('Veuillez entrer un code');
+      return;
+    }
+
+    if (!supabase) {
+      setPromoError('Service non disponible');
+      return;
+    }
+
+    setIsValidating(true);
+    setPromoError('');
+
+    try {
+      const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+      
+      const { data, error } = await supabase.rpc('validate_discount_code', {
+        p_code: promoCode.trim().toUpperCase(),
+        p_order_amount: total,
+      });
+
+      if (error) throw error;
+
+      if (data.valid) {
+        setDiscount(data.code, data.discount_amount);
+        toast.success(`Code ${data.code} appliqué ! -${data.discount_amount.toFixed(2)}€`);
+        setPromoCode('');
+        setPromoError('');
+      } else {
+        setPromoError(data.error || 'Code invalide');
+      }
+    } catch (err: any) {
+      console.error('Failed to validate discount code', err);
+      setPromoError(err.message || 'Erreur de validation');
+    } finally {
+      setIsValidating(false);
     }
   };
 
+  const handleRemovePromo = () => {
+    removeDiscount();
+    setPromoCode('');
+    setPromoError('');
+    toast.success('Code promo retiré');
+  };
+
   const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-  const discountAmount = total * (discount / 100);
   const finalTotal = total - discountAmount;
 
   return (
@@ -128,22 +175,41 @@ export default function CartDrawer() {
 
                 {/* Promo Code Input */}
                 <div className="border-t border-b border-ink/10 py-4 space-y-2">
-                  <form onSubmit={handleApplyPromo} className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Code promo (ex: VERIDIAN10)"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      className="flex-1 bg-transparent border-b border-ink/20 py-2 text-xs focus:outline-none focus:border-ink transition-all duration-200 placeholder:text-ink/30 italic uppercase"
-                    />
-                    <button type="submit" className="text-xs uppercase tracking-widest font-bold text-ink border border-ink/20 px-3 py-1 hover:border-ink hover:bg-ink/5 transition-colors cursor-pointer">
-                      Appliquer
-                    </button>
-                  </form>
-                  {appliedCode && (
-                    <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">
-                      ✓ Code {appliedCode} appliqué (-10%)
-                    </p>
+                  {discountCode ? (
+                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div>
+                        <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">
+                          ✓ Code {discountCode} appliqué
+                        </p>
+                        <p className="text-xs text-green-700">
+                          -{discountAmount.toFixed(2)}€ économisés
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleRemovePromo}
+                        className="text-xs text-green-600 hover:text-green-800 font-bold"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleApplyPromo} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Code promo"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        disabled={isValidating}
+                        className="flex-1 bg-transparent border-b border-ink/20 py-2 text-xs focus:outline-none focus:border-ink transition-all duration-200 placeholder:text-ink/30 italic uppercase disabled:opacity-50"
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={isValidating || !promoCode.trim()}
+                        className="text-xs uppercase tracking-widest font-bold text-ink border border-ink/20 px-3 py-1 hover:border-ink hover:bg-ink/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isValidating ? 'Validation...' : 'Appliquer'}
+                      </button>
+                    </form>
                   )}
                   {promoError && (
                     <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest">
@@ -157,9 +223,9 @@ export default function CartDrawer() {
                     <span>Sous-total</span>
                     <span>{total.toFixed(2)}€</span>
                   </div>
-                  {discount > 0 && (
+                  {discountAmount > 0 && (
                     <div className="flex items-center justify-between text-xs text-green-600 uppercase tracking-widest font-bold">
-                      <span>Remise (-10%)</span>
+                      <span>Remise</span>
                       <span>-{discountAmount.toFixed(2)}€</span>
                     </div>
                   )}
