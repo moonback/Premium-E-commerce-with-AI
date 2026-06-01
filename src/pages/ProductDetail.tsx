@@ -10,6 +10,8 @@ import ProductReviews from '../components/ProductReviews';
 import SEO from '../components/SEO';
 import { buildProductJsonLd, findProductByRouteParam, getProductPath } from '../lib/seo';
 import toast from 'react-hot-toast';
+import { ViewingCount, LimitedStockBadge } from '../components/SocialProof';
+import { SecurityBadges, SatisfactionGuarantee } from '../components/TrustBadges';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -161,7 +163,11 @@ export default function ProductDetail() {
             animate={{ opacity: 1, x: 0 }}
             className="flex flex-col"
           >
-
+            {/* Social Proof Elements */}
+            <div className="mb-6 space-y-3">
+              <ViewingCount productId={product.id} />
+              <LimitedStockBadge stock={product.stock} threshold={10} />
+            </div>
 
             <p className="text-xs font-bold uppercase tracking-widest text-ink/50 mb-4">{(product.categories || []).join(', ')}</p>
             <h1 className="text-5xl md:text-6xl font-light font-serif leading-none mb-6 text-ink">{product.name}</h1>
@@ -228,6 +234,12 @@ export default function ProductDetail() {
                 Rupture de stock
               </p>
             )}
+
+            {/* Security & Guarantee */}
+            <div className="mt-8 space-y-4">
+              <SecurityBadges />
+              <SatisfactionGuarantee />
+            </div>
           </motion.div>
         </div>
 

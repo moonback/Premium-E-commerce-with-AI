@@ -1,0 +1,27 @@
+# Robots.txt pour Véridian E-commerce
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /pos
+Disallow: /screen
+Disallow: /api/
+Disallow: /checkout
+Disallow: /profile
+
+# Sitemap
+Sitemap: https://veridian.com/sitemap.xml
+
+# Crawl-delay pour éviter la surcharge
+Crawl-delay: 1
+
+# Règles spécifiques pour les bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
