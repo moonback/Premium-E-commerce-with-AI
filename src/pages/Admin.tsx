@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard } from 'lucide-react';
+import { Package, Users, ShoppingCart, BarChart3, Settings, DatabaseBackup, Plus, Trash2, Edit2, LayoutDashboard, TrendingUp, Warehouse, Activity, Tag } from 'lucide-react';
 import { useStore } from '../store';
 import { Category, Product, Spec } from '../types';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import AdminOrdersList from '../components/AdminOrdersList';
 import KitchenOrders from '../components/KitchenOrders';
+import AdminAnalytics from '../components/AdminAnalytics';
+import AdminCustomers from '../components/AdminCustomers';
+import AdminInventory from '../components/AdminInventory';
+import AdminSettings from '../components/AdminSettings';
+import AdminActivityLog from '../components/AdminActivityLog';
+import AdminDashboard from '../components/AdminDashboard';
+import AdminDiscounts from '../components/AdminDiscounts';
 import { getErrorMessage } from '../lib/errors';
 
 type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
@@ -300,9 +307,15 @@ export default function Admin() {
         <nav className="flex flex-col gap-2">
           {[ 
             { icon: BarChart3, label: "Overview" },
+            { icon: TrendingUp, label: "Analytics" },
             { icon: Package, label: "Products" },
+            { icon: Warehouse, label: "Inventory" },
             { icon: LayoutDashboard, label: "Categories" },
             { icon: ShoppingCart, label: "Orders" },
+            { icon: Users, label: "Customers" },
+            { icon: Tag, label: "Discounts" },
+            { icon: Activity, label: "Activity" },
+            { icon: Settings, label: "Settings" },
           ].map((item, i) => (
             <button 
               key={i}
@@ -341,24 +354,19 @@ export default function Admin() {
           </button>
         </header>
 
-        {activeTab === 'Overview' && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-              {stats.map((stat, i) => (
-                <div key={i} className="bg-transparent p-6 border border-ink/10">
-                  <p className="text-ink/50 text-xs font-bold uppercase tracking-widest mb-2">{stat.label}</p>
-                  <p className="text-3xl font-serif tracking-tight mb-2">{stat.value}</p>
-                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 inline-block border ${
-                    stat.change.startsWith('+') ? 'border-ink/20 text-ink bg-soft-green' : 'border-ink/10 text-ink/60'
-                  }`}>
-                    {stat.change}
-                  </span>
-                </div>
-              ))}
-            </div>
-            
-          </>
-        )}
+        {activeTab === 'Overview' && <AdminDashboard />}
+
+        {activeTab === 'Analytics' && <AdminAnalytics />}
+
+        {activeTab === 'Customers' && <AdminCustomers />}
+
+        {activeTab === 'Discounts' && <AdminDiscounts />}
+
+        {activeTab === 'Inventory' && <AdminInventory />}
+
+        {activeTab === 'Activity' && <AdminActivityLog />}
+
+        {activeTab === 'Settings' && <AdminSettings />}
 
         {activeTab === 'Orders' && (
           <div className="bg-transparent border border-ink/10 overflow-hidden">
