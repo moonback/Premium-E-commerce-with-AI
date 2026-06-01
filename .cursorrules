@@ -1,0 +1,433 @@
+# Véridian E-commerce - AI Development Rules
+
+## Project Context
+Full-stack premium e-commerce platform built with React 19, TypeScript, Supabase, and Stripe.
+Target: High-end retail stores requiring modern, scalable, secure solution with AI recommendations.
+Multi-role system: customer, staff, admin, kiosk.
+
+## Tech Stack
+
+### Frontend
+- React 19.0.1 with TypeScript 5.8.2
+- Vite 6.2.3 for build and dev server
+- Tailwind CSS 4.1.14 for styling
+- Framer Motion 12.23.24 for animations
+- Zustand 5.0.13 for state management
+- React Router 7.15.1 for routing
+- Lucide React 0.546.0 for icons
+
+### Backend
+- Express 4.21.2 for HTTP/WebSocket server
+- Supabase 2.106.2 (PostgreSQL + Auth + Storage)
+- Stripe API for payments
+- Google Gemini 2.4.0 for AI recommendations
+
+### Dev Tools
+- tsx for TypeScript execution
+- esbuild for server bundling
+- ESLint + TypeScript compiler for linting
+
+## Code Style & Conventions
+
+### TypeScript
+- Use strict mode (`"strict": true` in tsconfig.json)
+- Prefer `interface` over `type` for object shapes
+- Use `type` for unions, intersections, primitives
+- Always define return types for functions
+- Use `const` by default, `let` only when reassignment needed
+- Never use `any`, prefer `unknown` or proper typing
+- Use optional chaining (`?.`) and nullish coalescing (`??`)
+
+### React
+- Use functional components only, no class components
+- Prefer named exports over default exports for components
+- Use TypeScript for props, never PropTypes
+- Destructure props in function signature
+- Use custom hooks for reusable logic
+- Prefix custom hooks with `use` (e.g., `usePWA`)
+- Use React.memo for expensive components
+- Use useCallback for functions passed as props
+- Use useMemo for expensive computations
+
+### Naming Conventions
+- Components: PascalCase (e.g., `ProductCard.tsx`)
+- Files: PascalCase for components, camelCase for utilities
+- Functions: camelCase (e.g., `handleSubmit`)
+- Constants: UPPER_SNAKE_CASE (e.g., `API_URL`)
+- Types/Interfaces: PascalCase (e.g., `User`, `CartItem`)
+- CSS classes: kebab-case via Tailwind utilities
+
+### File Organization
+- One component per file
+- Co-locate related files (component + styles + tests)
+- Group by feature, not by type
+- Keep files under 300 lines, split if larger
+- Index files for clean imports
+
+## Architecture Patterns
+
+### Component Structure
+```typescript
+// 1. Imports (React, libraries, local)
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Button } from './ui/Button';
+
+// 2. Types/Interfaces
+interface Props {
+  title: string;
+  onSubmit: () => void;
+}
+
+// 3. Component
+export function MyComponent({ title, onSubmit }: Props) {
+  // 4. Hooks (state, effects, custom hooks)
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // 5. Event handlers
+  const handleClick = () => {
+    setIsOpen(true);
+    onSubmit();
+  };
+  
+  // 6. Render
+  return (
+    <div>
+      <h1>{title}</h1>
+      <Button onClick={handleClick}>Submit</Button>
+    </div>
+  );
+}
+```
+
+### State Management
+- Use Zustand for global state
+- Use React state for local UI state
+- Never duplicate state between Zustand and React
+- Keep Zustand store flat, avoid deep nesting
+- Use selectors to prevent unnecessary re-renders
+- Persist cart and favorites in localStorage
+
+### Data Fetching
+- Use Supabase client for all DB operations
+- Always handle loading and error states
+- Use optimistic updates for better UX
+- Implement retry logic for failed requests
+- Cache responses when appropriate
+
+### Error Handling
+- Always wrap async operations in try/catch
+- Use toast notifications for user-facing errors
+- Log errors to console in development
+- Use Sentry in production (when implemented)
+- Provide fallback UI for error states
+
+## Best Practices
+
+### Performance
+- Lazy load routes with React.lazy()
+- Use code splitting for large components
+- Optimize images (WebP, lazy loading, blur placeholder)
+- Debounce search and filter inputs
+- Use virtual scrolling for long lists
+- Minimize bundle size (check with `npm run build`)
+- Use React DevTools Profiler to identify bottlenecks
+
+### Security
+- Never expose secrets in client code
+- Use environment variables for all API keys
+- Validate all inputs on server side
+- Use Supabase RLS for database security
+- Sanitize user inputs to prevent XSS
+- Use HTTPS only in production
+- Implement rate limiting on API endpoints
+- Use Stripe for PCI-compliant payments
+
+### Accessibility
+- Use semantic HTML elements
+- Add ARIA labels where needed
+- Ensure keyboard navigation works
+- Test with screen readers
+- Maintain color contrast ratios (WCAG AA)
+- Support reduced motion preferences
+- Add focus indicators for interactive elements
+
+### SEO
+- Use React Helmet for meta tags
+- Generate sitemap.xml dynamically
+- Use semantic HTML (h1, h2, article, etc.)
+- Add structured data (Schema.org)
+- Optimize images with alt text
+- Use descriptive URLs
+
+### Testing
+- Write unit tests for business logic
+- Test edge cases and error scenarios
+- Mock external dependencies (Supabase, Stripe)
+- Use TypeScript to catch type errors
+- Run `npm run lint` before committing
+
+## Common Workflows
+
+### Adding a New Component
+1. Create file in `src/components/` with PascalCase name
+2. Define TypeScript interface for props
+3. Implement component with proper typing
+4. Add to index.ts for clean imports
+5. Use in parent component
+
+### Adding a New Page
+1. Create file in `src/pages/` with PascalCase name
+2. Add route in `App.tsx`
+3. Add to lazy loading if needed
+4. Implement SEO meta tags
+5. Add to navigation if needed
+
+### Adding a New API Endpoint
+1. Add route in `server.ts`
+2. Implement handler function
+3. Add error handling
+4. Test with Postman/Insomnia
+5. Document in API_DOCS.md
+
+### Database Migration
+1. Create SQL file in `supabase/migrations/`
+2. Use format: `YYYYMMDD_description.sql`
+3. Make migration additive (no DROP TABLE)
+4. Test locally first
+5. Run in Supabase SQL Editor
+6. Update DB_SCHEMA.md
+
+### Adding a Zustand Action
+1. Define action in store interface
+2. Implement action in store
+3. Add TypeScript types
+4. Use in component with selector
+5. Test state updates
+
+## Preferred Dependencies
+
+### UI Components
+- Use Lucide React for icons (not Font Awesome)
+- Use Framer Motion for animations (not react-spring)
+- Use Tailwind CSS for styling (no CSS-in-JS)
+- Use React Hot Toast for notifications (not react-toastify)
+
+### Forms
+- Use React Hook Form for complex forms
+- Use Zod for validation schemas
+- Use native HTML5 validation when possible
+
+### Date/Time
+- Use date-fns for date manipulation (not moment.js)
+- Use native Intl API for formatting when possible
+
+### HTTP Requests
+- Use Supabase client for DB (not axios)
+- Use native fetch for external APIs
+- Use Stripe SDK for payments
+
+## Anti-patterns to Avoid
+
+### React
+- Never mutate state directly, use setState
+- Never use index as key in lists
+- Never define components inside other components
+- Never use inline functions in JSX (use useCallback)
+- Never forget to cleanup effects (return cleanup function)
+- Never use useEffect for derived state (use useMemo)
+
+### TypeScript
+- Never use `any` type
+- Never use `as` casting unless absolutely necessary
+- Never ignore TypeScript errors with `@ts-ignore`
+- Never use non-null assertion (`!`) without checking
+
+### Performance
+- Never fetch data in render function
+- Never create objects/arrays in render without memoization
+- Never use large images without optimization
+- Never block main thread with heavy computations
+
+### Security
+- Never store secrets in code or git
+- Never trust client-side validation alone
+- Never expose admin endpoints without auth
+- Never use eval() or dangerouslySetInnerHTML
+
+### Database
+- Never query database from client without RLS
+- Never use SELECT * in production
+- Never forget to add indexes on foreign keys
+- Never delete data without backup
+
+## Documentation Rules
+
+### Code Comments
+- Write comments for complex logic only
+- Use JSDoc for public functions
+- Explain "why", not "what"
+- Keep comments up to date
+- Remove commented-out code
+
+### Commit Messages
+- Use Conventional Commits format
+- Format: `type(scope): description`
+- Types: feat, fix, docs, style, refactor, test, chore
+- Example: `feat(checkout): add Stripe payment integration`
+- Keep first line under 72 characters
+- Add body for complex changes
+
+### Pull Requests
+- Write clear title and description
+- Reference related issues
+- Add screenshots for UI changes
+- Request review from team
+- Ensure CI passes before merging
+
+### API Documentation
+- Document all endpoints in API_DOCS.md
+- Include request/response examples
+- Document error codes
+- Keep documentation in sync with code
+
+## Supabase Specific
+
+### RLS Policies
+- Always enable RLS on new tables
+- Test policies with different user roles
+- Use `auth.uid()` for user-specific data
+- Use role checks for admin operations
+- Never bypass RLS in client code
+
+### Queries
+- Use `.select()` with specific columns
+- Use `.single()` for single row queries
+- Use `.maybeSingle()` when row might not exist
+- Handle errors with try/catch
+- Use `.order()` for sorted results
+
+### Real-time
+- Subscribe to changes for live updates
+- Unsubscribe in cleanup function
+- Handle connection errors gracefully
+- Use channels for specific tables
+
+## Stripe Specific
+
+### Payments
+- Always use PaymentIntents (not Charges)
+- Validate webhook signatures
+- Use idempotency keys for retries
+- Handle all payment states (succeeded, failed, pending)
+- Store payment metadata for reconciliation
+
+### Security
+- Never log full card numbers
+- Use Stripe.js for card input (PCI compliance)
+- Validate amounts on server side
+- Use webhook secrets for verification
+
+## AI/Gemini Specific
+
+### Prompts
+- Be specific and clear in prompts
+- Provide context and examples
+- Handle API errors gracefully
+- Cache responses when appropriate
+- Respect rate limits
+
+### Recommendations
+- Personalize based on user history
+- Fall back to popular items if no data
+- A/B test recommendation algorithms
+- Track recommendation performance
+
+## Development Workflow
+
+### Before Starting Work
+1. Pull latest changes from main
+2. Create feature branch: `feature/description`
+3. Run `npm install` if package.json changed
+4. Run `npm run dev` to start dev server
+
+### During Development
+1. Write code following these rules
+2. Test in browser frequently
+3. Check TypeScript errors: `npm run lint`
+4. Commit often with clear messages
+5. Push to remote branch regularly
+
+### Before Committing
+1. Run `npm run lint` (no errors)
+2. Test all changed functionality
+3. Check for console errors/warnings
+4. Review your own code
+5. Write clear commit message
+
+### Before Pull Request
+1. Rebase on latest main
+2. Resolve conflicts if any
+3. Run full build: `npm run build`
+4. Test production build locally
+5. Write PR description
+
+## Emergency Procedures
+
+### Production Bug
+1. Assess severity (critical/high/medium/low)
+2. Create hotfix branch from main
+3. Fix bug with minimal changes
+4. Test thoroughly
+5. Deploy immediately if critical
+6. Create post-mortem document
+
+### Database Issue
+1. Never run destructive queries in production
+2. Always backup before migrations
+3. Test migrations in staging first
+4. Have rollback plan ready
+5. Monitor after deployment
+
+### Security Incident
+1. Assess impact immediately
+2. Rotate compromised credentials
+3. Patch vulnerability
+4. Notify affected users if needed
+5. Document incident and response
+
+## Performance Targets
+
+- Lighthouse Score: > 90
+- First Contentful Paint: < 1.5s
+- Time to Interactive: < 3s
+- Bundle Size: < 500KB (gzipped)
+- API Response Time: < 200ms (p95)
+- Database Query Time: < 100ms (p95)
+
+## Code Review Checklist
+
+- [ ] Code follows style guide
+- [ ] TypeScript types are correct
+- [ ] No console.log in production code
+- [ ] Error handling is present
+- [ ] Loading states are handled
+- [ ] Accessibility is considered
+- [ ] Performance is optimized
+- [ ] Security is not compromised
+- [ ] Tests pass (if applicable)
+- [ ] Documentation is updated
+
+## Resources
+
+- React Docs: https://react.dev
+- TypeScript Docs: https://www.typescriptlang.org/docs
+- Supabase Docs: https://supabase.com/docs
+- Stripe Docs: https://stripe.com/docs
+- Tailwind Docs: https://tailwindcss.com/docs
+- Framer Motion: https://www.framer.com/motion
+
+---
+
+**Remember**: These rules exist to maintain code quality, security, and team productivity.
+When in doubt, ask for clarification rather than guessing.
