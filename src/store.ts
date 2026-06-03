@@ -420,7 +420,13 @@ export const useStore = create<AppState>()(
           const { data, error } = await supabase.from('products').select(PRODUCT_COLUMNS) as any;
           if (error) throw error;
           if (data && data.length > 0) {
-            set({ products: data as Product[] });
+            // Map/compute isNew property on the frontend
+            const mapped = data.map((p: any) => {
+              const isNew = p.badges?.includes('new') || 
+                (p.created_at && (new Date().getTime() - new Date(p.created_at).getTime()) < 14 * 24 * 60 * 60 * 1000);
+              return { ...p, isNew } as Product;
+            });
+            set({ products: mapped });
           }
         } catch (err) {
           console.error("Error fetching products:", err);

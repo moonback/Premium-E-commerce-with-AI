@@ -11,7 +11,7 @@
 // ── Products ─────────────────────────────────────────────────────────────────
 export const PRODUCT_COLUMNS = [
   'id', 'name', 'description', 'price', 'purchase_price', 'image',
-  'categories', 'effects', 'stock', 'isNew', 'specs', 'rating',
+  'categories', 'effects', 'stock', 'created_at', 'specs',
   'is_batch_product', 'batch_size', 'batch_unit',
   'seo', 'badges', 'promotion', 'total_sales',
   'embedding_updated_at',
@@ -30,7 +30,7 @@ export const PRODUCT_COLUMNS_EMBEDDING = [
 
 // ── Categories ───────────────────────────────────────────────────────────────
 export const CATEGORY_COLUMNS = [
-  'id', 'name', 'parent_id', 'level', 'image_url', 'description', 'seo',
+  'id', 'name', 'parent_id', 'level', 'image_url', 'seo',
 ].join(',');
 
 // ── Profiles ─────────────────────────────────────────────────────────────────
@@ -60,8 +60,7 @@ export const WISHLIST_COLUMNS = [
 // ── Orders ───────────────────────────────────────────────────────────────────
 export const ORDER_COLUMNS = [
   'id', 'user_id', 'order_number', 'status', 'payment_status',
-  'total', 'items', 'created_at', 'client_info', 'delivery_method',
-  'discount_code', 'discount_total',
+  'total', 'created_at', 'subtotal', 'discount_total', 'shipping_total', 'tax_total',
 ].join(',');
 
 // ── Discounts ────────────────────────────────────────────────────────────────
