@@ -68,6 +68,12 @@ import type { Request, Response, NextFunction } from "express";
 import { randomUUID, randomBytes } from "crypto";
 import { MemoryStore, SupabaseStore, rateLimiter, type RateLimitStore } from "./src/middleware/rateLimit";
 
+import { createAdminProductsRouter } from "./server/routes/adminProducts";
+import { createAdminCategoriesRouter } from "./server/routes/adminCategories";
+import { createAdminSettingsRouter } from "./server/routes/adminSettings";
+import { createAdminDiscountsRouter } from "./server/routes/adminDiscounts";
+import { createAdminShippingRouter } from "./server/routes/adminShipping";
+
 const LIVE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const LIVE_MAX_CONNECTIONS_PER_WINDOW = 5;
 const LIVE_MAX_ACTIVE_CONNECTIONS = 2;
@@ -284,6 +290,13 @@ async function startServer() {
       auth: { persistSession: false, autoRefreshToken: false },
     })
     : null;
+
+  // Mount admin API routes (TASK-P0-007)
+  app.use("/api/admin/products", createAdminProductsRouter(supabaseAuth, supabaseAdmin, log));
+  app.use("/api/admin/categories", createAdminCategoriesRouter(supabaseAuth, supabaseAdmin, log));
+  app.use("/api/admin/settings", createAdminSettingsRouter(supabaseAuth, supabaseAdmin, log));
+  app.use("/api/admin/discounts", createAdminDiscountsRouter(supabaseAuth, supabaseAdmin, log));
+  app.use("/api/admin/shipping", createAdminShippingRouter(supabaseAuth, supabaseAdmin, log));
 
   // ── Rate Limiting (TASK-P0-006) ───────────────────────────────────────────
   const rateLimitBackend = process.env.RATE_LIMIT_BACKEND || (supabaseAdmin ? "supabase" : "memory");

@@ -175,18 +175,29 @@ export default function AdminSettings() {
     if (!supabase) { toast.error('Supabase non configuré'); return; }
     setIsSaving(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
+
       const payload = { ...settings };
       delete (payload as any).id;
       delete (payload as any).created_at;
       delete (payload as any).updated_at;
 
-      if (settingsId) {
-        const { error } = await supabase.from('store_settings').update(payload).eq('id', settingsId);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase.from('store_settings').insert([payload]).select().single();
-        if (error) throw error;
-        if (data) setSettingsId(data.id);
+      const response = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
+      if (resJson.settings) {
+        setSettings(resJson.settings);
+        setSettingsId(resJson.settings.id);
       }
       toast.success('Paramètres sauvegardés');
     } catch (err) {

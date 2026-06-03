@@ -448,25 +448,33 @@ export default function AdminShipping() {
     if (!supabase) return;
     setIsSaving(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Session expirée");
+        return;
+      }
+
       const payload = { ...data };
       delete (payload as any).created_at;
       delete (payload as any).updated_at;
 
-      if (editing?.id) {
-        const { error } = await supabase
-          .from('shipping_carriers')
-          .update(payload)
-          .eq('id', editing.id);
-        if (error) throw error;
-        toast.success('Transporteur mis à jour');
-      } else {
-        delete (payload as any).id;
-        const { error } = await supabase
-          .from('shipping_carriers')
-          .insert([payload]);
-        if (error) throw error;
-        toast.success('Transporteur créé');
-      }
+      const isEdit = !!editing?.id;
+      const url = isEdit ? `/api/admin/shipping/${editing.id}` : "/api/admin/shipping";
+      const method = isEdit ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
+      toast.success(isEdit ? 'Transporteur mis à jour' : 'Transporteur créé');
       setShowForm(false);
       setEditing(null);
       load();
@@ -481,8 +489,19 @@ export default function AdminShipping() {
     if (!window.confirm(`Supprimer le transporteur "${name}" ?`)) return;
     if (!supabase) return;
     try {
-      const { error } = await supabase.from('shipping_carriers').delete().eq('id', id);
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
+
+      const response = await fetch(`/api/admin/shipping/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
       toast.success('Transporteur supprimé');
       load();
     } catch (err) {
@@ -493,11 +512,21 @@ export default function AdminShipping() {
   const handleToggle = async (carrier: ShippingCarrier) => {
     if (!supabase) return;
     try {
-      const { error } = await supabase
-        .from('shipping_carriers')
-        .update({ is_active: !carrier.is_active })
-        .eq('id', carrier.id);
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
+
+      const response = await fetch(`/api/admin/shipping/${carrier.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ is_active: !carrier.is_active })
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
       setCarriers(prev => prev.map(c => c.id === carrier.id ? { ...c, is_active: !c.is_active } : c));
     } catch (err) {
       toast.error(getErrorMessage(err));

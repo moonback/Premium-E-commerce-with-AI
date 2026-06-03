@@ -60,6 +60,9 @@ export default function AdminDiscounts() {
     }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
+
       // Clean payload - only include writable fields
       const payload: any = {
         code: editingDiscount.code.toUpperCase(),
@@ -81,21 +84,23 @@ export default function AdminDiscounts() {
         payload.valid_until = editingDiscount.valid_until;
       }
 
-      if (editingDiscount.id) {
-        const { error } = await supabase
-          .from('discounts')
-          .update(payload)
-          .eq('id', editingDiscount.id);
-        if (error) throw error;
-        toast.success('Code promo mis à jour');
-      } else {
-        const { error } = await supabase
-          .from('discounts')
-          .insert([payload]);
-        if (error) throw error;
-        toast.success('Code promo créé');
-      }
+      const isEdit = !!editingDiscount.id;
+      const url = isEdit ? `/api/admin/discounts/${editingDiscount.id}` : "/api/admin/discounts";
+      const method = isEdit ? "PUT" : "POST";
 
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
+      toast.success(isEdit ? 'Code promo mis à jour' : 'Code promo créé');
       setIsEditing(false);
       setEditingDiscount({ type: 'percentage', is_active: true, current_uses: 0 });
       fetchDiscounts();
@@ -109,12 +114,19 @@ export default function AdminDiscounts() {
     if (!window.confirm('Supprimer ce code promo ?')) return;
 
     try {
-      const { error } = await supabase
-        .from('discounts')
-        .delete()
-        .eq('id', id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
 
-      if (error) throw error;
+      const response = await fetch(`/api/admin/discounts/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
       toast.success('Code promo supprimé');
       fetchDiscounts();
     } catch (err) {
@@ -125,12 +137,21 @@ export default function AdminDiscounts() {
 
   const toggleActive = async (id: string, currentActive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('discounts')
-        .update({ is_active: !currentActive })
-        .eq('id', id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
 
-      if (error) throw error;
+      const response = await fetch(`/api/admin/discounts/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ is_active: !currentActive })
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
       toast.success(currentActive ? 'Code désactivé' : 'Code activé');
       fetchDiscounts();
     } catch (err) {

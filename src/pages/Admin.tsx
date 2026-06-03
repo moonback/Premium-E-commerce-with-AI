@@ -153,9 +153,11 @@ export default function Admin() {
   const handleSaveProduct = async (productData: EditableProduct) => {
     if (!supabase) return toast.error("Supabase non configuré");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
+
       const p = {
         ...productData,
-        id: productData.id || `prod_${Date.now()}`,
         name: productData.name || "",
         price: Number(productData.price) || 0,
         stock: Number(productData.stock) || 0,
@@ -172,13 +174,24 @@ export default function Admin() {
         is_batch_product: productData.is_batch_product || false,
         batch_size: productData.batch_size,
         batch_unit: productData.batch_unit,
-      } as Product;
+      };
 
-      // Remove legacy field if it exists
-      const { category, ...productToSave } = p as any;
+      const isEdit = !!productData.id;
+      const url = isEdit ? `/api/admin/products/${productData.id}` : "/api/admin/products";
+      const method = isEdit ? "PUT" : "POST";
 
-      const { error } = await supabase.from('products').upsert([productToSave]);
-      if (error) throw error;
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(p)
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
       toast.success("Produit sauvegardé");
       setIsEditing(false);
       fetchProducts();
@@ -230,8 +243,19 @@ export default function Admin() {
        'Cette action est irréversible. Le produit sera définitivement supprimé du catalogue.',
        async () => {
          try {
-           const { error } = await supabase.from('products').delete().eq('id', id);
-           if (error) throw error;
+           const { data: { session } } = await supabase.auth.getSession();
+           if (!session?.access_token) return toast.error("Session expirée");
+
+           const response = await fetch(`/api/admin/products/${id}`, {
+             method: "DELETE",
+             headers: {
+               "Authorization": `Bearer ${session.access_token}`
+             }
+           });
+
+           const resJson = await response.json();
+           if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
            toast.success("Produit supprimé");
            fetchProducts();
          } catch (err) {
@@ -248,8 +272,19 @@ export default function Admin() {
       'Les sous-catégories associées seront également supprimées. Cette action est irréversible.',
       async () => {
         try {
-          const { error } = await supabase.from('categories').delete().eq('id', id);
-          if (error) throw error;
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) return toast.error("Session expirée");
+
+          const response = await fetch(`/api/admin/categories/${id}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${session.access_token}`
+            }
+          });
+
+          const resJson = await response.json();
+          if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
           toast.success("Catégorie supprimée");
           useStore.getState().fetchCategories();
         } catch (err) {
