@@ -71,10 +71,12 @@ export default function VectorizationPanel() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         toast.error('Session expirée, reconnectez-vous');
+        setIsVectorizing(false);
         return;
       }
 
-      const res = await fetch('/api/products/vectorize', {
+      // 1. Démarrer le job asynchrone
+      const res = await fetch('/api/products/vectorization-jobs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,20 +85,53 @@ export default function VectorizationPanel() {
         body: JSON.stringify({ onlyMissing }),
       });
 
-      const json = await res.json() as VectorizationResult & { ok?: boolean; error?: string };
-
+      const json = await res.json();
       if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
+      
+      const jobId = json.jobId;
+      toast.success('Job de vectorisation démarré');
 
-      setResult(json);
-      toast.success(`${json.success} produit(s) vectorisé(s)`);
-      // Rafraîchir les stats après vectorisation
-      await fetchStats();
+      // 2. Polling du statut
+      const poll = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`/api/products/vectorization-jobs/${jobId}`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const job = await pollRes.json();
+          
+          if (!pollRes.ok) throw new Error(job.error);
+
+          setProgress({ done: job.processed_items || 0, total: job.total_items || 0 });
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(poll);
+            setIsVectorizing(false);
+            if (job.status === 'failed') {
+               toast.error(`Échec: ${job.error}`);
+            } else {
+               toast.success('Vectorisation terminée');
+               let parsedErrors = [];
+               try { parsedErrors = job.error ? JSON.parse(job.error) : []; } catch(e) {}
+               setResult({
+                 success: (job.processed_items || 0) - (job.failed_items || 0),
+                 failed: job.failed_items || 0,
+                 skipped: 0,
+                 errors: parsedErrors
+               });
+               await fetchStats();
+            }
+          }
+        } catch (e) {
+          clearInterval(poll);
+          setIsVectorizing(false);
+          toast.error(e instanceof Error ? e.message : 'Erreur lors du polling');
+        }
+      }, 2000);
+
     } catch (err) {
+      setIsVectorizing(false);
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';
       toast.error(msg);
-    } finally {
-      setIsVectorizing(false);
-      setProgress(null);
     }
   };
 

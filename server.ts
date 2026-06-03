@@ -1168,23 +1168,110 @@ Améliore cette description en respectant les normes Véridian.`;
   // ── Vectorisation des produits avec pgvector ───────────────────────────────
 
   /**
-   * POST /api/products/vectorize
-   * Vectorise tous les produits (ou seulement ceux sans embedding).
-   * Body JSON : { onlyMissing?: boolean }
-   * Auth : admin uniquement (Bearer token)
+   * Helper pour exécuter le job de vectorisation en arrière-plan
    */
-  app.post("/api/products/vectorize", vectorizeRateLimiter, async (req, res) => {
-    if (!geminiApiKey) {
-      res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
-      return;
+  async function processVectorizationJob(
+    jobId: string,
+    onlyMissing: boolean,
+    apiKey: string,
+    client: any
+  ) {
+    try {
+      const result = await vectorizeAllProducts(apiKey, client, {
+        onlyMissing,
+        onProgress: async (done, total) => {
+          // Mise à jour de la progression
+          if (supabaseAdmin) {
+            await supabaseAdmin.from('vectorization_jobs').update({
+              processed_items: done,
+              total_items: total,
+              status: 'processing',
+              updated_at: new Date().toISOString(),
+            }).eq('id', jobId);
+          }
+        },
+      });
+
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('vectorization_jobs').update({
+          status: 'completed',
+          processed_items: result.success + result.failed + result.skipped,
+          failed_items: result.failed,
+          error: result.errors?.length ? JSON.stringify(result.errors.slice(0, 10)) : null,
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+      }
+    } catch (err) {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('vectorization_jobs').update({
+          status: 'failed',
+          error: err instanceof Error ? err.message : String(err),
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+      }
     }
-    if (!supabaseAuth) {
+  }
+
+  /**
+   * GET /api/products/vectorization-jobs/:id
+   * Récupérer le statut d'un job de vectorisation
+   * Auth : admin uniquement
+   */
+  app.get("/api/products/vectorization-jobs/:id", vectorizeRateLimiter, async (req, res) => {
+    if (!supabaseAuth || !supabaseAdmin) {
       res.status(503).json({ error: "Supabase non configuré" });
       return;
     }
 
-    // Auth admin — on crée un client Supabase avec le token de l'admin
-    // pour que les opérations s'exécutent avec ses droits RLS
+    const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      res.status(401).json({ error: "Authentification requise" });
+      return;
+    }
+    const { data: userData, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !userData.user) {
+      res.status(401).json({ error: "Token invalide" });
+      return;
+    }
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+    if (!profile || !["admin", "staff"].includes(profile.role)) {
+      res.status(403).json({ error: "Accès réservé aux administrateurs" });
+      return;
+    }
+
+    const { data: job, error } = await supabaseAdmin
+      .from("vectorization_jobs")
+      .select("*")
+      .eq("id", req.params.id)
+      .single();
+
+    if (error || !job) {
+      res.status(404).json({ error: "Job introuvable" });
+      return;
+    }
+    res.json(job);
+  });
+
+  /**
+   * POST /api/products/vectorization-jobs
+   * Lance un job de vectorisation en asynchrone.
+   * Body JSON : { onlyMissing?: boolean }
+   * Auth : admin uniquement (Bearer token)
+   */
+  app.post("/api/products/vectorization-jobs", vectorizeRateLimiter, async (req, res) => {
+    if (!geminiApiKey) {
+      res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
+      return;
+    }
+    if (!supabaseAuth || !supabaseAdmin) {
+      res.status(503).json({ error: "Supabase non configuré" });
+      return;
+    }
+
     const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
     if (!token) {
       res.status(401).json({ error: "Authentification requise" });
@@ -1196,9 +1283,7 @@ Améliore cette description en respectant les normes Véridian.`;
       return;
     }
 
-    // Vérifier le rôle admin via le client anon (lecture publique du profil)
-    const catalogClient = supabaseAdmin || supabaseAuth;
-    const { data: profile } = await catalogClient
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("role")
       .eq("id", userData.user.id)
@@ -1208,11 +1293,21 @@ Améliore cette description en respectant les normes Véridian.`;
       return;
     }
 
-    // Client authentifié avec le token admin pour les écritures
+    // Vérifier les quotas / jobs en cours
+    const { data: activeJobs } = await supabaseAdmin
+      .from("vectorization_jobs")
+      .select("id")
+      .in("status", ["pending", "processing"]);
+    
+    if (activeJobs && activeJobs.length > 0) {
+      res.status(429).json({ error: "Un job de vectorisation est déjà en cours." });
+      return;
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
     const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
-    const authedClient = supabaseAdmin || createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    const authedClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
@@ -1220,18 +1315,29 @@ Améliore cette description en respectant les normes Véridian.`;
     const onlyMissing = req.body?.onlyMissing !== false;
     const requestId = (req as Request & { requestId?: string }).requestId;
 
-    log("info", "vectorize_start", { requestId, onlyMissing });
+    log("info", "vectorize_job_requested", { requestId, onlyMissing });
 
     try {
-      const result = await vectorizeAllProducts(geminiApiKey, authedClient, {
-        onlyMissing,
-        onProgress: (done, total) => {
-          log("info", "vectorize_progress", { requestId, done, total });
-        },
+      const { data: job, error: insertError } = await authedClient
+        .from('vectorization_jobs')
+        .insert({
+          status: 'pending',
+          only_missing: onlyMissing,
+          started_by: userData.user.id
+        })
+        .select('id')
+        .single();
+        
+      if (insertError || !job) {
+        throw new Error(insertError?.message || "Failed to create job");
+      }
+
+      // Lancer le process en asynchrone (sans await)
+      processVectorizationJob(job.id, onlyMissing, geminiApiKey, authedClient).catch(e => {
+        log("error", "processVectorizationJob_failed", { jobId: job.id, error: String(e) });
       });
 
-      log("info", "vectorize_complete", { requestId, ...result });
-      res.json({ ok: true, ...result });
+      res.status(202).json({ ok: true, jobId: job.id });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur inconnue";
       log("error", "vectorize_failed", { requestId, message });
