@@ -1347,6 +1347,34 @@ Améliore cette description en respectant les normes Véridian.`;
   });
 
   // ---- WebSocket handler for Gemini Live API ----
+  
+  let cachedCatalog: string | null = null;
+  let catalogCacheTime = 0;
+  const CATALOG_CACHE_TTL = 60 * 1000; // 1 minute
+
+  async function getServerCatalogContext(client: any): Promise<string> {
+    if (cachedCatalog && Date.now() - catalogCacheTime < CATALOG_CACHE_TTL) {
+      return cachedCatalog;
+    }
+    if (!client) return '';
+    try {
+      const { data: products } = await client
+        .from('products')
+        .select('id, name, price, description, stock')
+        .gt('stock', 0)
+        .limit(20);
+      
+      if (products && products.length > 0) {
+        cachedCatalog = products.map((p: any) => `${p.id}: ${p.name} (${Number(p.price).toFixed(2)}€) - ${p.description}`).join(' | ');
+        catalogCacheTime = Date.now();
+        return cachedCatalog;
+      }
+    } catch (e) {
+      console.error('Failed to fetch catalog context on server', e);
+    }
+    return '';
+  }
+
   const wss = new WebSocketServer({ server, path: "/live" });
 
   const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -1365,6 +1393,7 @@ Améliore cette description en respectant les normes Véridian.`;
 
     let liveSession: (Awaited<ReturnType<GoogleGenAI['live']['connect']>> & { close?: () => void }) | null = null;
     let sessionTimeout: NodeJS.Timeout | null = null;
+    const expectedFunctionCallIds = new Set<string>();
 
     const cleanupLiveSession = () => {
       if (sessionTimeout) {
@@ -1417,6 +1446,8 @@ Améliore cette description en respectant les normes Véridian.`;
             if (message.serverContent?.modelTurn?.parts) {
               for (const part of message.serverContent.modelTurn.parts) {
                 if (part.functionCall) {
+                  log('info', 'ava_tool_call_initiated', { name: part.functionCall.name, id: part.functionCall.id });
+                  expectedFunctionCallIds.add(part.functionCall.id);
                   clientWs.send(JSON.stringify({ functionCall: part.functionCall }));
                 }
               }
@@ -1457,6 +1488,15 @@ Améliore cette description en respectant les normes Véridian.`;
         cleanupLiveSession();
       }, LIVE_SESSION_MAX_MS);
 
+      // Inject catalog context server-side
+      const catalogClient = supabaseAdmin || supabaseAuth;
+      const catalogContext = await getServerCatalogContext(catalogClient);
+      if (catalogContext) {
+        session.sendRealtimeInput({
+          text: `[Contexte catalogue Véridian (session). Recommande uniquement ces produits en stock]\n${catalogContext}`
+        });
+      }
+
       // Handle messages coming from the client
       clientWs.on("message", (data: string) => {
         try {
@@ -1469,10 +1509,15 @@ Améliore cette description en respectant les normes Véridian.`;
               }
             });
           } else if (parsed.text) {
+            // ── Guard against client context spoofing ──────────────────────
+            const textStr = parsed.text as string;
+            if (textStr.startsWith('Contexte catalogue')) {
+               log('warn', 'client_catalog_spoof_attempt', { clientIp });
+               return; // Ignore completely
+            }
+
             // ── Skills auto-injection ──────────────────────────────────────
-            const isCatalogContext = (parsed.text as string).startsWith('Contexte catalogue');
-            if (!isCatalogContext) {
-              const activeSkills = skillsEngine.getActiveSkills(parsed.text as string);
+            const activeSkills = skillsEngine.getActiveSkills(textStr);
               if (activeSkills.length > 0) {
                 const skillNames = activeSkills.map(s => s.name).join(', ');
                 log('info', 'skills_activated', { skills: skillNames });
@@ -1508,11 +1553,18 @@ Améliore cette description en respectant les normes Véridian.`;
                     });
                   });
               }
-            }
 
-            session.sendRealtimeInput({ text: parsed.text });
+
+              session.sendRealtimeInput({ text: parsed.text });
           } else if (parsed.functionResponse) {
-             session.sendToolResponse({ functionResponses: [parsed.functionResponse] });
+             const fr = parsed.functionResponse as { id: string, name: string, response: any };
+             if (!expectedFunctionCallIds.has(fr.id)) {
+                log('warn', 'unexpected_function_response_forged', { id: fr.id, clientIp });
+                return;
+             }
+             expectedFunctionCallIds.delete(fr.id);
+             log('info', 'ava_tool_call_completed', { name: fr.name, id: fr.id });
+             session.sendToolResponse({ functionResponses: [fr] });
           }
         } catch (e) {
           console.error("Error processing client message", e);

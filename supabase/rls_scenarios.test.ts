@@ -548,24 +548,19 @@ async function main() {
     );
   });
 
-  await test('FINDING: Customer A can delete a product (missing restrictive policy)', async () => {
-    // ⚠️ SECURITY FINDING: The backup grants ALL on products to authenticated,
-    // and no migration revokes DELETE or adds a restrictive DELETE policy.
-    // Products have RLS enabled with USING(true) for SELECT, admin-only for UPDATE/INSERT,
-    // but no explicit DELETE restriction. This test documents the gap.
+  await test('Customer A cannot delete a product', async () => {
     if (!testProductId) return;
-    const { error } = await clientA
+    const { data, error } = await clientA
       .from('products')
       .delete()
-      .eq('id', 'rls-test-nonexistent-product-safe');
-    // We use a nonexistent ID to avoid actually deleting a product.
-    // The fact that there's no error means DELETE is allowed at the policy level.
-    // A corrective migration should:
-    //   1. REVOKE DELETE ON TABLE public.products FROM authenticated;
-    //   2. Add a restrictive DELETE policy for admin only.
-    console.log('     ⚠️  FINDING: products DELETE is not restricted for customers');
-    console.log('     ⚠️  Corrective migration needed: revoke DELETE + add admin-only DELETE policy');
-    // Pass the test to document the finding without failing the suite
+      .eq('id', testProductId)
+      .select('id');
+    // If blocked by RLS (or if no DELETE policy exists, which defaults to DENY), 
+    // it will return no error but 0 rows affected.
+    assert(
+      !!error || (data?.length ?? 0) === 0,
+      'Customer should not be able to delete products'
+    );
   });
 
   // ── AI_CONVERSATIONS ─────────────────────────────────────────────────

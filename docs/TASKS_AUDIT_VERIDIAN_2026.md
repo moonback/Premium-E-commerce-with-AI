@@ -352,16 +352,16 @@
 
 **Tâches :**
 
-- [ ] Créer fixtures utilisateurs : customer A, customer B, staff, admin.
-- [ ] Créer script de test Supabase staging/local.
-- [ ] Tester `profiles`, `orders`, `order_items`, `payments`, `addresses`, `wishlist_items`.
-- [ ] Tester `match_products` selon le niveau d’exposition souhaité.
-- [ ] Ajouter ces tests au pipeline CI si Supabase local disponible.
+- [x] Créer fixtures utilisateurs : customer A, customer B, staff, admin.
+- [x] Créer script de test Supabase staging/local.
+- [x] Tester `profiles`, `orders`, `order_items`, `payments`, `addresses`, `wishlist_items`.
+- [x] Tester `match_products` selon le niveau d’exposition souhaité.
+- [x] Ajouter ces tests au pipeline CI si Supabase local disponible.
 
 **Critères d’acceptation :**
 
-- [ ] Les scénarios RLS critiques sont automatisés.
-- [ ] Toute policy permissive échoue en CI.
+- [x] Les scénarios RLS critiques sont automatisés.
+- [x] Toute policy permissive échoue en CI.
 
 **Gravité :** élevée.  
 **Effort :** moyen/élevé.  
@@ -373,17 +373,17 @@
 
 **Tâches SQL :**
 
-- [ ] Ajouter index partiel `products(stock) where stock > 0`.
-- [ ] Ajouter index GIN sur `products.categories` si requêtes par catégorie fréquentes.
-- [ ] Ajouter index `orders(created_at desc)`.
-- [ ] Ajouter index reviews publiées par produit/date.
-- [ ] Vérifier les plans d’exécution des requêtes admin.
-- [ ] Documenter les indexes et leur usage.
+- [x] Ajouter index partiel `products(stock) where stock > 0`.
+- [x] Ajouter index GIN sur `products.categories` si requêtes par catégorie fréquentes.
+- [x] Ajouter index `orders(created_at desc)`.
+- [x] Ajouter index reviews publiées par produit/date.
+- [x] Vérifier les plans d’exécution des requêtes admin.
+- [x] Documenter les indexes et leur usage.
 
 **Critères d’acceptation :**
 
-- [ ] Les requêtes catalogue et admin ne font pas de scans inutiles sur grosses tables.
-- [ ] Les indexes sont idempotents et compatibles migrations Supabase.
+- [x] Les requêtes catalogue et admin ne font pas de scans inutiles sur grosses tables.
+- [x] Les indexes sont idempotents et compatibles migrations Supabase.
 
 **Gravité :** moyenne.  
 **Effort :** faible/moyen.  
@@ -405,17 +405,17 @@
 
 **Tâches :**
 
-- [ ] Supprimer l’envoi client du contexte catalogue complet.
-- [ ] Charger côté serveur les produits autorisés en stock.
-- [ ] Limiter les colonnes injectées au modèle.
-- [ ] Ajouter un format serveur strict : `id`, `name`, `price`, résumé court.
-- [ ] Ajouter cache court côté serveur pour catalogue vocal.
-- [ ] Tester qu’un client ne peut pas injecter de faux produit.
+- [x] Supprimer l’envoi client du contexte catalogue complet.
+- [x] Charger côté serveur les produits autorisés en stock.
+- [x] Limiter les colonnes injectées au modèle.
+- [x] Ajouter un format serveur strict : `id`, `name`, `price`, résumé court.
+- [x] Ajouter cache court côté serveur pour catalogue vocal.
+- [x] Tester qu’un client ne peut pas injecter de faux produit.
 
 **Critères d’acceptation :**
 
-- [ ] Ava ne reçoit jamais un catalogue fourni par le navigateur.
-- [ ] `addToCart` ne peut cibler qu’un productId réel et disponible.
+- [x] Ava ne reçoit jamais un catalogue fourni par le navigateur.
+- [x] `addToCart` ne peut cibler qu’un productId réel et disponible.
 
 **Gravité :** élevée.  
 **Effort :** moyen.  
@@ -427,18 +427,18 @@
 
 **Tâches :**
 
-- [ ] Corréler les `functionCall.id` attendus côté serveur.
-- [ ] Refuser les `functionResponse` non attendues.
-- [ ] Valider `quantity` min/max côté client et serveur.
-- [ ] Vérifier le stock avant ajout panier ou avant checkout.
-- [ ] Étudier exécution du tool `addToCart` côté serveur avec session panier signée.
-- [ ] Ajouter logs d’usage tool calling.
+- [x] Corréler les `functionCall.id` attendus côté serveur.
+- [x] Refuser les `functionResponse` non attendues.
+- [x] Valider `quantity` min/max côté client et serveur.
+- [x] Vérifier le stock avant ajout panier ou avant checkout.
+- [x] Étudier exécution du tool `addToCart` côté serveur avec session panier signée.
+- [x] Ajouter logs d’usage tool calling.
 
 **Critères d’acceptation :**
 
-- [ ] Une réponse tool forgée ne perturbe pas la session Gemini.
-- [ ] La quantité est bornée.
-- [ ] Les tool calls sont traçables.
+- [x] Une réponse tool forgée ne perturbe pas la session Gemini.
+- [x] La quantité est bornée.
+- [x] Les tool calls sont traçables.
 
 **Gravité :** moyenne/élevée.  
 **Effort :** moyen.  

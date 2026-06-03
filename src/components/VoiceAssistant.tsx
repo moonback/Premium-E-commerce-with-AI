@@ -74,13 +74,6 @@ export default function VoiceAssistant() {
     }
   }, [textMode, isOpen]);
 
-  const buildCatalogContext = () =>
-    products
-      .filter(p => p.stock > 0)
-      .slice(0, 20)
-      .map(p => `${p.id}: ${p.name} (${p.price.toFixed(2)}€) - ${p.description}`)
-      .join(' | ');
-
   const getWsUrl = (token?: string) => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
@@ -90,7 +83,10 @@ export default function VoiceAssistant() {
   const handleFunctionCall = (ws: WebSocket, id: string, name: string, args: Record<string, unknown>) => {
     if (name !== 'addToCart') return;
     const productId = typeof args.productId === 'string' ? args.productId : null;
-    const quantity = typeof args.quantity === 'number' ? args.quantity : 1;
+    let quantity = typeof args.quantity === 'number' ? args.quantity : 1;
+    
+    // Bounds check
+    quantity = Math.max(1, Math.min(Math.floor(quantity), 10));
 
     if (!productId) {
       ws.send(JSON.stringify({ functionResponse: { id, name, response: { error: 'productId manquant.' } } }));
@@ -100,6 +96,12 @@ export default function VoiceAssistant() {
     const store = useStore.getState();
     const product = store.products.find(p => p.id === productId);
     if (product) {
+      if (product.stock < quantity) {
+         ws.send(JSON.stringify({
+           functionResponse: { id, name, response: { error: `Stock insuffisant. Seulement ${product.stock} en stock.` } },
+         }));
+         return;
+      }
       addToCart(product, quantity);
       setCartConfirmation({ productName: product.name, quantity });
       ws.send(JSON.stringify({
@@ -126,7 +128,6 @@ export default function VoiceAssistant() {
         return;
       }
 
-      const catalogContext = buildCatalogContext();
       const ws = new WebSocket(getWsUrl(session?.access_token));
       wsRef.current = ws;
 
@@ -142,11 +143,6 @@ export default function VoiceAssistant() {
       nextStartTimeRef.current = audioCtx.currentTime;
 
       ws.onopen = async () => {
-        if (catalogContext) {
-          ws.send(JSON.stringify({
-            text: `Contexte catalogue Véridian (session). Recommande uniquement ces produits en stock: ${catalogContext}`,
-          }));
-        }
         setIsConnecting(false);
         setIsRecording(true);
 
