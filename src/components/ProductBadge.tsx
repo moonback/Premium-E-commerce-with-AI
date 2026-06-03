@@ -1,6 +1,7 @@
 // src/components/ProductBadge.tsx
 import React from 'react';
 import { motion } from 'motion/react';
+import type { TargetAndTransition, Transition } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Sparkles, TrendingUp, AlertCircle, Tag, Flame } from 'lucide-react';
 
@@ -65,7 +66,12 @@ const positionClasses: Record<string, string> = {
   'bottom-right': 'bottom-3 right-3',
 };
 
-const animations = {
+type AnimationConfig = {
+  animate: TargetAndTransition;
+  transition: Transition;
+};
+
+const animations: Record<string, AnimationConfig> = {
   pulse: {
     animate: {
       scale: [1, 1.05, 1],
@@ -110,36 +116,29 @@ export function ProductBadge({
 }: ProductBadgeProps) {
   const config = badgeConfig[type];
   const Icon = config.icon;
-  const animationConfig = config.animation ? animations[config.animation] : {};
+  const animationConfig: Partial<AnimationConfig> = config.animation ? animations[config.animation] : {};
 
   const getLabel = () => {
     switch (type) {
-      case 'new':
-        return 'Nouveau';
-      case 'promo':
-        return value ? `-${value}%` : 'Promo';
-      case 'lowStock':
-        return value ? `Stock: ${value}` : 'Stock limité';
-      case 'bestseller':
-        return 'Best-seller';
-      case 'trending':
-        return 'Tendance';
-      case 'exclusive':
-        return 'Exclusif';
-      default:
-        return '';
+      case 'new': return 'Nouveau';
+      case 'promo': return value ? `-${value}%` : 'Promo';
+      case 'lowStock': return value ? `Stock: ${value}` : 'Stock limité';
+      case 'bestseller': return 'Best-seller';
+      case 'trending': return 'Tendance';
+      case 'exclusive': return 'Exclusif';
+      default: return '';
     }
   };
 
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1, ...animationConfig.animate }}
+      animate={{ scale: 1, opacity: 1, ...(animationConfig.animate ?? {}) }}
       transition={{
         type: 'spring',
         stiffness: 500,
         damping: 25,
-        ...animationConfig.transition,
+        ...(animationConfig.transition ?? {}),
       }}
       className={cn(
         'absolute z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-lg',

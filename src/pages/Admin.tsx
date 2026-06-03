@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useStore } from '../store';
 import { Category, Product, Spec } from '../types';
 import toast from 'react-hot-toast';
@@ -21,6 +21,7 @@ import AdminStatsCards from '../components/admin/AdminStatsCards';
 import ProductsTable from '../components/admin/ProductsTable';
 import ProductForm from '../components/admin/ProductForm';
 import CategoriesManager from '../components/admin/CategoriesManager';
+import { Dialog } from '../components/ui/Dialog';
 import { getErrorMessage } from '../lib/errors';
 
 type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
@@ -29,7 +30,7 @@ type EditableProduct = Partial<Omit<Product, 'effects' | 'specs'>> & {
   category?: string;
 };
 
-type ProductUpsertPayload = Product & { category?: string };
+// Unused type removed (was ProductUpsertPayload)
 
 const parseListField = (value: string[] | string | undefined): string[] => {
   if (Array.isArray(value)) return value;
@@ -55,6 +56,22 @@ export default function Admin() {
   const [editingProduct, setEditingProduct] = useState<EditableProduct>({});
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  // ── Confirmation dialog state ────────────────────────────────────────────
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
+
+  const openConfirm = useCallback(
+    (title: string, description: string, onConfirm: () => void) => {
+      setConfirmDialog({ open: true, title, description, onConfirm });
+    },
+    []
+  );
+  const closeConfirm = () => setConfirmDialog(s => ({ ...s, open: false }));
 
   const [todaySales, setTodaySales] = useState(0);
   const [activeOrdersCount, setActiveOrdersCount] = useState(0);
@@ -176,10 +193,22 @@ export default function Admin() {
   const handleImageUpload = async (file: File) => {
     if (!supabase) return;
 
+    // Validate file type and size before upload
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error('Format non supporté. Utilisez JPG, PNG, WebP ou GIF.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Fichier trop volumineux (max 5 Mo).');
+      return;
+    }
+
     try {
       toast.loading("Upload de l'image...", { id: "upload" });
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      // Use crypto.randomUUID() instead of Math.random() for collision-resistant filenames
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(fileName, file);
@@ -198,29 +227,39 @@ export default function Admin() {
   };
 
   const handleDeleteProduct = async (id: string) => {
-     if (!window.confirm("Supprimer ce produit ?")) return;
      if (!supabase) return;
-     try {
-       const { error } = await supabase.from('products').delete().eq('id', id);
-       if (error) throw error;
-       toast.success("Produit supprimé");
-       fetchProducts();
-     } catch (err) {
-       toast.error(getErrorMessage(err));
-     }
+     openConfirm(
+       'Supprimer ce produit ?',
+       'Cette action est irréversible. Le produit sera définitivement supprimé du catalogue.',
+       async () => {
+         try {
+           const { error } = await supabase.from('products').delete().eq('id', id);
+           if (error) throw error;
+           toast.success("Produit supprimé");
+           fetchProducts();
+         } catch (err) {
+           toast.error(getErrorMessage(err));
+         }
+       }
+     );
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!window.confirm("Supprimer cette catégorie ? (Les sous-catégories seront aussi supprimées)")) return;
     if (!supabase) return;
-    try {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
-      if (error) throw error;
-      toast.success("Catégorie supprimée");
-      useStore.getState().fetchCategories();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    }
+    openConfirm(
+      'Supprimer cette catégorie ?',
+      'Les sous-catégories associées seront également supprimées. Cette action est irréversible.',
+      async () => {
+        try {
+          const { error } = await supabase.from('categories').delete().eq('id', id);
+          if (error) throw error;
+          toast.success("Catégorie supprimée");
+          useStore.getState().fetchCategories();
+        } catch (err) {
+          toast.error(getErrorMessage(err));
+        }
+      }
+    );
   };
 
   const handleEditCategoryClick = (cat: Category) => {
@@ -311,6 +350,33 @@ export default function Admin() {
         editingCategory={editingCategory}
         categories={categories}
       />
+
+      {/* Confirmation Dialog — replaces window.confirm() */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={closeConfirm}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        maxWidth="max-w-sm"
+      >
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={closeConfirm}
+            className="px-5 py-2.5 text-xs font-bold uppercase tracking-widest border border-ink/20 text-ink hover:bg-ink/5 transition-colors rounded-lg"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={() => {
+              closeConfirm();
+              confirmDialog.onConfirm();
+            }}
+            className="px-5 py-2.5 text-xs font-bold uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 transition-colors rounded-lg"
+          >
+            Supprimer
+          </button>
+        </div>
+      </Dialog>
     </div>
   );
 }

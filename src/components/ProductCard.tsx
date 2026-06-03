@@ -12,7 +12,9 @@ import QuickView from './QuickView';
 import { OptimizedImage } from './OptimizedImage';
 import toast from 'react-hot-toast';
 
-export default function ProductCard({ product }: { product: Product }) {
+export default React.memo(ProductCard);
+
+function ProductCard({ product }: { product: Product }) {
   const { addToCart, addToWishlist, removeFromWishlist, wishlist, user } = useStore();
   const productPath = getProductPath(product);
   const isFavorite = wishlist.some(w => w.product_id === product.id);

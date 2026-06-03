@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Plus, Trash2, Edit2, Check, X, Share2, ShoppingCart } from 'lucide-react';
 import { Product } from '../types';
 import { Button } from './ui/Button';
-import OptimizedImage from './OptimizedImage';
+import { OptimizedImage } from './OptimizedImage';
 import { cn } from '../lib/utils';
 import { useStore } from '../store';
+import toast from 'react-hot-toast';
 
 interface Wishlist {
   id: string;
@@ -107,15 +108,12 @@ export default function WishlistManager({ isOpen, onClose }: WishlistManagerProp
   const deleteWishlist = (id: string) => {
     const wishlist = wishlists.find(w => w.id === id);
     if (wishlist?.isDefault) {
-      alert('Impossible de supprimer la wishlist par défaut');
+      // Cannot delete default wishlist — ignore silently
       return;
     }
-
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette wishlist ?')) {
-      setWishlists(prev => prev.filter(w => w.id !== id));
-      if (selectedWishlist === id) {
-        setSelectedWishlist(wishlists[0]?.id || null);
-      }
+    setWishlists(prev => prev.filter(w => w.id !== id));
+    if (selectedWishlist === id) {
+      setSelectedWishlist(wishlists[0]?.id || null);
     }
   };
 
@@ -155,7 +153,7 @@ export default function WishlistManager({ isOpen, onClose }: WishlistManagerProp
       }
     } else {
       await navigator.clipboard.writeText(url);
-      alert('Lien copié dans le presse-papier !');
+      toast.success('Lien copié dans le presse-papier !');
     }
   };
 

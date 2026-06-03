@@ -17,6 +17,7 @@ const product: Product = {
   categories: ['Tests'],
   effects: ['Stable'],
   stock: 5,
+  rating: 0,
   specs: [],
 };
 

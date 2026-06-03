@@ -133,7 +133,7 @@ export const useStore = create<AppState>()(
       addresses: [],
       favorites: [],
       wishlist: [],
-      loyaltyPoints: 1250,
+      loyaltyPoints: 0,
       searchQuery: "",
       isLoadingProducts: true,
       discountCode: null,

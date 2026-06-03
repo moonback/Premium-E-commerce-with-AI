@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,6 +8,7 @@ import { buildStoreJsonLd } from '../lib/seo';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import TrustBadges from '../components/TrustBadges';
 import { RecentActivityNotification } from '../components/SocialProof';
+import toast from 'react-hot-toast';
 import {
   LayoutGrid,
   Shirt,
@@ -86,17 +87,18 @@ export default function StoreFront() {
   }, [activeTab, searchQuery]);
 
   // Featured products (top 4 by rating or newest)
-  const featuredProducts = products
-    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-    .slice(0, 4);
+  // Note: use [...products] to avoid mutating the original array
+  const featuredProducts = useMemo(
+    () => [...products].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 4),
+    [products]
+  );
 
   // Newsletter handler
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement newsletter subscription
-    console.log('Newsletter subscription:', email);
+    // TODO: Implement newsletter subscription (connect to Supabase subscribers table or Brevo/Mailchimp)
     setEmail('');
-    alert('Merci pour votre inscription !');
+    toast.success('Merci pour votre inscription à la newsletter !');
   };
 
   // Get active category SEO data

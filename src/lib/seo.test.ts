@@ -12,6 +12,7 @@ const product: Product = {
   categories: ['Café'],
   effects: ['Énergie'],
   stock: 4,
+  rating: 0,
   specs: [],
 };
 

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { X, Minus, Plus } from 'lucide-react';
+import { X, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import FreeShippingBar from './FreeShippingBar';
 import ProductRecommendations from './ProductRecommendations';
+import { getErrorMessage } from '../lib/errors';
 
 
 export default function CartDrawer() {
@@ -61,9 +62,9 @@ export default function CartDrawer() {
       } else {
         setPromoError(data.error || 'Code invalide');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to validate discount code', err);
-      setPromoError(err.message || 'Erreur de validation');
+      setPromoError(getErrorMessage(err, 'Erreur de validation'));
     } finally {
       setIsValidating(false);
     }
@@ -98,7 +99,7 @@ export default function CartDrawer() {
             className="fixed inset-y-0 right-0 w-full max-w-md bg-bg shadow-2xl z-50 flex flex-col border-l border-ink/10"
           >
             <div className="flex items-center justify-between p-6 border-b border-ink/10">
-              <h2 className="text-xl font-serif tracking-tight">Your Cart</h2>
+              <h2 className="text-xl font-serif tracking-tight">Votre Panier</h2>
               <button onClick={() => setCartOpen(false)} className="p-2 hover:bg-soft-green rounded-full transition-colors text-ink/60 hover:text-ink">
                 <X className="w-5 h-5" />
               </button>
@@ -108,9 +109,9 @@ export default function CartDrawer() {
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
                   <div className="w-16 h-16 rounded-full bg-soft-green flex items-center justify-center">
-                    <ShoppingBagIcon className="w-6 h-6 text-ink/30" />
+                    <ShoppingBag className="w-6 h-6 text-ink/30" />
                   </div>
-                  <p className="text-ink/60">Your cart is empty.</p>
+                  <p className="text-ink/60">Votre panier est vide.</p>
                 </div>
               ) : (
                 <>
@@ -251,23 +252,3 @@ export default function CartDrawer() {
   );
 }
 
-function ShoppingBagIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-      <path d="M3 6h18" />
-      <path d="M16 10a4 4 0 0 1-8 0" />
-    </svg>
-  );
-}

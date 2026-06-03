@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Share2, Check, Minus } from 'lucide-react';
 import { Product } from '../types';
 import { Button } from './ui/Button';
-import OptimizedImage from './OptimizedImage';
+import { OptimizedImage } from './OptimizedImage';
 import { cn } from '../lib/utils';
 import { useStore } from '../store';
+import toast from 'react-hot-toast';
 
 interface ProductComparisonProps {
   isOpen: boolean;
@@ -62,9 +63,8 @@ export default function ProductComparison({ isOpen, onClose }: ProductComparison
         // User cancelled or error
       }
     } else {
-      // Fallback: copier dans le presse-papier
       await navigator.clipboard.writeText(url);
-      alert('Lien copié dans le presse-papier !');
+      toast.success('Lien copié dans le presse-papier !');
     }
   };
 
@@ -214,7 +214,7 @@ export default function ProductComparison({ isOpen, onClose }: ProductComparison
                       <td className="sticky left-0 bg-bg p-4 font-medium">Catégorie</td>
                       {comparisonProducts.map((product) => (
                         <td key={product.id} className="p-4 text-center">
-                          {product.category}
+                          {product.categories?.join(', ') || '—'}
                         </td>
                       ))}
                     </tr>
@@ -317,7 +317,7 @@ export function useProductComparison() {
     setComparisonIds(prev => {
       if (prev.includes(productId)) return prev;
       if (prev.length >= MAX_PRODUCTS) {
-        alert(`Vous pouvez comparer jusqu'à ${MAX_PRODUCTS} produits`);
+        toast(`Maximum ${MAX_PRODUCTS} produits comparables`, { icon: 'ℹ️' });
         return prev;
       }
       const updated = [...prev, productId];

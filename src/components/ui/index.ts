@@ -23,8 +23,8 @@ export type { DialogProps } from './Dialog';
 export { Drawer } from './Drawer';
 export type { DrawerProps, DrawerSide } from './Drawer';
 
-export { Tabs, TabsList, TabTrigger, TabPanel } from './Tabs';
-export type { TabsProps, TabTriggerProps } from './Tabs';
+export { Tabs, TabsList, TabsTrigger as TabTrigger, TabsContent as TabPanel } from './Tabs';
+export type { TabsProps, TabsTriggerProps as TabTriggerProps } from './Tabs';
 
 export { ToastProvider, toast } from './Toast';
 export { Tooltip } from './Tooltip';

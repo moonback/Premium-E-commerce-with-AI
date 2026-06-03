@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
+import type { TargetAndTransition } from 'motion/react';
+
 export type DrawerSide = 'bottom' | 'right' | 'left';
 
 export interface DrawerProps {
@@ -16,7 +18,7 @@ export interface DrawerProps {
   className?: string;
 }
 
-const sideVariants: Record<DrawerSide, { initial: object; animate: object; exit: object; panelClass: string }> = {
+const sideVariants: Record<DrawerSide, { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition; panelClass: string }> = {
   bottom: {
     initial: { y: '100%' },
     animate: { y: 0 },

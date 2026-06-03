@@ -8,7 +8,7 @@ import { layers } from '../../styles/tokens/layers';
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 
 export interface TooltipProps {
-  children: React.ReactElement;
+  children: React.ReactElement<React.HTMLAttributes<HTMLElement>>;
   content: React.ReactNode;
   position?: TooltipPosition;
   delay?: number;
@@ -41,7 +41,7 @@ export function Tooltip({
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showTooltip = () => {
     if (disabled) return;
@@ -69,23 +69,23 @@ export function Tooltip({
     };
   }, []);
 
-  const trigger = React.cloneElement(children, {
+  const trigger = React.cloneElement(children as React.ReactElement<React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement> }>, {
     ref: triggerRef,
-    onMouseEnter: (e: React.MouseEvent) => {
+    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
       showTooltip();
-      children.props.onMouseEnter?.(e);
+      children.props.onMouseEnter?.(e as React.MouseEvent<HTMLElement> & React.MouseEvent<Element, MouseEvent>);
     },
-    onMouseLeave: (e: React.MouseEvent) => {
+    onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
       hideTooltip();
-      children.props.onMouseLeave?.(e);
+      children.props.onMouseLeave?.(e as React.MouseEvent<HTMLElement> & React.MouseEvent<Element, MouseEvent>);
     },
-    onFocus: (e: React.FocusEvent) => {
+    onFocus: (e: React.FocusEvent<HTMLElement>) => {
       showTooltip();
-      children.props.onFocus?.(e);
+      children.props.onFocus?.(e as React.FocusEvent<HTMLElement> & React.FocusEvent<Element>);
     },
-    onBlur: (e: React.FocusEvent) => {
+    onBlur: (e: React.FocusEvent<HTMLElement>) => {
       hideTooltip();
-      children.props.onBlur?.(e);
+      children.props.onBlur?.(e as React.FocusEvent<HTMLElement> & React.FocusEvent<Element>);
     },
     'aria-describedby': isVisible ? 'tooltip' : undefined,
   });

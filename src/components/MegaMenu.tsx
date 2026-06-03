@@ -20,7 +20,7 @@ export default function MegaMenu({ className }: MegaMenuProps) {
   const [menuItems, setMenuItems] = useState<MegaMenuItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchMegaMenu();

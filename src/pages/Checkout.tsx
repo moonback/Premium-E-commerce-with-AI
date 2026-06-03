@@ -139,7 +139,7 @@ export default function Checkout() {
   const next = useCallback(
     (isValid: boolean = true) => {
       if (!isValid) {
-        toast.error("Please complete the required fields before continuing.");
+        toast.error("Veuillez compléter les champs obligatoires avant de continuer.");
         return;
       }
       setStep((s) => Math.min(s + 1, 2));
@@ -164,7 +164,7 @@ export default function Checkout() {
       const orderId = await checkout(paymentIntentId, providerStatus); // creates order after PSP acceptance; paid status is reconciled by webhook
       const orderNumber = useStore.getState().lastOrderNumber;
       resetCheckout();
-      toast.success("✅ Order placed! Thank you for your purchase.");
+      toast.success("✅ Commande validée ! Merci pour votre achat.");
       navigate("/order-confirmation", {
         state: { orderId, orderNumber, total, deliveryMethod, items, status },
       });
@@ -188,7 +188,7 @@ export default function Checkout() {
           to="/"
           className="mt-4 inline-flex text-sm underline underline-offset-4 hover:text-ink/80"
         >
-          ← Back to store
+          ← Retour à la boutique
         </Link>
       </header>
 
@@ -288,7 +288,7 @@ export default function Checkout() {
 
       {/* Mobile Cart Summary Drawer */}
       <Drawer
-        isOpen={isCartDrawerOpen}
+        open={isCartDrawerOpen}
         onClose={() => setIsCartDrawerOpen(false)}
         title="Résumé du panier"
       >

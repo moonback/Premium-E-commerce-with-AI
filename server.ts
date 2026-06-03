@@ -18,6 +18,39 @@ import {
 // Load .env before anything else (tsx doesn't auto-inject env files)
 loadDotenv({ path: ".env" });
 loadDotenv({ path: ".env.local", override: true }); // .env.local takes precedence
+
+// ── Validate required environment variables at startup ────────────────────────
+// Warn (not throw) so the app can still run in dev without all keys configured.
+const REQUIRED_IN_PRODUCTION = [
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'GEMINI_API_KEY',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+] as const;
+
+if (process.env.NODE_ENV === 'production') {
+  const missing = REQUIRED_IN_PRODUCTION.filter(k => !process.env[k] && !process.env[`VITE_${k}`]);
+  if (missing.length > 0) {
+    console.error(JSON.stringify({
+      ts: new Date().toISOString(),
+      level: 'error',
+      message: 'Missing required environment variables — server will not start',
+      missing,
+    }));
+    process.exit(1);
+  }
+} else {
+  const missing = REQUIRED_IN_PRODUCTION.filter(k => !process.env[k] && !process.env[`VITE_${k}`]);
+  if (missing.length > 0) {
+    console.warn(JSON.stringify({
+      ts: new Date().toISOString(),
+      level: 'warn',
+      message: 'Some environment variables are not configured — related features will be disabled',
+      missing,
+    }));
+  }
+}
 import {
   calculatePaymentAmountCents,
   createStripeIdempotencyKey,
@@ -176,6 +209,30 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   const server = createServer(app);
+
+  // ── Security headers (lightweight CSP without helmet dependency) ──────────
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    if (IS_PRODUCTION) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+      res.setHeader(
+        'Content-Security-Policy',
+        [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline'", // Vite injects inline scripts in dev; tighten in prod
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' https://images.unsplash.com data: blob:",
+          "font-src 'self' data:",
+          "connect-src 'self' https://*.supabase.co https://api.stripe.com https://generativelanguage.googleapis.com https://openrouter.ai wss:",
+          "frame-src https://js.stripe.com",
+        ].join('; ')
+      );
+    }
+    next();
+  });
 
   // ── Skills Engine — chargé une fois au démarrage ───────────────────────────
   const skillsEngine = createSkillsEngine(process.cwd());
