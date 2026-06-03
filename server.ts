@@ -992,7 +992,11 @@ async function startServer() {
   ]);
 
   app.post("/api/events", eventsRateLimiter, async (req, res) => {
-    const { event_type, payload } = req.body as { event_type?: string; payload?: Record<string, unknown> };
+    const { event_type, payload, anonymous_id } = req.body as {
+      event_type?: string;
+      payload?: Record<string, unknown>;
+      anonymous_id?: string;
+    };
     if (!event_type || !ALLOWED_EVENT_TYPES.has(event_type)) {
       res.status(400).json({ error: "Invalid or missing event_type" });
       return;
@@ -1007,10 +1011,20 @@ async function startServer() {
         const { data } = await supabaseAuth.auth.getUser(token);
         userId = data.user?.id ?? null;
       }
+
+      // Check max size of properties to protect database
+      const propertiesJson = payload ?? {};
+      const propertiesStr = JSON.stringify(propertiesJson);
+      if (propertiesStr.length > 50000) {
+        res.status(400).json({ error: "Properties payload size limit exceeded (max 50KB)" });
+        return;
+      }
+
       const { error } = await supabaseAdmin.from("events").insert({
-        event_type,
+        event_name: event_type,
         user_id: userId,
-        payload: payload ?? {},
+        anonymous_id: anonymous_id || null,
+        properties: propertiesJson,
         created_at: new Date().toISOString(),
       });
       if (error) {
