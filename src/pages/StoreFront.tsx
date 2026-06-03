@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence, useInView } from 'motion/react';
@@ -98,6 +99,32 @@ export default function StoreFront() {
   const [testimonialIndex, setTestimonialIndex] = useState(0);
   const prefersReducedMotion = useReducedMotion();
   const PRODUCTS_PER_PAGE = 12;
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
+
+  useEffect(() => {
+    if (categoryParam && storeCategories.length > 0) {
+      const match = storeCategories.find(
+        c => c.name.toLowerCase() === categoryParam.toLowerCase()
+      );
+      if (match) {
+        setActiveTab(match.name);
+      }
+    } else if (!categoryParam) {
+      setActiveTab('Tout');
+    }
+  }, [categoryParam, storeCategories]);
+
+  const handleTabChange = (tabName: string) => {
+    setActiveTab(tabName);
+    if (tabName === 'Tout') {
+      searchParams.delete('category');
+    } else {
+      searchParams.set('category', tabName.toLowerCase());
+    }
+    setSearchParams(searchParams);
+  };
 
   const categories = ['Tout', ...storeCategories.filter(c => c.level === 1).map(c => c.name)];
   // Map category name → full Category object for image_url access
@@ -636,7 +663,7 @@ export default function StoreFront() {
             return (
               <button
                 key={cat}
-                onClick={() => setActiveTab(cat)}
+                onClick={() => handleTabChange(cat)}
                 className="relative flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl whitespace-nowrap transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent min-w-[72px]"
                 aria-pressed={isActive}
               >

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { slugify } from './lib/slugify';
 import { Product, CartItem, User, Category, Address, UserRole, CheckoutClientInfo, CheckoutDeliveryMethod, CheckoutInfo, WishlistItem } from './types';
+
 import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
 import { createCheckoutOrder } from './services/checkoutService';
@@ -53,6 +55,7 @@ export interface AppState {
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
   fetchProducts: () => Promise<void>;
   fetchCategories: () => Promise<void>;
+  getCategoryBySlug: (slug: string) => Category | undefined;
   // Address management
   fetchAddresses: () => Promise<void>;
   addAddress: (data: Omit<Address, 'id' | 'user_id'>) => Promise<void>;
@@ -394,6 +397,9 @@ export const useStore = create<AppState>()(
         }
       },
 
+      getCategoryBySlug: (slug: string) => {
+        return get().categories.find((c) => slugify(c.name) === slug);
+      },
 
 
       // ── Wishlist (server-side) ──────────────────────────────────────────────

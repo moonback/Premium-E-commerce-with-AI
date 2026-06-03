@@ -26,6 +26,7 @@ const Contact = lazy(() => import('./pages/Contact'));
 const MentionsLegales = lazy(() => import('./pages/MentionsLegales'));
 const CGV = lazy(() => import('./pages/CGV'));
 const Livraison = lazy(() => import('./pages/Livraison'));
+const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 
 function RouteFallback() {
   return (
@@ -78,6 +79,7 @@ function AppContent() {
               <Route path="/mentions-legales" element={<PageTransition><MentionsLegales /></PageTransition>} />
               <Route path="/cgv" element={<PageTransition><CGV /></PageTransition>} />
               <Route path="/livraison" element={<PageTransition><Livraison /></PageTransition>} />
+              <Route path="/category/:slug" element={<PageTransition><CategoryPage /></PageTransition>} />
             </Route>
             <Route path="/pos" element={<PageTransition><ProtectedRoute role={["staff", "admin"]}><POS /></ProtectedRoute></PageTransition>} />
             <Route path="/admin" element={<PageTransition><ProtectedRoute role="admin"><Admin /></ProtectedRoute></PageTransition>} />

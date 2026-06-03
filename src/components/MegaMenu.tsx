@@ -7,6 +7,7 @@ import { useStore } from '../store';
 import { cn } from '../lib/utils';
 import { layers } from '../styles/tokens/layers';
 import { OptimizedImage } from './OptimizedImage';
+import { slugify } from '../lib/slugify';
 import { supabase } from '../lib/supabase';
 import { MegaMenuItem, MegaMenuLink } from '../types';
 import * as LucideIcons from 'lucide-react';
@@ -130,8 +131,9 @@ export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
     switch (link.type) {
       case 'category': {
         const category = categories.find(c => c.id === link.category_id);
+        const catSlug = category ? slugify(category.name) : (link.label ? slugify(link.label) : '');
         return {
-          url: `/?category=${encodeURIComponent(category?.name || '')}`,
+          url: `/category/${catSlug}`,
           label: link.label || category?.name || '',
           description: link.description,
         };
@@ -332,16 +334,22 @@ export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
                     </div>
 
                     {/* "View all" CTA at bottom of non-highlight columns */}
-                    {!column.highlight && column.links.length > 0 && (
-                      <Link
-                        to="/"
-                        onClick={closeMenu}
-                        className="flex items-center gap-2 mt-4 pt-4 border-t border-ink/10 text-[11px] font-bold uppercase tracking-[0.15em] text-accent hover:text-accent/80 transition-colors group"
-                      >
-                        <span>Voir tout</span>
-                        <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                    )}
+                    {!column.highlight && column.links.length > 0 && (() => {
+                      // Build a "Voir tout" link pointing to the first category link's page, or homepage
+                      const firstCatLink = column.links.find(l => l.type === 'category');
+                      const firstCat = firstCatLink ? categories.find(c => c.id === firstCatLink.category_id) : null;
+                      const viewAllUrl = firstCat ? `/category/${slugify(firstCat.name)}` : '/';
+                      return (
+                        <Link
+                          to={viewAllUrl}
+                          onClick={closeMenu}
+                          className="flex items-center gap-2 mt-4 pt-4 border-t border-ink/10 text-[11px] font-bold uppercase tracking-[0.15em] text-accent hover:text-accent/80 transition-colors group"
+                        >
+                          <span>Voir tout</span>
+                          <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

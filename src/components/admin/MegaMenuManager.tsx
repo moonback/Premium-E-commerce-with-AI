@@ -551,16 +551,22 @@ export default function MegaMenuManager() {
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs font-bold text-ink/60 block mb-1">Type</label>
+                          <label className="text-xs font-bold text-ink/60 block mb-1">Type de lien</label>
                           <select
-                            value={item.category_id?.startsWith('link:') ? 'simple' : 'mega'}
+                            value={
+                              item.category_id?.startsWith('link:') 
+                                ? 'custom' 
+                                : item.category_id 
+                                  ? 'category' 
+                                  : 'none'
+                            }
                             onChange={(e) => {
-                              const type = e.target.value;
+                              const val = e.target.value;
                               setMenuItems(menuItems.map(i => {
                                 if (i.id === item.id) {
                                   return {
                                     ...i,
-                                    category_id: type === 'simple' ? 'link:/' : null
+                                    category_id: val === 'custom' ? 'link:/' : val === 'category' ? (categories[0]?.id || null) : null
                                   };
                                 }
                                 return i;
@@ -568,8 +574,9 @@ export default function MegaMenuManager() {
                             }}
                             className="w-full px-3 py-1 border border-ink/20 rounded-lg text-sm bg-white"
                           >
-                            <option value="mega">Mega Menu (avec colonnes)</option>
-                            <option value="simple">Lien simple (ex: Accueil)</option>
+                            <option value="none">Aucun lien direct (Mega Menu classique)</option>
+                            <option value="category">Catégorie de la BDD</option>
+                            <option value="custom">Lien personnalisé (ex: Accueil)</option>
                           </select>
                         </div>
                         {item.category_id?.startsWith('link:') && (
@@ -588,22 +595,49 @@ export default function MegaMenuManager() {
                             />
                           </div>
                         )}
+                        {item.category_id && !item.category_id.startsWith('link:') && (
+                          <div>
+                            <label className="text-xs font-bold text-ink/60 block mb-1">Catégorie</label>
+                            <select
+                              value={item.category_id}
+                              onChange={(e) =>
+                                setMenuItems(menuItems.map(i =>
+                                  i.id === item.id ? { ...i, category_id: e.target.value } : i
+                                ))
+                              }
+                              className="w-full px-3 py-1 border border-ink/20 rounded-lg text-sm bg-white"
+                            >
+                              <option value="">Sélectionner une catégorie</option>
+                              {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
                     <div>
                       <h3 className="text-lg font-bold flex items-center gap-2">
                         {item.label}
-                        {item.category_id?.startsWith('link:') && (
+                        {item.category_id?.startsWith('link:') ? (
                           <span className="text-xs font-medium px-2 py-0.5 bg-accent/10 text-accent rounded-full normal-case">
-                            Lien simple: {item.category_id.substring(5)}
+                            Lien: {item.category_id.substring(5)}
                           </span>
-                        )}
+                        ) : item.category_id ? (
+                          <span className="text-xs font-medium px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full normal-case">
+                            Catégorie: {categories.find(c => c.id === item.category_id)?.name || 'Inconnue'}
+                          </span>
+                        ) : null}
                       </h3>
                       <p className="text-xs text-ink/50 mt-0.5">
                         {item.category_id?.startsWith('link:')
                           ? 'Redirige directement vers l\'URL'
-                          : `${item.columns ? item.columns.length : 0} colonne${item.columns && item.columns.length > 1 ? 's' : ''}`
+                          : item.category_id
+                            ? `Redirige vers la catégorie + ${item.columns ? item.columns.length : 0} colonne(s)`
+                            : `${item.columns ? item.columns.length : 0} colonne${item.columns && item.columns.length > 1 ? 's' : ''}`
                         }
                       </p>
                     </div>

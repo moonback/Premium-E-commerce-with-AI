@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { ViewingCount, LimitedStockBadge } from '../components/SocialProof';
 import { SecurityBadges, SatisfactionGuarantee } from '../components/TrustBadges';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { slugify } from '../lib/slugify';
 import ErrorMessage, { ErrorMessages, useErrorMessage } from '../components/ErrorMessage';
 
 export default function ProductDetail() {
@@ -42,7 +43,7 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    
+
     // Vérifier le stock
     if (product.stock === 0) {
       showError(
@@ -134,15 +135,28 @@ export default function ProductDetail() {
       />
       <div className="max-w-7xl mx-auto w-full">
         {/* Breadcrumbs */}
-        <Breadcrumbs
-          items={[
-            { label: (product.categories || [])[0] || 'Produits', path: '/' },
-            { label: product.name, path: getProductPath(product) },
-          ]}
-          className="mb-8"
-        />
+        {(() => {
+          const firstCat = (product.categories || [])[0];
+          const catSlug = firstCat ? slugify(firstCat) : null;
+          return (
+            <Breadcrumbs
+              items={[
 
-        <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink/60 hover:text-ink mb-8 transition-colors">
+                ...(firstCat && catSlug ? [{ label: firstCat, path: `/category/${catSlug}` }] : []),
+                { label: product.name, path: getProductPath(product) },
+              ]}
+              className="mb-8"
+            />
+          );
+        })()}
+
+        <Link
+          to={(() => {
+            const firstCat = (product.categories || [])[0];
+            return firstCat ? `/category/${slugify(firstCat)}` : '/';
+          })()}
+          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink/60 hover:text-ink mb-8 transition-colors"
+        >
           <ChevronLeft className="w-4 h-4" /> Retour
         </Link>
 
@@ -178,8 +192,8 @@ export default function ProductDetail() {
                 onClick={handleWishlistToggle}
                 className={cn(
                   "absolute top-8 right-8 p-3 rounded-full transition-all z-20 shadow-lg",
-                  isFavorite 
-                    ? "bg-accent text-white" 
+                  isFavorite
+                    ? "bg-accent text-white"
                     : "glass text-ink hover:bg-bg"
                 )}
                 aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}

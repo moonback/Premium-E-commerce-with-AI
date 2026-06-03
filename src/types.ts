@@ -14,6 +14,7 @@ export type Category = {
   parent_id: string | null;
   level: number;
   image_url?: string | null;
+  description?: string | null;
   seo?: SEOData | null;
 };
 
