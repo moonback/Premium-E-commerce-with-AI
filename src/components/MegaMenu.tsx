@@ -1,8 +1,8 @@
 // src/components/MegaMenu.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, TrendingUp, Sparkles, Tag, Package, FileText, ExternalLink, Link as LinkIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, ArrowRight } from 'lucide-react';
 import { useStore } from '../store';
 import { cn } from '../lib/utils';
 import { layers } from '../styles/tokens/layers';
@@ -13,27 +13,32 @@ import * as LucideIcons from 'lucide-react';
 
 export interface MegaMenuProps {
   className?: string;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
-export default function MegaMenu({ className }: MegaMenuProps) {
+export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
   const { categories, products } = useStore();
   const [menuItems, setMenuItems] = useState<MegaMenuItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchMegaMenu();
   }, []);
 
+  // Notify parent of open/close changes
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
+
   const fetchMegaMenu = async () => {
     if (!supabase) {
-      // Fallback: utiliser les catégories par défaut
       return;
     }
 
     try {
-      // Récupérer les items actifs
       const { data: items, error: itemsError } = await supabase
         .from('mega_menu_items')
         .select('*')
@@ -42,7 +47,6 @@ export default function MegaMenu({ className }: MegaMenuProps) {
 
       if (itemsError) throw itemsError;
 
-      // Pour chaque item, récupérer les colonnes et liens
       const itemsWithData = await Promise.all(
         (items || []).map(async (item) => {
           const { data: columns, error: columnsError } = await supabase
@@ -83,20 +87,31 @@ export default function MegaMenu({ className }: MegaMenuProps) {
     }
   };
 
-  const handleMouseEnter = (itemLabel: string) => {
+  const handleMouseEnter = useCallback((itemLabel: string) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     setActiveCategory(itemLabel);
     setIsOpen(true);
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     timeoutRef.current = setTimeout(() => {
       setIsOpen(false);
       setActiveCategory(null);
-    }, 200);
-  };
+    }, 250);
+  }, []);
+
+  const handleDropdownEnter = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setIsOpen(false);
+    setActiveCategory(null);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -106,7 +121,7 @@ export default function MegaMenu({ className }: MegaMenuProps) {
     };
   }, []);
 
-  // Fallback: utiliser les catégories si pas de mega menu configuré
+  // Fallback: use categories if no mega menu configured
   const mainCategories = menuItems.length > 0
     ? menuItems
     : categories.filter((c) => c.level === 1).map(c => ({
@@ -122,7 +137,7 @@ export default function MegaMenu({ className }: MegaMenuProps) {
 
   const activeItem = menuItems.find(item => item.label === activeCategory);
 
-  // Résoudre les liens (catégorie, produit, etc.)
+  // Resolve links (category, product, etc.)
   const resolveLink = (link: MegaMenuLink): { url: string; label: string; description?: string; image?: string } => {
     switch (link.type) {
       case 'category': {
@@ -158,7 +173,7 @@ export default function MegaMenu({ className }: MegaMenuProps) {
     }
   };
 
-  // Obtenir l'icône Lucide dynamiquement
+  // Get Lucide icon dynamically
   const getIcon = (iconName?: string) => {
     if (!iconName) return null;
     const Icon = (LucideIcons as any)[iconName];
@@ -166,145 +181,171 @@ export default function MegaMenu({ className }: MegaMenuProps) {
   };
 
   return (
-    <nav className={cn('relative', className)} onMouseLeave={handleMouseLeave}>
-      {/* Navigation principale */}
+    <div ref={menuRef} className={cn('relative', className)} onMouseLeave={handleMouseLeave}>
+      {/* Main category navigation — inline buttons */}
       <ul className="flex items-center gap-1">
         {mainCategories.map((item) => (
           <li key={item.id}>
             <button
               onMouseEnter={() => handleMouseEnter(item.label)}
+              onClick={() => {
+                if (activeCategory === item.label && isOpen) {
+                  closeMenu();
+                } else {
+                  handleMouseEnter(item.label);
+                }
+              }}
               className={cn(
-                'flex items-center gap-1 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors rounded-lg',
+                'flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200 rounded-none relative',
                 activeCategory === item.label
-                  ? 'text-ink bg-ink/5'
-                  : 'text-ink/70 hover:text-ink hover:bg-ink/5'
+                  ? 'text-ink'
+                  : 'text-ink/50 hover:text-ink'
               )}
             >
               {item.label}
               <ChevronDown
                 className={cn(
-                  'w-3 h-3 transition-transform',
-                  activeCategory === item.label && 'rotate-180'
+                  'w-3 h-3 transition-transform duration-300',
+                  activeCategory === item.label && isOpen && 'rotate-180'
                 )}
               />
+              {/* Active indicator line */}
+              {activeCategory === item.label && isOpen && (
+                <motion.span
+                  layoutId="mega-menu-indicator"
+                  className="absolute bottom-0 left-2 right-2 h-[2px] bg-accent"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
             </button>
           </li>
         ))}
       </ul>
 
-      {/* Mega Menu Dropdown */}
+      {/* Mega Menu Dropdown — Full width under header */}
       <AnimatePresence>
         {isOpen && activeItem && activeItem.columns.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
-            className="absolute left-0 right-0 top-full mt-2 bg-bg border border-ink/10 rounded-2xl shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute left-1/2 -translate-x-1/2 top-full w-[100vw] bg-white border-t border-ink/10 shadow-2xl overflow-hidden"
             style={{ zIndex: layers.dropdown }}
-            onMouseEnter={() => {
-              if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-              }
-            }}
+            onMouseEnter={handleDropdownEnter}
           >
-            <div className={cn(
-              'grid gap-8 p-8 max-w-7xl mx-auto',
-              activeItem.columns.length === 1 && 'grid-cols-1',
-              activeItem.columns.length === 2 && 'grid-cols-2',
-              activeItem.columns.length === 3 && 'grid-cols-3',
-              activeItem.columns.length >= 4 && 'grid-cols-12'
-            )}>
-              {activeItem.columns.map((column, index) => (
-                <div
-                  key={column.id}
-                  className={cn(
-                    activeItem.columns.length >= 4 && index === 0 && 'col-span-4',
-                    activeItem.columns.length >= 4 && index === 1 && 'col-span-5',
-                    activeItem.columns.length >= 4 && index === 2 && 'col-span-3',
-                    column.highlight && 'bg-gradient-to-br rounded-xl p-6',
-                    column.background_color || (column.highlight && 'from-accent/10 to-accent/5')
-                  )}
-                >
-                  <h3 className={cn(
-                    'text-xs font-bold uppercase tracking-widest mb-4',
-                    column.highlight ? 'text-accent' : 'text-ink/50'
-                  )}>
-                    {column.title}
-                  </h3>
+            <div className="max-w-7xl mx-auto">
+              <div className={cn(
+                'grid gap-8 p-10',
+                activeItem.columns.length === 1 && 'grid-cols-1',
+                activeItem.columns.length === 2 && 'grid-cols-2',
+                activeItem.columns.length === 3 && 'grid-cols-3',
+                activeItem.columns.length >= 4 && 'grid-cols-12'
+              )}>
+                {activeItem.columns.map((column, index) => (
+                  <div
+                    key={column.id}
+                    className={cn(
+                      activeItem.columns.length >= 4 && index === 0 && 'col-span-4',
+                      activeItem.columns.length >= 4 && index === 1 && 'col-span-5',
+                      activeItem.columns.length >= 4 && index === 2 && 'col-span-3',
+                      column.highlight && 'bg-gradient-to-br rounded-xl p-6',
+                      column.background_color || (column.highlight && 'from-accent/10 to-accent/5')
+                    )}
+                  >
+                    {/* Column title — editorial serif style */}
+                    <h3 className={cn(
+                      'text-[11px] font-bold uppercase tracking-[0.2em] mb-5 pb-3 border-b',
+                      column.highlight ? 'text-accent border-accent/20' : 'text-ink/40 border-ink/10'
+                    )}>
+                      {column.title}
+                    </h3>
 
-                  {/* Liens de la colonne */}
-                  <div className="space-y-2">
-                    {column.links.map((link) => {
-                      const resolved = resolveLink(link);
-                      const icon = getIcon(link.icon);
+                    {/* Column links */}
+                    <div className="space-y-1">
+                      {column.links.map((link) => {
+                        const resolved = resolveLink(link);
+                        const icon = getIcon(link.icon);
 
-                      // Si c'est un produit avec image
-                      if (link.type === 'product' && resolved.image) {
+                        // Product with image
+                        if (link.type === 'product' && resolved.image) {
+                          return (
+                            <Link
+                              key={link.id}
+                              to={resolved.url}
+                              className="flex gap-4 p-3 hover:bg-ink/5 rounded-lg transition-all duration-200 group"
+                              onClick={closeMenu}
+                            >
+                              <div className="relative w-20 h-20 flex-shrink-0 bg-soft-green rounded-lg overflow-hidden">
+                                <OptimizedImage
+                                  src={resolved.image}
+                                  alt={resolved.label}
+                                  width={80}
+                                  height={80}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-serif text-sm mb-1 truncate group-hover:text-accent transition-colors">
+                                  {resolved.label}
+                                </h4>
+                                {resolved.description && (
+                                  <p className="text-xs text-ink/50 line-clamp-2 leading-relaxed">
+                                    {resolved.description}
+                                  </p>
+                                )}
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-ink/20 group-hover:text-accent group-hover:translate-x-1 transition-all self-center flex-shrink-0" />
+                            </Link>
+                          );
+                        }
+
+                        // Standard link
                         return (
                           <Link
                             key={link.id}
                             to={resolved.url}
-                            className="flex gap-4 p-3 hover:bg-ink/5 rounded-lg transition-colors group"
-                            onClick={() => setIsOpen(false)}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group',
+                              column.highlight
+                                ? 'hover:bg-white/50'
+                                : 'hover:bg-ink/5'
+                            )}
+                            onClick={closeMenu}
                           >
-                            <div className="relative w-20 h-20 flex-shrink-0 bg-soft-green rounded-lg overflow-hidden">
-                              <OptimizedImage
-                                src={resolved.image}
-                                alt={resolved.label}
-                                width={80}
-                                height={80}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-serif text-sm mb-1 truncate group-hover:text-accent transition-colors">
-                                {resolved.label}
-                              </h4>
+                            {icon && <span className={cn('transition-colors', column.highlight ? 'text-accent' : 'text-ink/40 group-hover:text-accent')}>{icon}</span>}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium group-hover:text-accent transition-colors">{resolved.label}</p>
                               {resolved.description && (
-                                <p className="text-xs text-ink/60 line-clamp-2">
+                                <p className="text-xs text-ink/50 mt-0.5">
                                   {resolved.description}
                                 </p>
                               )}
                             </div>
+                            <ChevronRight className="w-3 h-3 text-ink/20 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                           </Link>
                         );
-                      }
+                      })}
+                    </div>
 
-                      // Lien standard
-                      return (
-                        <Link
-                          key={link.id}
-                          to={resolved.url}
-                          className={cn(
-                            'block px-3 py-2 rounded-lg transition-colors',
-                            column.highlight
-                              ? 'hover:bg-white/50'
-                              : 'hover:bg-ink/5'
-                          )}
-                          onClick={() => setIsOpen(false)}
-                        >
-                          <div className="flex items-center gap-2">
-                            {icon && <span className={column.highlight ? 'text-accent' : 'text-ink/60'}>{icon}</span>}
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold">{resolved.label}</p>
-                              {resolved.description && (
-                                <p className="text-xs text-ink/60 mt-0.5">
-                                  {resolved.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                    {/* "View all" CTA at bottom of non-highlight columns */}
+                    {!column.highlight && column.links.length > 0 && (
+                      <Link
+                        to="/"
+                        onClick={closeMenu}
+                        className="flex items-center gap-2 mt-4 pt-4 border-t border-ink/10 text-[11px] font-bold uppercase tracking-[0.15em] text-accent hover:text-accent/80 transition-colors group"
+                      >
+                        <span>Voir tout</span>
+                        <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+    </div>
   );
 }

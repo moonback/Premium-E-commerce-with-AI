@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useInView } from 'motion/react';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import SEO from '../components/SEO';
 import { buildStoreJsonLd } from '../lib/seo';
@@ -28,7 +28,14 @@ import {
   TrendingUp,
   Mail,
   ArrowRight,
+  ArrowUpRight,
   Quote,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  Globe,
+  Heart,
 } from 'lucide-react';
 
 // ─── Category config ────────────────────────────────────────────────────────
@@ -58,11 +65,37 @@ function getCategoryConfig(name: string) {
   return prefixKey ? CATEGORY_CONFIG[prefixKey] : { icon: Package, accent: 'text-ink/70', bg: 'bg-ink/5' };
 }
 
+// ─── Animated Counter ───────────────────────────────────────────────────────
+function AnimatedCounter({ target, suffix = '', duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true });
+
+  useEffect(() => {
+    if (!isInView) return;
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(start));
+      }
+    }, 16);
+    return () => clearInterval(timer);
+  }, [isInView, target, duration]);
+
+  return <span ref={ref} className="tabular-nums">{count.toLocaleString()}{suffix}</span>;
+}
+
 export default function StoreFront() {
   const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
   const [currentPage, setCurrentPage] = useState(1);
   const [email, setEmail] = useState('');
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
   const prefersReducedMotion = useReducedMotion();
   const PRODUCTS_PER_PAGE = 12;
 
@@ -82,15 +115,26 @@ export default function StoreFront() {
   );
 
   // Reset to page 1 when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchQuery]);
 
   // Featured products (top 4 by rating or newest)
-  // Note: use [...products] to avoid mutating the original array
   const featuredProducts = useMemo(
     () => [...products].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 4),
     [products]
+  );
+
+  // New arrivals (latest products)
+  const newArrivals = useMemo(
+    () => [...products].filter(p => p.isNew).slice(0, 6),
+    [products]
+  );
+
+  // Top categories for editorial section
+  const editorialCategories = useMemo(
+    () => storeCategories.filter(c => c.level === 1).slice(0, 4),
+    [storeCategories]
   );
 
   // Newsletter handler
@@ -101,12 +145,45 @@ export default function StoreFront() {
     toast.success('Merci pour votre inscription à la newsletter !');
   };
 
+  // Testimonials data
+  const testimonials = [
+    {
+      name: 'Sophie Martin',
+      role: 'Cliente fidèle',
+      text: 'Une expérience d\'achat exceptionnelle. La qualité des produits est irréprochable et le service client est remarquable. Je recommande vivement Véridian.',
+      rating: 5,
+      initials: 'SM',
+    },
+    {
+      name: 'Thomas Dubois',
+      role: 'Acheteur régulier',
+      text: 'Je recommande vivement Véridian. Les produits sont élégants, durables et le rapport qualité-prix est excellent. Un vrai coup de cœur.',
+      rating: 5,
+      initials: 'TD',
+    },
+    {
+      name: 'Marie Laurent',
+      role: 'Nouvelle cliente',
+      text: 'Impressionnée par la rapidité de livraison et l\'attention portée aux détails. Une boutique qui se démarque par son excellence.',
+      rating: 5,
+      initials: 'ML',
+    },
+  ];
+
   // Get active category SEO data
   const activeCategoryObj = activeTab !== 'Tout' ? categoryMap[activeTab] : null;
   const categoryTitle = activeTab === 'Tout' ? 'Collection premium e-commerce' : `${activeTab} - Collection Véridian`;
   const categoryDescription = activeTab === 'Tout' 
     ? 'Explorez la collection Véridian : produits premium, recommandations IA et expérience d\'achat élégante.'
     : `Découvrez notre sélection de ${activeTab.toLowerCase()} premium avec livraison rapide et service client exceptionnel.`;
+
+  // Category images for editorial section
+  const categoryImages = [
+    'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800&q=80',
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80',
+    'https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=800&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+  ];
 
   return (
     <div className="bg-bg flex-1">
@@ -122,79 +199,216 @@ export default function StoreFront() {
       {/* Notification de preuve sociale */}
       <RecentActivityNotification />
       
-      <div className="relative w-full h-[60vh] md:h-[80vh] bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04')" }}>
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/70 to-transparent opacity-70"></div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.2 }}
-          className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center pt-20"
-        >
-          <motion.span 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/70 mb-6"
-          >
-            Maison de Qualité
-          </motion.span>
-          <motion.h1 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-6xl md:text-8xl font-light font-serif text-white mb-6 leading-none"
-          >
-            La Collection <br /><span className="italic">Essentielle</span>
-          </motion.h1>
-          <motion.p 
+      {/* ═══════════════════════════════════════════════════════════════════════
+          HERO — Cinematic full-screen
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden">
+        {/* Background image with overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center scale-105 transition-transform duration-[20s]"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&q=80')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/30 to-ink/70" />
+        
+        {/* Content */}
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-lg md:text-xl text-white/80 max-w-2xl font-light mb-6"
+            transition={{ duration: 1.5 }}
+            className="text-center max-w-5xl mx-auto"
           >
-            Découvrez notre sélection de produits intemporels. L'alliance parfaite entre esthétique et utilité.
-          </motion.p>
-          <motion.a 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1 }}
-            href="#collection" 
-            className="group px-8 py-4 bg-white text-ink font-bold uppercase tracking-widest hover:bg-white/90 transition-all flex items-center gap-2"
-          >
-            Explorer la collection
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </motion.a>
-        </motion.div>
-      </div>
+            {/* Subtle top label */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="flex items-center justify-center gap-3 mb-8"
+            >
+              <span className="h-px w-12 bg-white/30" />
+              <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-[0.35em] text-white/60">
+                Maison de Qualité — Depuis 2024
+              </span>
+              <span className="h-px w-12 bg-white/30" />
+            </motion.div>
 
-      {/* ── Trust Badges Section ── */}
+            {/* Main heading */}
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.5 }}
+              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light font-serif text-white mb-6 leading-[0.95]"
+            >
+              L'Art de la
+              <br />
+              <span className="italic text-accent/90">Sélection</span>
+            </motion.h1>
+
+            {/* Subtitle */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="text-base md:text-lg text-white/60 max-w-xl mx-auto mb-10 font-light leading-relaxed"
+            >
+              Des produits d'exception, sélectionnés avec soin pour les esprits exigeants. 
+              L'alliance parfaite entre esthétique et qualité.
+            </motion.p>
+
+            {/* Double CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            >
+              <a
+                href="#collection"
+                className="group px-8 py-4 bg-white text-ink font-semibold text-sm uppercase tracking-[0.15em] hover:bg-white/90 transition-all duration-300 flex items-center gap-2"
+              >
+                Explorer la collection
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </a>
+              <a
+                href="#featured"
+                className="group px-8 py-4 border border-white/30 text-white font-semibold text-sm uppercase tracking-[0.15em] hover:bg-white/10 transition-all duration-300 flex items-center gap-2"
+              >
+                Nos vedettes
+                <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </a>
+            </motion.div>
+
+            {/* Product count */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 1.3 }}
+              className="mt-14 flex items-center justify-center gap-8 text-white/40"
+            >
+              <div className="text-center">
+                <span className="block text-2xl font-serif italic text-white/70">{products.length}+</span>
+                <span className="text-[9px] uppercase tracking-[0.2em]">Produits</span>
+              </div>
+              <span className="w-px h-8 bg-white/20" />
+              <div className="text-center">
+                <span className="block text-2xl font-serif italic text-white/70">{storeCategories.filter(c => c.level === 1).length}</span>
+                <span className="text-[9px] uppercase tracking-[0.2em]">Catégories</span>
+              </div>
+              <span className="w-px h-8 bg-white/20" />
+              <div className="text-center">
+                <span className="block text-2xl font-serif italic text-white/70">4.9</span>
+                <span className="text-[9px] uppercase tracking-[0.2em]">Note client</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Bottom gradient fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-bg to-transparent" />
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          TRUST BADGES — Refined
+      ═══════════════════════════════════════════════════════════════════════ */}
       <TrustBadges />
 
-      
-
-      {/* ── Featured Products Section ── */}
-      {!isLoadingProducts && featuredProducts.length > 0 && (
-        <section className="bg-bg py-20">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          CATEGORIES EN VEDETTE — Magazine editorial grid
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {editorialCategories.length > 0 && (
+        <section className="py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
               whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-center mb-12"
+              className="flex items-end justify-between mb-12"
             >
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <TrendingUp className="w-5 h-5 text-accent" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-ink/70">Sélection</span>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-3 block">Explorer</span>
+                <h2 className="text-3xl md:text-5xl font-light font-serif text-ink">
+                  Nos <span className="italic">Univers</span>
+                </h2>
               </div>
-              <h2 className="text-4xl md:text-5xl font-light font-serif text-ink mb-4">
+              <a
+                href="#collection"
+                className="hidden md:flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50 hover:text-ink transition-colors group"
+              >
+                Tout voir
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </a>
+            </motion.div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {editorialCategories.map((cat, i) => (
+                <motion.a
+                  key={cat.id}
+                  href={`#collection`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveTab(cat.name);
+                    document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+                  whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className={`group relative overflow-hidden cursor-pointer ${
+                    i === 0 ? 'row-span-2 min-h-[300px] md:min-h-[500px]' : 'min-h-[200px] md:min-h-[240px]'
+                  }`}
+                >
+                  {/* Image */}
+                  <div className="absolute inset-0">
+                    <img
+                      src={cat.image_url || categoryImages[i] || categoryImages[0]}
+                      alt={cat.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  </div>
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent group-hover:from-ink/90 transition-all duration-500" />
+                  {/* Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
+                    <h3 className="text-white font-serif text-lg md:text-xl mb-1">{cat.name}</h3>
+                    <div className="flex items-center gap-2 text-white/60 text-[11px] font-medium uppercase tracking-[0.1em] group-hover:text-white/80 transition-colors">
+                      <span>Découvrir</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </motion.a>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          FEATURED PRODUCTS — Top rated
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {!isLoadingProducts && featuredProducts.length > 0 && (
+        <section id="featured" className="bg-white py-20 md:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+              whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-14"
+            >
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <span className="h-px w-8 bg-accent/30" />
+                <TrendingUp className="w-4 h-4 text-accent" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Sélection</span>
+                <span className="h-px w-8 bg-accent/30" />
+              </div>
+              <h2 className="text-3xl md:text-5xl font-light font-serif text-ink mb-4">
                 Produits <span className="italic">Vedettes</span>
               </h2>
-              <p className="text-ink/60 max-w-2xl mx-auto">
-                Découvrez nos articles les plus appréciés, sélectionnés pour leur qualité exceptionnelle
+              <p className="text-ink/50 max-w-lg mx-auto text-sm leading-relaxed">
+                Nos articles les plus appréciés, sélectionnés pour leur qualité exceptionnelle et leur design intemporel
               </p>
             </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
               {featuredProducts.map((product, i) => (
                 <motion.div
                   key={product.id}
@@ -211,72 +425,208 @@ export default function StoreFront() {
         </section>
       )}
 
-      {/* ── Testimonials Section ── */}
-      <section className="bg-white py-20">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          NOTRE SAVOIR-FAIRE — Split layout with animated stats
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Star className="w-5 h-5 text-accent fill-accent" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-ink/70">Témoignages</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-light font-serif text-ink mb-4">
-              Ce que disent <span className="italic">nos clients</span>
-            </h2>
-          </motion.div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left — Image */}
+            <motion.div
+              initial={prefersReducedMotion ? {} : { opacity: 0, x: -30 }}
+              whileInView={prefersReducedMotion ? {} : { opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="relative"
+            >
+              <div className="relative aspect-[4/5] overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80"
+                  alt="Notre savoir-faire"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {/* Floating accent card */}
+              <div className="absolute -bottom-6 -right-6 md:bottom-8 md:-right-8 bg-white p-6 shadow-2xl max-w-[200px]">
+                <p className="text-3xl font-serif italic text-accent mb-1">
+                  <AnimatedCounter target={98} suffix="%" />
+                </p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/50">Clients satisfaits</p>
+              </div>
+            </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Sophie Martin',
-                role: 'Cliente fidèle',
-                text: 'Une expérience d\'achat exceptionnelle. La qualité des produits est irréprochable et le service client est remarquable.',
-                rating: 5,
-              },
-              {
-                name: 'Thomas Dubois',
-                role: 'Acheteur régulier',
-                text: 'Je recommande vivement Véridian. Les produits sont élégants, durables et le rapport qualité-prix est excellent.',
-                rating: 5,
-              },
-              {
-                name: 'Marie Laurent',
-                role: 'Nouvelle cliente',
-                text: 'Impressionnée par la rapidité de livraison et l\'attention portée aux détails. Je reviendrai sans hésiter.',
-                rating: 5,
-              },
-            ].map((testimonial, i) => (
-              <motion.div
-                key={i}
-                initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-                whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="bg-bg p-8 relative group hover:shadow-lg transition-shadow"
-              >
-                <Quote className="absolute top-6 right-6 w-8 h-8 text-ink/5 group-hover:text-ink/10 transition-colors" />
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: testimonial.rating }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 text-accent fill-accent" />
-                  ))}
-                </div>
-                <p className="text-ink/70 mb-6 italic leading-relaxed">{testimonial.text}</p>
+            {/* Right — Content */}
+            <motion.div
+              initial={prefersReducedMotion ? {} : { opacity: 0, x: 30 }}
+              whileInView={prefersReducedMotion ? {} : { opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-4 block">Notre histoire</span>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-light font-serif text-ink mb-6 leading-tight">
+                Le goût de <br className="hidden md:block" />
+                l'<span className="italic">excellence</span>
+              </h2>
+              <p className="text-ink/60 mb-8 leading-relaxed">
+                Depuis notre création, nous avons à cœur de sélectionner les meilleurs produits
+                pour nos clients. Chaque article est choisi avec soin pour garantir une qualité
+                exceptionnelle et un design intemporel qui traverse les tendances.
+              </p>
+
+              {/* Stats grid */}
+              <div className="grid grid-cols-3 gap-6 mb-8 pt-8 border-t border-ink/10">
                 <div>
-                  <p className="font-bold text-sm uppercase tracking-widest">{testimonial.name}</p>
-                  <p className="text-xs text-ink/50 uppercase tracking-wider">{testimonial.role}</p>
+                  <p className="text-2xl md:text-3xl font-serif italic text-ink">
+                    <AnimatedCounter target={5000} suffix="+" />
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/40 mt-1">Clients</p>
                 </div>
-              </motion.div>
-            ))}
+                <div>
+                  <p className="text-2xl md:text-3xl font-serif italic text-ink">
+                    <AnimatedCounter target={150} suffix="+" />
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/40 mt-1">Produits</p>
+                </div>
+                <div>
+                  <p className="text-2xl md:text-3xl font-serif italic text-ink">
+                    <AnimatedCounter target={12} />
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/40 mt-1">Pays</p>
+                </div>
+              </div>
+
+              <a
+                href="#collection"
+                className="group inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink border-b-2 border-ink pb-1 hover:text-accent hover:border-accent transition-colors"
+              >
+                Découvrir notre collection
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </a>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      <main id="collection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 scroll-mt-24">
-        {/* ── Visual category pills ── */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          TESTIMONIALS — Immersive carousel
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="bg-ink py-20 md:py-28 relative overflow-hidden">
+        {/* Decorative background */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl" />
+        
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <motion.div
+            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-14"
+          >
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <span className="h-px w-8 bg-accent/30" />
+              <Star className="w-4 h-4 text-accent fill-accent" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">Témoignages</span>
+              <span className="h-px w-8 bg-accent/30" />
+            </div>
+            <h2 className="text-3xl md:text-5xl font-light font-serif text-white">
+              Ce que disent <span className="italic text-accent/80">nos clients</span>
+            </h2>
+          </motion.div>
+
+          {/* Testimonial card */}
+          <div className="relative">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={testimonialIndex}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.4 }}
+                className="max-w-3xl mx-auto text-center"
+              >
+                {/* Stars */}
+                <div className="flex justify-center gap-1 mb-8">
+                  {Array.from({ length: testimonials[testimonialIndex].rating }).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-accent fill-accent" />
+                  ))}
+                </div>
+
+                {/* Quote */}
+                <Quote className="w-10 h-10 text-accent/20 mx-auto mb-6" />
+                <p className="text-lg md:text-xl text-white/80 mb-10 leading-relaxed font-light italic">
+                  "{testimonials[testimonialIndex].text}"
+                </p>
+
+                {/* Author */}
+                <div className="flex items-center justify-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center text-white font-bold text-sm">
+                    {testimonials[testimonialIndex].initials}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-semibold text-sm">{testimonials[testimonialIndex].name}</p>
+                    <p className="text-white/40 text-xs uppercase tracking-wider">{testimonials[testimonialIndex].role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Nav buttons */}
+            <div className="flex items-center justify-center gap-4 mt-10">
+              <button
+                onClick={() => setTestimonialIndex(i => i === 0 ? testimonials.length - 1 : i - 1)}
+                className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/50 hover:text-white hover:border-white/40 transition-colors"
+                aria-label="Témoignage précédent"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              
+              {/* Dots */}
+              <div className="flex gap-2">
+                {testimonials.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setTestimonialIndex(i)}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      i === testimonialIndex ? 'bg-accent w-6' : 'bg-white/20 hover:bg-white/40'
+                    }`}
+                    aria-label={`Témoignage ${i + 1}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={() => setTestimonialIndex(i => i === testimonials.length - 1 ? 0 : i + 1)}
+                className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/50 hover:text-white hover:border-white/40 transition-colors"
+                aria-label="Témoignage suivant"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          COLLECTION — Product catalogue with category pills
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <main id="collection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 scroll-mt-24">
+        {/* Section header */}
+        <motion.div
+          initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+          whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-12"
+        >
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-3 block">Catalogue</span>
+          <h2 className="text-3xl md:text-5xl font-light font-serif text-ink mb-4">
+            Notre <span className="italic">Collection</span>
+          </h2>
+          <p className="text-ink/50 max-w-lg mx-auto text-sm">
+            Parcourez l'ensemble de nos produits premium, filtrés par catégorie
+          </p>
+        </motion.div>
+
+        {/* Visual category pills */}
         <div className="flex gap-3 mb-12 overflow-x-auto pb-3 scrollbar-hide md:justify-center">
           {categories.map(cat => {
             const { icon: Icon, accent, bg } = getCategoryConfig(cat);
@@ -358,20 +708,20 @@ export default function StoreFront() {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-ink/20 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] border border-ink/15 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Précédent
             </button>
             
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`w-10 h-10 text-xs font-bold uppercase tracking-widest transition-colors ${
+                  className={`w-10 h-10 text-[11px] font-semibold transition-colors ${
                     currentPage === page
                       ? 'bg-ink text-bg'
-                      : 'border border-ink/20 text-ink hover:bg-ink/5'
+                      : 'border border-ink/15 text-ink hover:bg-ink/5'
                   }`}
                 >
                   {page}
@@ -382,7 +732,7 @@ export default function StoreFront() {
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-ink/20 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] border border-ink/15 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Suivant
             </button>
@@ -390,60 +740,78 @@ export default function StoreFront() {
         )}
       </main>
 
-      {/* ── Newsletter Section ── */}
-      <section className="bg-ink text-white py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          NEWSLETTER — Glassmorphism design
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-20 md:py-28 overflow-hidden">
+        {/* Background image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=1920&q=80')" }}
+        />
+        <div className="absolute inset-0 bg-ink/80 backdrop-blur-sm" />
+        
+        <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
             whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Mail className="w-5 h-5 text-accent" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/70">Newsletter</span>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <span className="h-px w-8 bg-accent/30" />
+              <Mail className="w-4 h-4 text-accent" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">Newsletter</span>
+              <span className="h-px w-8 bg-accent/30" />
             </div>
-            <h2 className="text-4xl md:text-5xl font-light font-serif mb-4">
-              Restez <span className="italic">informé</span>
+            <h2 className="text-3xl md:text-5xl font-light font-serif text-white mb-4">
+              Restez <span className="italic text-accent/80">informé</span>
             </h2>
-            <p className="text-white/70 mb-8 max-w-2xl mx-auto">
+            <p className="text-white/50 mb-10 max-w-xl mx-auto text-sm leading-relaxed">
               Inscrivez-vous à notre newsletter pour recevoir nos dernières nouveautés, offres exclusives et conseils style.
             </p>
-            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Votre adresse email"
-                required
-                className="flex-1 px-6 py-4 bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:border-accent transition-colors"
-              />
-              <button
-                type="submit"
-                className="px-8 py-4 bg-accent text-white font-bold uppercase tracking-widest hover:bg-accent/90 transition-colors whitespace-nowrap"
-              >
-                S'inscrire
-              </button>
-            </form>
-            <p className="text-xs text-white/50 mt-4">
-              En vous inscrivant, vous acceptez de recevoir nos communications marketing.
-            </p>
+
+            {/* Glassmorphism form card */}
+            <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-2xl max-w-md mx-auto">
+              <form onSubmit={handleNewsletterSubmit} className="space-y-4">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Votre adresse email"
+                  required
+                  className="w-full px-5 py-3.5 bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-accent/50 transition-colors text-sm rounded-lg"
+                />
+                <button
+                  type="submit"
+                  className="w-full px-6 py-3.5 bg-accent text-white font-semibold text-sm uppercase tracking-[0.15em] hover:bg-accent/90 transition-colors rounded-lg"
+                >
+                  S'inscrire
+                </button>
+              </form>
+              <p className="text-[10px] text-white/30 mt-4">
+                En vous inscrivant, vous acceptez de recevoir nos communications marketing.
+              </p>
+            </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ── Brand Values Section ── */}
-      <section className="bg-bg py-20 border-t border-ink/10">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          BRAND VALUES — Engagements
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="bg-bg py-20 md:py-28 border-t border-ink/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
             whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-14"
           >
-            <h2 className="text-4xl md:text-5xl font-light font-serif text-ink mb-4">
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-3 block">Nos valeurs</span>
+            <h2 className="text-3xl md:text-5xl font-light font-serif text-ink mb-4">
               Nos <span className="italic">Engagements</span>
             </h2>
-            <p className="text-ink/60 max-w-2xl mx-auto">
+            <p className="text-ink/50 max-w-lg mx-auto text-sm">
               Des valeurs qui guident chacune de nos actions
             </p>
           </motion.div>
@@ -474,11 +842,11 @@ export default function StoreFront() {
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 className="text-center group"
               >
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-ink/5 mb-6 group-hover:bg-ink/10 transition-colors">
-                  <value.icon className="w-10 h-10 text-ink" strokeWidth={1.5} />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/8 mb-6 group-hover:bg-accent/15 transition-colors duration-300">
+                  <value.icon className="w-7 h-7 text-accent" strokeWidth={1.5} />
                 </div>
-                <h3 className="text-xl font-bold uppercase tracking-widest mb-4">{value.title}</h3>
-                <p className="text-ink/60 leading-relaxed">{value.desc}</p>
+                <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-3 text-ink">{value.title}</h3>
+                <p className="text-ink/50 text-sm leading-relaxed max-w-xs mx-auto">{value.desc}</p>
               </motion.div>
             ))}
           </div>
