@@ -43,7 +43,7 @@ export const PROFILE_COLUMNS = [
 export const PROFILE_COLUMNS_ADMIN = [
   'id', 'email', 'role', 'address', 'phone', 'loyalty_points',
   'address_line1', 'address_line2', 'city', 'postal_code', 'country',
-  'created_at', 'updated_at',
+  'created_at',
 ].join(',');
 
 // ── Addresses ────────────────────────────────────────────────────────────────
