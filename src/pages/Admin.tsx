@@ -46,7 +46,6 @@ const parseSpecsField = (value: Spec[] | string | undefined): Spec[] => {
 };
 
 export default function Admin() {
-  const syncCatalogToDb = useStore((state) => state.syncCatalogToDb);
   const products = useStore((state) => state.products);
   const categories = useStore((state) => state.categories);
   const fetchProducts = useStore((state) => state.fetchProducts);
@@ -140,7 +139,7 @@ export default function Admin() {
     { 
       label: "Produits Catalogue", 
       value: products.length.toString(), 
-      change: products.length > 0 ? "Synchronisé" : "Sync requis" 
+      change: products.length > 0 ? "En ligne" : "Aucun" 
     }
   ];
 
@@ -148,8 +147,6 @@ export default function Admin() {
     if (activeTab === 'Products') {
       setEditingProduct({});
       setIsEditing(true);
-    } else {
-      syncCatalogToDb();
     }
   };
 

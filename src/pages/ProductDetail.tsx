@@ -21,7 +21,6 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Sticky CTA — all hooks must be declared before any early return
   const addBtnRef = useRef<HTMLButtonElement>(null);
@@ -119,16 +118,7 @@ export default function ProductDetail() {
 
   const isFavorite = wishlist.some(w => w.product_id === product.id);
 
-  // Mocks pour les nouvelles fonctionnalités
-  const mockGallery = [
-    product.image,
-    "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=600&q=80"
-  ];
-
   const suggestedProducts = products.filter(p => p.id !== product.id).slice(0, 3);
-
-
 
   return (
     <div className="flex-1 bg-bg px-4 sm:px-6 lg:px-8 py-12 flex flex-col">
@@ -178,7 +168,7 @@ export default function ProductDetail() {
               className="relative aspect-square md:aspect-[4/5] bg-soft-green rounded-t-full overflow-hidden"
             >
               <img
-                src={mockGallery[activeImageIndex]}
+                src={product.image}
                 alt={product.name}
                 className="w-full h-full object-cover transition-all duration-500"
               />
@@ -200,22 +190,6 @@ export default function ProductDetail() {
                 N°{product.id.replace('prod_', '').padStart(3, '0')}
               </div>
             </motion.div>
-
-            {/* Miniatures */}
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
-              {mockGallery.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveImageIndex(idx)}
-                  className={cn(
-                    "relative w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 transition-all",
-                    activeImageIndex === idx ? "border-ink" : "border-transparent opacity-60 hover:opacity-100"
-                  )}
-                >
-                  <img src={img} alt={`Vue ${idx + 1}`} className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
           </div>
 
           <motion.div

@@ -43,8 +43,7 @@ function getActionConfig(activeTab: string): ActionConfig {
   switch (activeTab) {
     case 'Products':  return { icon: Plus,           label: 'Nouveau Produit',      variant: 'primary' };
     case 'Shipping':  return { icon: Truck,          label: 'Ajouter transporteur', variant: 'primary' };
-    case 'Settings':  return { icon: Settings,       label: '',                     variant: 'secondary', hidden: true };
-    default:          return { icon: DatabaseBackup, label: 'Sync Catalogue',       variant: 'secondary' };
+    default:          return { icon: Settings,       label: '',                     variant: 'secondary', hidden: true };
   }
 }
 

@@ -121,19 +121,7 @@ export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
     };
   }, []);
 
-  // Fallback: use categories if no mega menu configured
-  const mainCategories = menuItems.length > 0
-    ? menuItems
-    : categories.filter((c) => c.level === 1).map(c => ({
-        id: c.id,
-        label: c.name,
-        category_id: c.id,
-        columns: [],
-        is_active: true,
-        order: 0,
-        created_at: '',
-        updated_at: '',
-      }));
+  const mainCategories = menuItems;
 
   const activeItem = menuItems.find(item => item.label === activeCategory);
 
@@ -184,42 +172,57 @@ export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
     <div ref={menuRef} className={cn('relative', className)} onMouseLeave={handleMouseLeave}>
       {/* Main category navigation — inline buttons */}
       <ul className="flex items-center gap-1">
-        {mainCategories.map((item) => (
-          <li key={item.id}>
-            <button
-              onMouseEnter={() => handleMouseEnter(item.label)}
-              onClick={() => {
-                if (activeCategory === item.label && isOpen) {
-                  closeMenu();
-                } else {
-                  handleMouseEnter(item.label);
-                }
-              }}
-              className={cn(
-                'flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200 rounded-none relative',
-                activeCategory === item.label
-                  ? 'text-ink'
-                  : 'text-ink/50 hover:text-ink'
+        {mainCategories.map((item) => {
+          const isSimpleLink = item.category_id?.startsWith('link:');
+          const linkUrl = isSimpleLink ? item.category_id.substring(5) : null;
+
+          return (
+            <li key={item.id}>
+              {isSimpleLink && linkUrl ? (
+                <Link
+                  to={linkUrl}
+                  onClick={closeMenu}
+                  className="flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50 hover:text-ink transition-all duration-200 rounded-none relative"
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <button
+                  onMouseEnter={() => handleMouseEnter(item.label)}
+                  onClick={() => {
+                    if (activeCategory === item.label && isOpen) {
+                      closeMenu();
+                    } else {
+                      handleMouseEnter(item.label);
+                    }
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200 rounded-none relative',
+                    activeCategory === item.label
+                      ? 'text-ink'
+                      : 'text-ink/50 hover:text-ink'
+                  )}
+                >
+                  {item.label}
+                  <ChevronDown
+                    className={cn(
+                      'w-3 h-3 transition-transform duration-300',
+                      activeCategory === item.label && isOpen && 'rotate-180'
+                    )}
+                  />
+                  {/* Active indicator line */}
+                  {activeCategory === item.label && isOpen && (
+                    <motion.span
+                      layoutId="mega-menu-indicator"
+                      className="absolute bottom-0 left-2 right-2 h-[2px] bg-accent"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </button>
               )}
-            >
-              {item.label}
-              <ChevronDown
-                className={cn(
-                  'w-3 h-3 transition-transform duration-300',
-                  activeCategory === item.label && isOpen && 'rotate-180'
-                )}
-              />
-              {/* Active indicator line */}
-              {activeCategory === item.label && isOpen && (
-                <motion.span
-                  layoutId="mega-menu-indicator"
-                  className="absolute bottom-0 left-2 right-2 h-[2px] bg-accent"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       {/* Mega Menu Dropdown — Full width under header */}

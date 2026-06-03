@@ -12,65 +12,7 @@ function normalizeUserRole(role: unknown): UserRole {
   return typeof role === 'string' && USER_ROLES.includes(role as UserRole) ? (role as UserRole) : 'customer';
 }
 
-// Initial Seed DB for testing/syncing
-export const SEED_PRODUCTS: Product[] = [
-  {
-    id: "prod_1",
-    name: "T-Shirt Minimaliste",
-    description: "Un t-shirt en coton bio avec une coupe parfaite. Conçu pour le confort au quotidien.",
-    price: 35.0,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab",
-    categories: ["Vêtements"],
-    effects: ["Coton bio", "Coupe droite", "Confortable"],
-    stock: 120,
-    specs: [
-      { title: "Allergènes", content: "Contient des traces de fruits à coque." },
-      { title: "Conseils de dégustation", content: "Laver avant usage." },
-      { title: "Valeurs nutritionnelles", content: "100 kcal pour 100g." }
-    ]
-  },
-  {
-    id: "prod_2",
-    name: "Sacoche en Cuir",
-    description: "Sacoche artisanale en cuir véritable. Pratique et élégante pour vos déplacements.",
-    price: 110.0,
-    image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa",
-    categories: ["Accessoires"],
-    effects: ["Cuir", "Artisanal", "Durable"],
-    stock: 30,
-    specs: [
-      { title: "Allergènes", content: "Cuir véritable, peut contenir des résidus de tannage." },
-      { title: "Conseils d'entretien", content: "Essuyer avec un chiffon sec." }
-    ]
-  },
-  {
-    id: "prod_3",
-    name: "Tasse en Céramique",
-    description: "Tasse façonnée à la main. Idéale pour le thé ou le café du matin.",
-    price: 18.0,
-    image: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d",
-    categories: ["Maison"],
-    effects: ["Céramique", "Fait main", "Minimaliste"],
-    stock: 50,
-    specs: [
-      { title: "Matériau", content: "Céramique émaillée, sans plomb." }
-    ]
-  },
-  {
-    id: "prod_4",
-    name: "Gourde Isotherme",
-    description: "Gourde en acier inoxydable. Garde vos boissons chaudes ou froides pendant des heures.",
-    price: 25.0,
-    image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8",
-    categories: ["Accessoires"],
-    effects: ["Inox", "Isotherme", "Écologique"],
-    stock: 85,
-    specs: [
-      { title: "Matériau", content: "Acier inoxydable 316L, sans BPA." },
-      { title: "Capacité", content: "750ml, étanche." }
-    ]
-  }
-];
+
 
 export interface AppState {
   checkoutInfo: CheckoutInfo;
@@ -111,7 +53,6 @@ export interface AppState {
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
   fetchProducts: () => Promise<void>;
   fetchCategories: () => Promise<void>;
-  syncCatalogToDb: () => Promise<void>;
   // Address management
   fetchAddresses: () => Promise<void>;
   addAddress: (data: Omit<Address, 'id' | 'user_id'>) => Promise<void>;
@@ -453,21 +394,7 @@ export const useStore = create<AppState>()(
         }
       },
 
-      syncCatalogToDb: async () => {
-        if (!supabase) {
-          toast.error('Supabase non configuré.');
-          return;
-        }
-        try {
-          const { error } = await supabase.from('products').upsert(SEED_PRODUCTS);
-          if (error) throw error;
-          toast.success('Catalogue synchronisé avec succès !');
-          get().fetchProducts();
-        } catch (err: unknown) {
-          console.error("Error syncing products:", err);
-          toast.error('Erreur de synchronisation : ' + getErrorMessage(err));
-        }
-      },
+
 
       // ── Wishlist (server-side) ──────────────────────────────────────────────
       fetchWishlist: async () => {

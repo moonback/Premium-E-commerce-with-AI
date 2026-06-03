@@ -15,6 +15,9 @@ import {
   Package,
   FileText,
   ExternalLink,
+  Copy,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
@@ -148,6 +151,131 @@ export default function MegaMenuManager() {
     } catch (error) {
       console.error('Error deleting menu item:', error);
       toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const duplicateMenuItem = async (item: MegaMenuItem) => {
+    if (!supabase) return;
+    try {
+      // 1. Créer le nouvel item de menu
+      const { data: newItem, error: itemError } = await supabase
+        .from('mega_menu_items')
+        .insert({
+          label: `${item.label} (Copie)`,
+          category_id: item.category_id || null,
+          is_active: item.is_active,
+          order: menuItems.length,
+        })
+        .select()
+        .single();
+
+      if (itemError) throw itemError;
+
+      const duplicatedColumns: MegaMenuColumn[] = [];
+
+      // 2. Parcourir et dupliquer chaque colonne et ses liens
+      if (item.columns && item.columns.length > 0) {
+        for (const col of item.columns) {
+          const { data: newCol, error: colError } = await supabase
+            .from('mega_menu_columns')
+            .insert({
+              menu_item_id: newItem.id,
+              title: col.title,
+              order: col.order,
+              highlight: col.highlight,
+              background_color: col.background_color,
+            })
+            .select()
+            .single();
+
+          if (colError) throw colError;
+
+          const duplicatedLinks: MegaMenuLink[] = [];
+
+          if (col.links && col.links.length > 0) {
+            for (const link of col.links) {
+              const { data: newLink, error: linkError } = await supabase
+                .from('mega_menu_links')
+                .insert({
+                  column_id: newCol.id,
+                  label: link.label,
+                  type: link.type,
+                  url: link.url,
+                  category_id: link.category_id,
+                  product_id: link.product_id,
+                  icon: link.icon,
+                  description: link.description,
+                  image_url: link.image_url,
+                  order: link.order,
+                })
+                .select()
+                .single();
+
+              if (linkError) throw linkError;
+              duplicatedLinks.push(newLink as MegaMenuLink);
+            }
+          }
+
+          duplicatedColumns.push({
+            ...newCol,
+            links: duplicatedLinks,
+          } as MegaMenuColumn);
+        }
+      }
+
+      setMenuItems([
+        ...menuItems,
+        {
+          ...newItem,
+          columns: duplicatedColumns,
+        } as MegaMenuItem,
+      ]);
+      toast.success('Menu dupliqué avec succès');
+    } catch (error) {
+      console.error('Error duplicating menu item:', error);
+      toast.error('Erreur lors de la duplication du menu');
+    }
+  };
+
+  const moveMenuItem = async (index: number, direction: 'up' | 'down') => {
+    if (!supabase) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= menuItems.length) return;
+
+    const itemA = menuItems[index];
+    const itemB = menuItems[targetIndex];
+
+    try {
+      // Swapper les ordres dans Supabase
+      const { error: errorA } = await supabase
+        .from('mega_menu_items')
+        .update({ order: itemB.order })
+        .eq('id', itemA.id);
+
+      if (errorA) throw errorA;
+
+      const { error: errorB } = await supabase
+        .from('mega_menu_items')
+        .update({ order: itemA.order })
+        .eq('id', itemB.id);
+
+      if (errorB) throw errorB;
+
+      // Mettre à jour l'état local
+      const newItems = [...menuItems];
+      const tempOrder = itemA.order;
+      itemA.order = itemB.order;
+      itemB.order = tempOrder;
+      
+      newItems[index] = itemB;
+      newItems[targetIndex] = itemA;
+
+      newItems.sort((a, b) => a.order - b.order);
+      setMenuItems(newItems);
+      toast.success('Ordre mis à jour');
+    } catch (error) {
+      console.error('Error moving menu item:', error);
+      toast.error('Erreur lors du changement d\'ordre');
     }
   };
 
@@ -364,16 +492,36 @@ export default function MegaMenuManager() {
       </div>
 
       <div className="space-y-4">
-        {menuItems.map((item) => (
+        {menuItems.map((item, index) => (
           <div
             key={item.id}
             className="bg-white border border-ink/10 rounded-xl overflow-hidden"
           >
             {/* Header du menu item */}
             <div className="flex items-center gap-3 p-4 bg-ink/5">
-              <button className="cursor-grab text-ink/40 hover:text-ink">
-                <GripVertical className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button className="cursor-grab text-ink/40 hover:text-ink mr-1">
+                  <GripVertical className="w-5 h-5" />
+                </button>
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => moveMenuItem(index, 'up')}
+                    disabled={index === 0}
+                    className="p-0.5 text-ink/40 hover:text-ink hover:bg-ink/5 rounded disabled:opacity-20 disabled:pointer-events-none"
+                    title="Monter"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => moveMenuItem(index, 'down')}
+                    disabled={index === menuItems.length - 1}
+                    className="p-0.5 text-ink/40 hover:text-ink hover:bg-ink/5 rounded disabled:opacity-20 disabled:pointer-events-none"
+                    title="Descendre"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
 
               <button
                 onClick={() => toggleExpanded(item.id)}
@@ -386,23 +534,80 @@ export default function MegaMenuManager() {
                 )}
                 <div className="flex-1">
                   {editingItem === item.id ? (
-                    <input
-                      type="text"
-                      value={item.label}
-                      onChange={(e) =>
-                        setMenuItems(menuItems.map(i =>
-                          i.id === item.id ? { ...i, label: e.target.value } : i
-                        ))
-                      }
-                      className="px-3 py-1 border border-ink/20 rounded-lg text-sm font-bold"
-                      autoFocus
-                    />
+                    <div className="flex flex-col gap-2 p-2 bg-ink/5 rounded-lg border border-ink/10 mt-2">
+                      <div>
+                        <label className="text-xs font-bold text-ink/60 block mb-1">Nom du menu</label>
+                        <input
+                          type="text"
+                          value={item.label}
+                          onChange={(e) =>
+                            setMenuItems(menuItems.map(i =>
+                              i.id === item.id ? { ...i, label: e.target.value } : i
+                            ))
+                          }
+                          className="w-full px-3 py-1 border border-ink/20 rounded-lg text-sm font-bold bg-white"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs font-bold text-ink/60 block mb-1">Type</label>
+                          <select
+                            value={item.category_id?.startsWith('link:') ? 'simple' : 'mega'}
+                            onChange={(e) => {
+                              const type = e.target.value;
+                              setMenuItems(menuItems.map(i => {
+                                if (i.id === item.id) {
+                                  return {
+                                    ...i,
+                                    category_id: type === 'simple' ? 'link:/' : null
+                                  };
+                                }
+                                return i;
+                              }));
+                            }}
+                            className="w-full px-3 py-1 border border-ink/20 rounded-lg text-sm bg-white"
+                          >
+                            <option value="mega">Mega Menu (avec colonnes)</option>
+                            <option value="simple">Lien simple (ex: Accueil)</option>
+                          </select>
+                        </div>
+                        {item.category_id?.startsWith('link:') && (
+                          <div>
+                            <label className="text-xs font-bold text-ink/60 block mb-1">URL du lien</label>
+                            <input
+                              type="text"
+                              value={item.category_id.substring(5)}
+                              onChange={(e) =>
+                                setMenuItems(menuItems.map(i =>
+                                  i.id === item.id ? { ...i, category_id: `link:${e.target.value}` } : i
+                                ))
+                              }
+                              className="w-full px-3 py-1 border border-ink/20 rounded-lg text-sm bg-white"
+                              placeholder="/"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ) : (
-                    <h3 className="text-lg font-bold">{item.label}</h3>
+                    <div>
+                      <h3 className="text-lg font-bold flex items-center gap-2">
+                        {item.label}
+                        {item.category_id?.startsWith('link:') && (
+                          <span className="text-xs font-medium px-2 py-0.5 bg-accent/10 text-accent rounded-full normal-case">
+                            Lien simple: {item.category_id.substring(5)}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-xs text-ink/50 mt-0.5">
+                        {item.category_id?.startsWith('link:')
+                          ? 'Redirige directement vers l\'URL'
+                          : `${item.columns ? item.columns.length : 0} colonne${item.columns && item.columns.length > 1 ? 's' : ''}`
+                        }
+                      </p>
+                    </div>
                   )}
-                  <p className="text-xs text-ink/50 mt-0.5">
-                    {item.columns.length} colonne{item.columns.length > 1 ? 's' : ''}
-                  </p>
                 </div>
               </button>
 
@@ -420,10 +625,18 @@ export default function MegaMenuManager() {
                 {item.is_active ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
               </button>
 
+              <button
+                onClick={() => duplicateMenuItem(item)}
+                className="p-2 text-ink/60 hover:bg-ink/5 rounded-lg transition-colors"
+                title="Dupliquer"
+              >
+                <Copy className="w-5 h-5" />
+              </button>
+
               {editingItem === item.id ? (
                 <button
                   onClick={() => {
-                    updateMenuItem(item.id, { label: item.label });
+                    updateMenuItem(item.id, { label: item.label, category_id: item.category_id });
                     setEditingItem(null);
                   }}
                   className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
