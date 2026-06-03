@@ -42,12 +42,14 @@ interface PaymentFormProps {
   totalAmount?: number;
   customerName?: string;
   customerEmail?: string;
+  /** Cart items — shapes are normalized server-side; client price is ignored */
   items?: PaymentFormItem[];
   checkoutData?: {
     clientInfo?: Record<string, string>;
     deliveryMethod?: string;
   };
   checkoutAttemptId?: string;
+  discountCode?: string;
 }
 
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
@@ -93,6 +95,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   items = [],
   checkoutData,
   checkoutAttemptId: externalAttemptId,
+  discountCode,
 }) => {
   const internalAttemptIdRef = useRef(
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -130,6 +133,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           currency: "eur",
           customer: { name: customerName, email: customerEmail },
           checkoutData,
+          discountCode,
         }),
       });
 
@@ -197,7 +201,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       stripeRef.current = null;
       setIsStripeReady(false);
     };
-  }, [customerEmail, customerName, items, totalAmount, checkoutData, checkoutAttemptId]);
+  }, [customerEmail, customerName, items, totalAmount, checkoutData, checkoutAttemptId, discountCode]);
 
   useEffect(() => setName(customerName), [customerName]);
   useEffect(() => setEmail(customerEmail), [customerEmail]);

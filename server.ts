@@ -59,9 +59,14 @@ import {
   normalizeCheckoutAttemptId,
   toPaymentStatus,
   toCheckoutAttemptStatus,
+  validateWebhookAmountCents,
+  validateWebhookCurrency,
+  validateDiscount,
+  normalizePaymentItems,
 } from "./src/services/paymentSecurity";
 import type { Request, Response, NextFunction } from "express";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
+import { MemoryStore, SupabaseStore, rateLimiter, type RateLimitStore } from "./src/middleware/rateLimit";
 
 const LIVE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const LIVE_MAX_CONNECTIONS_PER_WINDOW = 5;
@@ -81,6 +86,8 @@ type StripePaymentIntent = {
   id: string;
   client_secret?: string;
   status: string;
+  /** Amount in cents as stored by Stripe */
+  amount?: number;
 };
 
 type LiveRateRecord = {
@@ -211,24 +218,44 @@ async function startServer() {
   const PORT = 3000;
   const server = createServer(app);
 
-  // ── Security headers (lightweight CSP without helmet dependency) ──────────
+  // ── Security headers + per-request CSP nonce (TASK-P0-005) ──────────────
+  // In production: strict CSP without unsafe-inline.
+  //   - script-src: only 'self' + Stripe.js + per-request nonce (no unsafe-inline)
+  //   - object-src, base-uri, frame-ancestors: locked down
+  //   - connect-src: explicit allowlist including Stripe, Supabase, Gemini
+  // In development: Vite HMR requires unsafe-inline/unsafe-eval — not restricted.
   app.use((_req: Request, res: Response, next: NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     if (IS_PRODUCTION) {
-      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+      // Per-request nonce — injected into served HTML so any remaining
+      // inline scripts (e.g. service worker registration) can be whitelisted
+      const nonce = randomBytes(16).toString('base64');
+      res.locals.cspNonce = nonce;
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
       res.setHeader(
         'Content-Security-Policy',
         [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline'", // Vite injects inline scripts in dev; tighten in prod
+          // No unsafe-inline — Vite production builds emit only external JS files.
+          // Nonce is provided for any inline scripts that legitimately need one.
+          `script-src 'self' 'nonce-${nonce}' https://js.stripe.com`,
+          // Styles may include Stripe Payment Element inline styles — unsafe-inline required
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' https://images.unsplash.com data: blob:",
           "font-src 'self' data:",
-          "connect-src 'self' https://*.supabase.co https://api.stripe.com https://generativelanguage.googleapis.com https://openrouter.ai wss:",
-          "frame-src https://js.stripe.com",
+          // Stripe requires api.stripe.com + js.stripe.com in connect-src
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://js.stripe.com https://generativelanguage.googleapis.com https://openrouter.ai wss:",
+          // Stripe Payment Element renders in iframes from js.stripe.com and hooks.stripe.com
+          "frame-src https://js.stripe.com https://hooks.stripe.com",
+          // Prevent plugin/Flash injection
+          "object-src 'none'",
+          // Prevent base-tag hijacking
+          "base-uri 'self'",
+          // Prevent clickjacking via embedding (belt-and-suspenders with X-Frame-Options)
+          "frame-ancestors 'self'",
         ].join('; ')
       );
     }
@@ -257,6 +284,72 @@ async function startServer() {
       auth: { persistSession: false, autoRefreshToken: false },
     })
     : null;
+
+  // ── Rate Limiting (TASK-P0-006) ───────────────────────────────────────────
+  const rateLimitBackend = process.env.RATE_LIMIT_BACKEND || (supabaseAdmin ? "supabase" : "memory");
+  const rateLimitStore: RateLimitStore =
+    rateLimitBackend === "supabase" && supabaseAdmin
+      ? new SupabaseStore(supabaseAdmin)
+      : new MemoryStore();
+
+  const limitPaymentsMax = Number(process.env.RATE_LIMIT_PAYMENTS_LIMIT ?? 5);
+  const limitPaymentsWindow = Number(process.env.RATE_LIMIT_PAYMENTS_WINDOW_MS ?? 60 * 1000);
+
+  const limitEventsMax = Number(process.env.RATE_LIMIT_EVENTS_LIMIT ?? 60);
+  const limitEventsWindow = Number(process.env.RATE_LIMIT_EVENTS_WINDOW_MS ?? 60 * 1000);
+
+  const limitSearchMax = Number(process.env.RATE_LIMIT_SEARCH_LIMIT ?? 30);
+  const limitSearchWindow = Number(process.env.RATE_LIMIT_SEARCH_WINDOW_MS ?? 60 * 1000);
+
+  const limitEnhanceMax = Number(process.env.RATE_LIMIT_ENHANCE_LIMIT ?? 10);
+  const limitEnhanceWindow = Number(process.env.RATE_LIMIT_ENHANCE_WINDOW_MS ?? 60 * 1000);
+
+  const limitVectorizeMax = Number(process.env.RATE_LIMIT_VECTORIZE_LIMIT ?? 10);
+  const limitVectorizeWindow = Number(process.env.RATE_LIMIT_VECTORIZE_WINDOW_MS ?? 60 * 1000);
+
+  const paymentsRateLimiter = rateLimiter({
+    windowMs: limitPaymentsWindow,
+    max: limitPaymentsMax,
+    prefix: "payments",
+    store: rateLimitStore,
+    message: "Trop de tentatives de paiement. Veuillez réessayer dans une minute.",
+    log,
+  });
+
+  const eventsRateLimiter = rateLimiter({
+    windowMs: limitEventsWindow,
+    max: limitEventsMax,
+    prefix: "events",
+    store: rateLimitStore,
+    log,
+  });
+
+  const searchRateLimiter = rateLimiter({
+    windowMs: limitSearchWindow,
+    max: limitSearchMax,
+    prefix: "search",
+    store: rateLimitStore,
+    message: "Trop de recherches de produits. Veuillez ralentir.",
+    log,
+  });
+
+  const enhanceRateLimiter = rateLimiter({
+    windowMs: limitEnhanceWindow,
+    max: limitEnhanceMax,
+    prefix: "enhance",
+    store: rateLimitStore,
+    message: "Trop de demandes d'amélioration de description. Veuillez patienter.",
+    log,
+  });
+
+  const vectorizeRateLimiter = rateLimiter({
+    windowMs: limitVectorizeWindow,
+    max: limitVectorizeMax,
+    prefix: "vectorize",
+    store: rateLimitStore,
+    message: "Trop de demandes de vectorisation. Veuillez patienter.",
+    log,
+  });
 
   app.post("/api/payments/webhook", express.raw({ type: "application/json" }), async (req, res) => {
     if (!stripeWebhookSecret) {
@@ -332,6 +425,86 @@ async function startServer() {
 
         // ── Handle payment outcomes ───────────────────────────────────────
         if (event.type === 'payment_intent.succeeded') {
+          // ── Validate amount and currency ────────────────────────────────
+          let order: any = null;
+          if (orderId) {
+            const { data, error: orderFetchError } = await supabaseAdmin
+              .from("orders")
+              .select("total, payment_status, discount_code")
+              .eq("id", orderId)
+              .single();
+
+            if (orderFetchError || !data) {
+              log('error', 'webhook_order_fetch_failed', { requestId, orderId, error: orderFetchError?.message });
+              res.status(400).json({ error: "Linked order not found" });
+              return;
+            }
+            order = data;
+
+            const stripeAmount = event.data?.object?.amount_received;
+            const stripeCurrency = event.data?.object?.currency;
+            const expectedAmountCents = Math.round(Number(order.total) * 100);
+
+            const isAmountValid = validateWebhookAmountCents(stripeAmount, expectedAmountCents);
+            const isCurrencyValid = validateWebhookCurrency(stripeCurrency, 'eur');
+
+            if (!isAmountValid || !isCurrencyValid) {
+              log('error', 'payment_discrepancy_detected', {
+                requestId,
+                paymentIntentId,
+                orderId,
+                stripeAmount,
+                stripeCurrency,
+                expectedAmountCents,
+              });
+
+              // Write to audit_events
+              const action = !isAmountValid ? 'stripe_amount_mismatch' : 'stripe_currency_mismatch';
+              await supabaseAdmin.from("audit_events").insert({
+                action,
+                entity_type: 'order',
+                entity_id: orderId,
+                before: { total: order.total, currency: 'EUR', payment_status: order.payment_status },
+                after: { amount_received: stripeAmount, currency: stripeCurrency, payment_intent_id: paymentIntentId },
+                created_at: new Date().toISOString(),
+              });
+
+              // Mark order and payments as failed
+              await supabaseAdmin
+                .from("orders")
+                .update({ payment_status: 'failed' as const })
+                .eq("id", orderId);
+
+              await supabaseAdmin
+                .from("payments")
+                .update({ status: 'failed' as const, raw_provider_status: 'failed_mismatch' })
+                .eq("provider", "stripe")
+                .eq("provider_payment_id", paymentIntentId);
+
+              // Release stock reservations
+              if (checkoutAttemptId) {
+                await supabaseAdmin.rpc('release_stock_reservations', {
+                  p_checkout_attempt_id: checkoutAttemptId,
+                  p_new_status: 'failed',
+                });
+              }
+
+              res.status(400).json({ error: "Payment amount or currency mismatch" });
+              return;
+            }
+          }
+
+          // Increment discount usage if discount_code is present
+          if (orderId && order && order.discount_code) {
+            const { error: incError } = await supabaseAdmin
+              .rpc('increment_discount_usage', { p_code: order.discount_code });
+            if (incError) {
+              log('error', 'webhook_increment_discount_failed', { requestId, orderId, code: order.discount_code, error: incError.message });
+            } else {
+              log('info', 'webhook_discount_incremented', { requestId, orderId, code: order.discount_code });
+            }
+          }
+
           // Consume stock reservations (decrement real stock)
           if (checkoutAttemptId) {
             const { error: consumeError } = await supabaseAdmin
@@ -453,7 +626,64 @@ async function startServer() {
   });
 
 
-  app.post("/api/payments/create-intent", async (req, res) => {
+  app.post("/api/discounts/validate", async (req, res) => {
+    if (!supabaseAdmin) {
+      res.status(503).json({ error: "Supabase non configuré" });
+      return;
+    }
+
+    const code = typeof req.body?.code === 'string' ? req.body.code.trim().toUpperCase() : '';
+    const rawItems = req.body?.items;
+
+    if (!code) {
+      res.status(400).json({ error: "Code promo requis" });
+      return;
+    }
+
+    try {
+      const { data: discount, error: fetchError } = await supabaseAdmin
+        .from('discounts')
+        .select('*')
+        .eq('code', code)
+        .single();
+
+      if (fetchError || !discount) {
+        res.json({ valid: false, error: "Code promo invalide ou expiré" });
+        return;
+      }
+
+      const items = normalizePaymentItems(rawItems);
+      const productIds = items.map(item => item.productId);
+      const { data: dbProducts, error: productsError } = await supabaseAdmin
+        .from('products')
+        .select('id,price,stock,categories')
+        .in('id', productIds);
+
+      if (productsError || !dbProducts) {
+        res.status(500).json({ error: "Impossible de charger les produits du panier" });
+        return;
+      }
+
+      const productsMap = new Map(dbProducts.map((p: any) => [p.id, p]));
+      const subtotal = items.reduce((sum, item) => {
+        const prod = productsMap.get(item.productId);
+        return sum + (prod ? Number(prod.price) * item.quantity : 0);
+      }, 0);
+
+      const validation = validateDiscount({
+        discount: discount as any,
+        items,
+        products: productsMap as any,
+        subtotal,
+      });
+
+      res.json(validation);
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : "Erreur lors de la validation" });
+    }
+  });
+
+  app.post("/api/payments/create-intent", paymentsRateLimiter, async (req, res) => {
     if (!stripeSecretKey) {
       res.status(503).json({ error: "Stripe is not configured on the server" });
       return;
@@ -480,6 +710,7 @@ async function startServer() {
       clientInfo?: Record<string, string>;
       deliveryMethod?: string;
     } | undefined;
+    const discountCode = typeof req.body?.discountCode === 'string' ? req.body.discountCode.trim().toUpperCase() : '';
 
     if (!/^[a-z]{3}$/.test(currency)) {
       res.status(400).json({ error: "Invalid currency" });
@@ -490,7 +721,7 @@ async function startServer() {
 
     try {
       const catalogClient = supabaseAdmin || supabaseAuth;
-      const { amountCents, itemCount, cartHash } = await calculatePaymentAmountCents(catalogClient, req.body?.items);
+      const { amountCents, itemCount, cartHash, products } = await calculatePaymentAmountCents(catalogClient, req.body?.items);
 
       const checkoutAttemptId = normalizeCheckoutAttemptId(req.body?.checkoutAttemptId);
       if (!checkoutAttemptId) {
@@ -498,7 +729,100 @@ async function startServer() {
         return;
       }
 
-      // ── Step 1: Create pending order with stock reservations ──────────
+      // ── Step 0b: Idempotency — reuse existing PaymentIntent if present ────
+      // Handles double-clicks, browser refreshes, and network retries.
+      // If a PaymentIntent already exists for this checkoutAttemptId and is
+      // still in a payable state, return it directly without creating a new one.
+      if (supabaseAdmin) {
+        const { data: existingAttempt } = await supabaseAdmin
+          .from('checkout_attempts')
+          .select('payment_intent_id, order_id, status')
+          .eq('checkout_attempt_id', checkoutAttemptId)
+          .single();
+
+        if (existingAttempt?.payment_intent_id && existingAttempt.status === 'pending') {
+          const stripeGetRes = await fetch(
+            `https://api.stripe.com/v1/payment_intents/${existingAttempt.payment_intent_id}`,
+            { headers: { Authorization: `Bearer ${stripeSecretKey}` } }
+          );
+          if (stripeGetRes.ok) {
+            const existingIntent = await stripeGetRes.json() as StripePaymentIntent;
+            // Only reuse if the intent is still in a payable, non-terminal state
+            const isReusable =
+              existingIntent.client_secret &&
+              !['succeeded', 'canceled'].includes(existingIntent.status);
+
+            if (isReusable) {
+              const existingOrderId = (existingAttempt.order_id as string | null) ?? null;
+              let existingOrderNumber: string | null = null;
+              if (existingOrderId) {
+                const { data: existingOrder } = await supabaseAdmin
+                  .from('orders')
+                  .select('order_number')
+                  .eq('id', existingOrderId)
+                  .single();
+                existingOrderNumber = existingOrder?.order_number ?? null;
+              }
+              log('info', 'create_intent_idempotent_hit', {
+                requestId,
+                checkoutAttemptId,
+                paymentIntentId: existingIntent.id,
+                status: existingIntent.status,
+              });
+              res.json({
+                clientSecret: existingIntent.client_secret,
+                paymentIntentId: existingIntent.id,
+                // Prefer the amount Stripe knows about; fall back to current catalog price
+                amountCents: existingIntent.amount ?? amountCents,
+                orderId: existingOrderId,
+                orderNumber: existingOrderNumber,
+                checkoutAttemptId,
+                idempotent: true,
+              });
+              return;
+            }
+          }
+        }
+      }
+
+      // ── Step 1: Validate discount if present ──────────────────────────
+      let discountAmountCents = 0;
+      let validatedDiscountCode = '';
+
+      if (discountCode && supabaseAdmin) {
+        const { data: discount } = await supabaseAdmin
+          .from('discounts')
+          .select('*')
+          .eq('code', discountCode)
+          .single();
+
+        if (discount) {
+          const items = normalizePaymentItems(req.body?.items);
+          const subtotal = items.reduce((sum, item) => {
+            const prod = products.get(item.productId);
+            return sum + (prod ? Number(prod.price) * item.quantity : 0);
+          }, 0);
+
+          const validation = validateDiscount({
+            discount: discount as any,
+            items,
+            products: products as any,
+            subtotal,
+          });
+
+          if (validation.valid && validation.discountAmountCents) {
+            discountAmountCents = validation.discountAmountCents;
+            validatedDiscountCode = discount.code;
+            log('info', 'discount_validated_for_intent', { requestId, discountCode, discountAmountCents });
+          } else {
+            log('warn', 'discount_invalid_for_intent', { requestId, discountCode, error: validation.error });
+          }
+        }
+      }
+
+      const finalAmountCents = Math.max(amountCents - discountAmountCents, 50);
+
+      // ── Step 2: Create pending order with stock reservations ──────────
       let orderId: string | null = null;
       let orderNumber: string | null = null;
 
@@ -517,6 +841,8 @@ async function startServer() {
             p_checkout: {
               clientInfo: checkoutData?.clientInfo || {},
               deliveryMethod: checkoutData?.deliveryMethod || 'courier',
+              discount_code: validatedDiscountCode || null,
+              discount_total: discountAmountCents / 100,
             },
           });
 
@@ -538,9 +864,9 @@ async function startServer() {
         }
       }
 
-      // ── Step 2: Create Stripe PaymentIntent with order metadata ────────
+      // ── Step 3: Create Stripe PaymentIntent with order metadata ────────
       const body = new URLSearchParams({
-        amount: String(amountCents),
+        amount: String(finalAmountCents),
         currency,
         "automatic_payment_methods[enabled]": "true",
         "automatic_payment_methods[allow_redirects]": "never",
@@ -553,6 +879,7 @@ async function startServer() {
       if (orderNumber) body.set("metadata[order_number]", orderNumber);
       if (customer?.email) body.set("receipt_email", customer.email);
       if (customer?.name) body.set("metadata[customer_name]", customer.name);
+      if (validatedDiscountCode) body.set("metadata[discount_code]", validatedDiscountCode);
 
       const idempotencyKey = createStripeIdempotencyKey({
         userId: authenticatedUserId,
@@ -572,7 +899,6 @@ async function startServer() {
       const paymentIntent = await stripeResponse.json() as StripePaymentIntent & { error?: { message?: string } };
 
       if (!stripeResponse.ok || !paymentIntent.client_secret) {
-        // PaymentIntent failed — release stock reservations
         if (supabaseAdmin && checkoutAttemptId) {
           await supabaseAdmin.rpc('release_stock_reservations', {
             p_checkout_attempt_id: checkoutAttemptId,
@@ -584,14 +910,13 @@ async function startServer() {
         return;
       }
 
-      // ── Step 3: Link PaymentIntent to checkout attempt ─────────────────
+      // ── Step 4: Link PaymentIntent to checkout attempt ─────────────────
       if (supabaseAdmin && checkoutAttemptId) {
         await supabaseAdmin
           .from('checkout_attempts')
           .update({ payment_intent_id: paymentIntent.id, updated_at: new Date().toISOString() })
           .eq('checkout_attempt_id', checkoutAttemptId);
 
-        // Also create the payments row early so the webhook can reconcile
         if (orderId) {
           await supabaseAdmin
             .from('payments')
@@ -601,20 +926,20 @@ async function startServer() {
               provider_payment_id: paymentIntent.id,
               status: 'requires_payment',
               raw_provider_status: 'requires_payment_method',
-              amount: amountCents / 100,
+              amount: finalAmountCents / 100,
               currency: currency.toUpperCase(),
-              metadata: { source: 'create_intent', checkout_attempt_id: checkoutAttemptId },
+              metadata: { source: 'create_intent', checkout_attempt_id: checkoutAttemptId, discount_code: validatedDiscountCode || null },
               reconciled_at: new Date().toISOString(),
             }, { onConflict: 'provider_payment_id' });
         }
       }
 
-      log('info', 'payment_intent_created', { requestId, paymentIntentId: paymentIntent.id, orderId, checkoutAttemptId, amountCents });
+      log('info', 'payment_intent_created', { requestId, paymentIntentId: paymentIntent.id, orderId, checkoutAttemptId, amountCents: finalAmountCents });
 
       res.json({
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
-        amountCents,
+        amountCents: finalAmountCents,
         orderId,
         orderNumber,
         checkoutAttemptId,
@@ -653,7 +978,7 @@ async function startServer() {
     'begin_checkout', 'purchase', 'search',
   ]);
 
-  app.post("/api/events", async (req, res) => {
+  app.post("/api/events", eventsRateLimiter, async (req, res) => {
     const { event_type, payload } = req.body as { event_type?: string; payload?: Record<string, unknown> };
     if (!event_type || !ALLOWED_EVENT_TYPES.has(event_type)) {
       res.status(400).json({ error: "Invalid or missing event_type" });
@@ -690,7 +1015,7 @@ async function startServer() {
    * Body JSON : { name, description, categories?, effects?, price? }
    * Auth : admin/staff uniquement
    */
-  app.post("/api/products/enhance-description", async (req, res) => {
+  app.post("/api/products/enhance-description", enhanceRateLimiter, async (req, res) => {
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     if (!openRouterKey) {
       res.status(503).json({ error: "OPENROUTER_API_KEY non configurée. Ajoutez-la dans votre .env." });
@@ -821,7 +1146,7 @@ Améliore cette description en respectant les normes Véridian.`;
    * Body JSON : { onlyMissing?: boolean }
    * Auth : admin uniquement (Bearer token)
    */
-  app.post("/api/products/vectorize", async (req, res) => {
+  app.post("/api/products/vectorize", vectorizeRateLimiter, async (req, res) => {
     if (!geminiApiKey) {
       res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
       return;
@@ -892,7 +1217,7 @@ Améliore cette description en respectant les normes Véridian.`;
    * Vectorise un seul produit par son ID.
    * Auth : admin uniquement
    */
-  app.post("/api/products/:id/vectorize", async (req, res) => {
+  app.post("/api/products/:id/vectorize", vectorizeRateLimiter, async (req, res) => {
     if (!geminiApiKey) {
       res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
       return;
@@ -960,7 +1285,7 @@ Améliore cette description en respectant les normes Véridian.`;
    * Recherche sémantique dans le catalogue.
    * Auth : utilisateur connecté
    */
-  app.get("/api/products/search", async (req, res) => {
+  app.get("/api/products/search", searchRateLimiter, async (req, res) => {
     if (!geminiApiKey) {
       res.status(503).json({ error: "GEMINI_API_KEY non configurée" });
       return;
@@ -1188,9 +1513,28 @@ Améliore cette description en respectant les normes Véridian.`;
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    // Serve static assets (JS, CSS, images) — no CSP nonce needed in asset headers
+    app.use(express.static(distPath, { index: false }));
+    // SPA fallback: serve index.html with the per-request CSP nonce injected.
+    // This ensures the nonce in the CSP header matches the one in the HTML, allowing
+    // any inline scripts that are nonce-whitelisted to execute.
+    app.get('*', async (req, res) => {
+      try {
+        const fs = await import('node:fs/promises');
+        let html = await fs.readFile(path.join(distPath, 'index.html'), 'utf-8');
+        const nonce = res.locals.cspNonce as string | undefined;
+        if (nonce) {
+          // Inject nonce into <head> as a meta tag so client-side code can read it
+          // if it ever needs to create script elements dynamically.
+          html = html.replace(
+            '</head>',
+            `  <meta name="csp-nonce" content="${nonce}" />\n  </head>`
+          );
+        }
+        res.type('html').send(html);
+      } catch {
+        res.status(500).send('Application unavailable');
+      }
     });
   }
 

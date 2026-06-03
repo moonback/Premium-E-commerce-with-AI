@@ -32,7 +32,7 @@
 
 ## P0 — Paiement, commandes et stock
 
-### TASK-P0-001 — Rendre le flux Stripe atomique avec commande pending avant paiement
+<!-- ### TASK-P0-001 — Rendre le flux Stripe atomique avec commande pending avant paiement
 
 **Problème :** le paiement Stripe est confirmé avant la création locale de la commande. Une erreur RPC après paiement peut créer un débit sans commande.
 
@@ -70,9 +70,9 @@
 **Effort :** élevé.  
 **Impact :** très élevé.
 
----
+--- -->
 
-### TASK-P0-002 — Vérifier le montant Stripe dans le webhook
+<!-- ### TASK-P0-002 — Vérifier le montant Stripe dans le webhook
 
 **Problème :** le webhook met à jour les statuts mais ne compare pas explicitement le montant Stripe reçu avec le total local de commande.
 
@@ -102,9 +102,9 @@
 **Effort :** moyen.  
 **Impact :** très élevé.
 
----
+--- -->
 
-### TASK-P0-003 — Corriger la gestion serveur des remises au checkout
+<!-- ### TASK-P0-003 — Corriger la gestion serveur des remises au checkout -->
 
 **Problème :** le total UI peut inclure une remise, mais le PaymentIntent est calculé depuis les items catalogue sans validation serveur complète du code promo.
 

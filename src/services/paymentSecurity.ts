@@ -10,6 +10,7 @@ type ProductPaymentRow = {
   id: string;
   price: number;
   stock: number | null;
+  categories: string[];
 };
 
 export type StripeWebhookEvent = {
@@ -76,7 +77,7 @@ export async function calculatePaymentAmountCents(
   const productIds = items.map((item) => item.productId);
   const { data, error } = await catalogClient
     .from('products')
-    .select('id,price,stock')
+    .select('id,price,stock,categories')
     .in('id', productIds);
 
   if (error) throw error;
@@ -103,7 +104,12 @@ export async function calculatePaymentAmountCents(
     throw new Error('Invalid payment amount');
   }
 
-  return { amountCents, itemCount: items.reduce((sum, item) => sum + item.quantity, 0), cartHash: createCartHash(items) };
+  return {
+    amountCents,
+    itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    cartHash: createCartHash(items),
+    products,
+  };
 }
 
 
@@ -197,4 +203,138 @@ export function toCheckoutAttemptStatus(stripeStatus?: string): 'paid' | 'failed
     default:
       return 'failed';
   }
+}
+
+/** Validate Stripe payment intent amount received against expected order total */
+export function validateWebhookAmountCents(amountReceived: number | undefined, orderTotalCents: number): boolean {
+  if (typeof amountReceived !== 'number') return false;
+  return amountReceived === orderTotalCents;
+}
+
+/** Validate Stripe payment intent currency against expected store currency */
+export function validateWebhookCurrency(currency: string | undefined, expectedCurrency: string): boolean {
+  if (typeof currency !== 'string') return false;
+  return currency.toLowerCase() === expectedCurrency.toLowerCase();
+}
+
+export type DiscountValidationResult = {
+  valid: boolean;
+  error?: string;
+  discountAmount?: number;
+  discountAmountCents?: number;
+  code?: string;
+  type?: 'percentage' | 'fixed';
+  value?: number;
+};
+
+export function validateDiscount({
+  discount,
+  items,
+  products,
+  subtotal,
+}: {
+  discount: {
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    min_order_amount?: number | null;
+    max_uses?: number | null;
+    current_uses: number;
+    valid_from: string;
+    valid_until?: string | null;
+    is_active: boolean;
+    eligible_products?: string[] | null;
+    eligible_categories?: string[] | null;
+  };
+  items: Array<{ productId: string; quantity: number }>;
+  products: Map<string, { id: string; price: number; categories: string[] }>;
+  subtotal: number;
+}): DiscountValidationResult {
+  // 1. Check is_active
+  if (!discount.is_active) {
+    return { valid: false, error: "Ce code promo n'est pas actif" };
+  }
+
+  // 2. Check dates
+  const now = new Date();
+  const validFrom = new Date(discount.valid_from);
+  if (now < validFrom) {
+    return { valid: false, error: "Ce code promo n'est pas encore valide" };
+  }
+  if (discount.valid_until) {
+    const validUntil = new Date(discount.valid_until);
+    if (now > validUntil) {
+      return { valid: false, error: "Ce code promo a expiré" };
+    }
+  }
+
+  // 3. Check uses limit
+  if (discount.max_uses !== null && discount.max_uses !== undefined && discount.current_uses >= discount.max_uses) {
+    return { valid: false, error: "Ce code promo a atteint sa limite d'utilisation" };
+  }
+
+  // 4. Check min_order_amount
+  if (discount.min_order_amount !== null && discount.min_order_amount !== undefined) {
+    if (subtotal < discount.min_order_amount) {
+      return {
+        valid: false,
+        error: `Montant minimum de commande non atteint (${discount.min_order_amount.toFixed(2)}€ requis)`,
+      };
+    }
+  }
+
+  // 5. Calculate eligible subtotal
+  let eligibleSubtotal = 0;
+  let hasEligibleItem = false;
+
+  for (const item of items) {
+    const product = products.get(item.productId);
+    if (!product) continue;
+
+    let isProductEligible = true;
+
+    // Check product restriction
+    if (discount.eligible_products && discount.eligible_products.length > 0) {
+      isProductEligible = discount.eligible_products.includes(item.productId);
+    }
+
+    // Check category restriction
+    if (isProductEligible && discount.eligible_categories && discount.eligible_categories.length > 0) {
+      const productCats = product.categories || [];
+      isProductEligible = productCats.some((cat) => discount.eligible_categories?.includes(cat));
+    }
+
+    if (isProductEligible) {
+      eligibleSubtotal += Number(product.price) * item.quantity;
+      hasEligibleItem = true;
+    }
+  }
+
+  const hasRestrictions =
+    (discount.eligible_products && discount.eligible_products.length > 0) ||
+    (discount.eligible_categories && discount.eligible_categories.length > 0);
+
+  if (hasRestrictions && !hasEligibleItem) {
+    return { valid: false, error: "Votre panier ne contient pas d'articles éligibles à ce code promo" };
+  }
+
+  // 6. Calculate discount amount
+  let discountAmount = 0;
+  if (discount.type === 'percentage') {
+    discountAmount = eligibleSubtotal * (Number(discount.value) / 100);
+  } else {
+    discountAmount = Number(discount.value);
+  }
+
+  // Cap discount at eligible subtotal
+  discountAmount = Math.min(discountAmount, eligibleSubtotal);
+
+  return {
+    valid: true,
+    code: discount.code,
+    type: discount.type,
+    value: Number(discount.value),
+    discountAmount: Math.round(discountAmount * 100) / 100,
+    discountAmountCents: Math.round(discountAmount * 100),
+  };
 }
