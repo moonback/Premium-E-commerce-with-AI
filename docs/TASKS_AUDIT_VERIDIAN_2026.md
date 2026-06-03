@@ -458,20 +458,20 @@
 
 **Tâches :**
 
-- [ ] Créer table `vectorization_jobs`.
-- [ ] Créer table optionnelle `vectorization_job_items`.
-- [ ] Endpoint `POST /api/products/vectorization-jobs`.
-- [ ] Endpoint `GET /api/products/vectorization-jobs/:id`.
-- [ ] Worker backend ou cron pour traiter les jobs.
-- [ ] Gestion retry/backoff.
-- [ ] UI progress persistée dans `VectorizationPanel`.
-- [ ] Quotas par admin/staff.
+- [x] Créer table `vectorization_jobs`.
+- [x] Créer table optionnelle `vectorization_job_items`.
+- [x] Endpoint `POST /api/products/vectorization-jobs`.
+- [x] Endpoint `GET /api/products/vectorization-jobs/:id`.
+- [x] Worker backend ou cron pour traiter les jobs.
+- [x] Gestion retry/backoff.
+- [x] UI progress persistée dans `VectorizationPanel`.
+- [x] Quotas par admin/staff.
 
 **Critères d’acceptation :**
 
-- [ ] Une vectorisation de gros catalogue ne bloque pas une requête HTTP longue.
-- [ ] Un job peut reprendre après erreur partielle.
-- [ ] Le coût et le nombre d’échecs sont visibles.
+- [x] Une vectorisation de gros catalogue ne bloque pas une requête HTTP longue.
+- [x] Un job peut reprendre après erreur partielle.
+- [x] Le coût et le nombre d’échecs sont visibles.
 
 **Gravité :** moyenne.  
 **Effort :** élevé.  
