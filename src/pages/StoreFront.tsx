@@ -1,15 +1,14 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
-import { motion, AnimatePresence, useInView } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import SEO from '../components/SEO';
 import { buildStoreJsonLd } from '../lib/seo';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import TrustBadges from '../components/TrustBadges';
 import { RecentActivityNotification } from '../components/SocialProof';
-import toast from 'react-hot-toast';
 import {
   LayoutGrid,
   Shirt,
@@ -21,23 +20,25 @@ import {
   Watch,
   Sparkles,
   Package,
-  Truck,
-  Shield,
-  Headphones,
-  Award,
-  Star,
-  TrendingUp,
-  Mail,
   ArrowRight,
-  ArrowUpRight,
+  TrendingUp,
+  Star,
   Quote,
-  Play,
   ChevronLeft,
   ChevronRight,
-  Users,
-  Globe,
-  Heart,
+  Mail,
+  Award,
 } from 'lucide-react';
+import {
+  HeroSection,
+  FeaturedCategories,
+  FeaturedProducts,
+  SavoirFaireSection,
+  TestimonialsSection,
+  NewsletterSection,
+  BrandValuesSection,
+  AnimatedCounter,
+} from '../components/storefront';
 
 // ─── Category config ────────────────────────────────────────────────────────
 // Maps a category name (case-insensitive prefix match) to an icon + accent color.
@@ -66,39 +67,32 @@ function getCategoryConfig(name: string) {
   return prefixKey ? CATEGORY_CONFIG[prefixKey] : { icon: Package, accent: 'text-ink/70', bg: 'bg-ink/5' };
 }
 
-// ─── Animated Counter ───────────────────────────────────────────────────────
-function AnimatedCounter({ target, suffix = '', duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true });
-
-  useEffect(() => {
-    if (!isInView) return;
-    let start = 0;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(start));
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, [isInView, target, duration]);
-
-  return <span ref={ref} className="tabular-nums">{count.toLocaleString()}{suffix}</span>;
-}
-
 export default function StoreFront() {
   const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
   const [currentPage, setCurrentPage] = useState(1);
-  const [email, setEmail] = useState('');
   const [testimonialIndex, setTestimonialIndex] = useState(0);
+  const [email, setEmail] = useState('');
   const prefersReducedMotion = useReducedMotion();
   const PRODUCTS_PER_PAGE = 12;
+
+  const testimonials = [
+    { name: 'Sophie M.', role: 'Cliente fidèle', initials: 'SM', rating: 5, text: 'Une expérience d\'achat exceptionnelle. Les produits sont d\'une qualité remarquable et la livraison est toujours rapide.' },
+    { name: 'Thomas L.', role: 'Acheteur régulier', initials: 'TL', rating: 5, text: 'Je suis impressionné par la qualité des produits et le service client irréprochable. Je recommande vivement.' },
+    { name: 'Camille D.', role: 'Nouvelle cliente', initials: 'CD', rating: 5, text: 'Première commande et déjà conquise ! Emballage soigné, produits conformes à la description. Je reviendrai.' },
+  ];
+
+  const categoryImages = [
+    'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80',
+    'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&q=80',
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80',
+    'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80',
+  ];
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmail('');
+  };
 
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
@@ -152,50 +146,11 @@ export default function StoreFront() {
     [products]
   );
 
-  // New arrivals (latest products)
-  const newArrivals = useMemo(
-    () => [...products].filter(p => p.isNew).slice(0, 6),
-    [products]
-  );
-
   // Top categories for editorial section
   const editorialCategories = useMemo(
     () => storeCategories.filter(c => c.level === 1).slice(0, 4),
     [storeCategories]
   );
-
-  // Newsletter handler
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement newsletter subscription (connect to Supabase subscribers table or Brevo/Mailchimp)
-    setEmail('');
-    toast.success('Merci pour votre inscription à la newsletter !');
-  };
-
-  // Testimonials data
-  const testimonials = [
-    {
-      name: 'Sophie Martin',
-      role: 'Cliente fidèle',
-      text: 'Une expérience d\'achat exceptionnelle. La qualité des produits est irréprochable et le service client est remarquable. Je recommande vivement Véridian.',
-      rating: 5,
-      initials: 'SM',
-    },
-    {
-      name: 'Thomas Dubois',
-      role: 'Acheteur régulier',
-      text: 'Je recommande vivement Véridian. Les produits sont élégants, durables et le rapport qualité-prix est excellent. Un vrai coup de cœur.',
-      rating: 5,
-      initials: 'TD',
-    },
-    {
-      name: 'Marie Laurent',
-      role: 'Nouvelle cliente',
-      text: 'Impressionnée par la rapidité de livraison et l\'attention portée aux détails. Une boutique qui se démarque par son excellence.',
-      rating: 5,
-      initials: 'ML',
-    },
-  ];
 
   // Get active category SEO data
   const activeCategoryObj = activeTab !== 'Tout' ? categoryMap[activeTab] : null;
@@ -203,14 +158,6 @@ export default function StoreFront() {
   const categoryDescription = activeTab === 'Tout' 
     ? 'Explorez la collection Véridian : produits premium, recommandations IA et expérience d\'achat élégante.'
     : `Découvrez notre sélection de ${activeTab.toLowerCase()} premium avec livraison rapide et service client exceptionnel.`;
-
-  // Category images for editorial section
-  const categoryImages = [
-    'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800&q=80',
-    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80',
-    'https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=800&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
-  ];
 
   return (
     <div className="bg-bg flex-1">
@@ -223,120 +170,13 @@ export default function StoreFront() {
         keywords={activeTab !== 'Tout' ? activeTab : 'e-commerce, boutique, premium'}
       />
       
-      {/* Notification de preuve sociale */}
       <RecentActivityNotification />
       
-      {/* ═══════════════════════════════════════════════════════════════════════
-          HERO — Cinematic full-screen
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden">
-        {/* Background image with overlay */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center scale-105 transition-transform duration-[20s]"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&q=80')" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/30 to-ink/70" />
-        
-        {/* Content */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.5 }}
-            className="text-center max-w-5xl mx-auto"
-          >
-            {/* Subtle top label */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="flex items-center justify-center gap-3 mb-8"
-            >
-              <span className="h-px w-12 bg-white/30" />
-              <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-[0.35em] text-white/60">
-                Maison de Qualité — Depuis 2024
-              </span>
-              <span className="h-px w-12 bg-white/30" />
-            </motion.div>
+      <HeroSection 
+        productsCount={products.length} 
+        categoriesCount={storeCategories.filter(c => c.level === 1).length} 
+      />
 
-            {/* Main heading */}
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.5 }}
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light font-serif text-white mb-6 leading-[0.95]"
-            >
-              L'Art de la
-              <br />
-              <span className="italic text-accent/90">Sélection</span>
-            </motion.h1>
-
-            {/* Subtitle */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="text-base md:text-lg text-white/60 max-w-xl mx-auto mb-10 font-light leading-relaxed"
-            >
-              Des produits d'exception, sélectionnés avec soin pour les esprits exigeants. 
-              L'alliance parfaite entre esthétique et qualité.
-            </motion.p>
-
-            {/* Double CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
-            >
-              <a
-                href="#collection"
-                className="group px-8 py-4 bg-white text-ink font-semibold text-sm uppercase tracking-[0.15em] hover:bg-white/90 transition-all duration-300 flex items-center gap-2"
-              >
-                Explorer la collection
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </a>
-              <a
-                href="#featured"
-                className="group px-8 py-4 border border-white/30 text-white font-semibold text-sm uppercase tracking-[0.15em] hover:bg-white/10 transition-all duration-300 flex items-center gap-2"
-              >
-                Nos vedettes
-                <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              </a>
-            </motion.div>
-
-            {/* Product count */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.3 }}
-              className="mt-14 flex items-center justify-center gap-8 text-white/40"
-            >
-              <div className="text-center">
-                <span className="block text-2xl font-serif italic text-white/70">{products.length}+</span>
-                <span className="text-[9px] uppercase tracking-[0.2em]">Produits</span>
-              </div>
-              <span className="w-px h-8 bg-white/20" />
-              <div className="text-center">
-                <span className="block text-2xl font-serif italic text-white/70">{storeCategories.filter(c => c.level === 1).length}</span>
-                <span className="text-[9px] uppercase tracking-[0.2em]">Catégories</span>
-              </div>
-              <span className="w-px h-8 bg-white/20" />
-              <div className="text-center">
-                <span className="block text-2xl font-serif italic text-white/70">4.9</span>
-                <span className="text-[9px] uppercase tracking-[0.2em]">Note client</span>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Bottom gradient fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-bg to-transparent" />
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          TRUST BADGES — Refined
-      ═══════════════════════════════════════════════════════════════════════ */}
       <TrustBadges />
 
       {/* ═══════════════════════════════════════════════════════════════════════

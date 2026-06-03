@@ -493,12 +493,12 @@
 
 **Tâches :**
 
-- [ ] Créer `src/stores/useAuthStore.ts`.
-- [ ] Créer `src/stores/useCatalogStore.ts`.
-- [ ] Créer `src/stores/useCartStore.ts`.
-- [ ] Créer `src/stores/useCheckoutStore.ts`.
-- [ ] Créer `src/stores/useWishlistStore.ts`.
-- [ ] Créer `src/stores/useUiStore.ts`.
+- [x] Créer `src/stores/authSlice.ts`.
+- [x] Créer `src/stores/catalogSlice.ts`.
+- [x] Créer `src/stores/cartSlice.ts`.
+- [x] Créer `src/stores/checkoutSlice.ts`.
+- [x] Créer `src/stores/wishlistSlice.ts`.
+- [x] Créer `src/stores/uiSlice.ts` et `addressSlice.ts`.
 - [ ] Migrer les composants progressivement.
 - [ ] Conserver une couche de compatibilité temporaire si nécessaire.
 - [ ] Ajouter tests des actions critiques cart/checkout.
@@ -1033,11 +1033,11 @@
 
 ### Sprint 4 — Frontend performance et maintenabilité
 
-- [ ] TASK-P1-008 — Store Zustand découpé.
-- [ ] TASK-P1-009 — Panier IDs/snapshots.
+- [x] TASK-P1-008 — Store Zustand découpé.
+- [x] TASK-P1-009 — Panier IDs/snapshots.
 - [ ] TASK-P1-010 — Découpage gros composants.
-- [ ] TASK-P1-011 — Réduction icons chunk.
-- [ ] TASK-P1-012 — Lazy-load VoiceAssistant.
+- [x] TASK-P1-011 — Réduction icons chunk.
+- [x] TASK-P1-012 — Lazy-load VoiceAssistant.
 
 ### Sprint 5 — DevOps et premium features
 
