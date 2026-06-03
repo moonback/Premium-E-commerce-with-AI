@@ -34,12 +34,12 @@ export default function VectorizationPanel() {
       // Total produits
       const { count: total } = await supabase
         .from('products')
-        .select('*', { count: 'exact', head: true });
+        .select('id', { count: 'exact', head: true });
 
       // Produits vectorisés (embedding non null)
       const { count: vectorized } = await supabase
         .from('products')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .not('embedding', 'is', null);
 
       const t = total ?? 0;

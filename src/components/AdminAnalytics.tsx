@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package, BarChart2, RefreshCw } from 'lucide-react';
 import { format, subDays, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ORDER_COLUMNS } from '../lib/columns';
 
 type SalesData = { date: string; sales: number; orders: number };
 type TopProduct = { product_id: string; product_name: string; total_quantity: number; total_revenue: number };
@@ -83,14 +84,14 @@ export default function AdminAnalytics() {
       const [{ data: orders }, { data: prevOrders }] = await Promise.all([
         supabase
           .from('orders')
-          .select('*, order_items(quantity, price_at_time, product_id, products(name))')
+          .select(`${ORDER_COLUMNS}, order_items(quantity, price_at_time, product_id, products(name))`)
           .gte('created_at', startDate.toISOString())
-          .order('created_at', { ascending: true }),
+          .order('created_at', { ascending: true }) as any,
         supabase
           .from('orders')
           .select('total')
           .gte('created_at', prevStartDate.toISOString())
-          .lt('created_at', startDate.toISOString()),
+          .lt('created_at', startDate.toISOString()) as any,
       ]);
 
       const totalRevenue = orders?.reduce((s, o) => s + (o.total || 0), 0) ?? 0;

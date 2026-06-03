@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { ShippingCarrier, CarrierType } from '../../types';
 import { getErrorMessage } from '../../lib/errors';
+import { SHIPPING_CARRIER_COLUMNS } from '../../lib/columns';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -431,8 +432,8 @@ export default function AdminShipping() {
     try {
       const { data, error } = await supabase
         .from('shipping_carriers')
-        .select('*')
-        .order('display_order', { ascending: true });
+        .select(SHIPPING_CARRIER_COLUMNS)
+        .order('display_order', { ascending: true }) as any;
       if (error) throw error;
       setCarriers(data ?? []);
     } catch (err) {

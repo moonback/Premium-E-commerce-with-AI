@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Activity, User, Package, ShoppingCart, Settings, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { AUDIT_EVENT_COLUMNS } from '../lib/columns';
 
 type AuditEvent = {
   id: string;
@@ -44,9 +45,9 @@ export default function AdminActivityLog() {
       setLoading(true);
       let query = supabase
         .from('audit_events')
-        .select('*, profiles(email)')
+        .select(`${AUDIT_EVENT_COLUMNS}, profiles(email)`)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(100) as any;
 
       if (filter !== 'all') {
         query = query.eq('entity_type', filter);

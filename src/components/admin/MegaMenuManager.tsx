@@ -23,6 +23,7 @@ import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { MegaMenuItem, MegaMenuColumn, MegaMenuLink, MegaMenuLinkType } from '../../types';
 import { useStore } from '../../store';
+import { MEGA_MENU_ITEM_COLUMNS, MEGA_MENU_COLUMN_COLUMNS, MEGA_MENU_LINK_COLUMNS } from '../../lib/columns';
 
 export default function MegaMenuManager() {
   const { categories, products } = useStore();
@@ -42,8 +43,8 @@ export default function MegaMenuManager() {
       // Récupérer les items
       const { data: items, error: itemsError } = await supabase
         .from('mega_menu_items')
-        .select('*')
-        .order('order');
+        .select(MEGA_MENU_ITEM_COLUMNS)
+        .order('order') as any;
 
       if (itemsError) throw itemsError;
 
@@ -52,9 +53,9 @@ export default function MegaMenuManager() {
         (items || []).map(async (item) => {
           const { data: columns, error: columnsError } = await supabase
             .from('mega_menu_columns')
-            .select('*')
+            .select(MEGA_MENU_COLUMN_COLUMNS)
             .eq('menu_item_id', item.id)
-            .order('order');
+            .order('order') as any;
 
           if (columnsError) throw columnsError;
 
@@ -62,9 +63,9 @@ export default function MegaMenuManager() {
             (columns || []).map(async (column) => {
               const { data: links, error: linksError } = await supabase
                 .from('mega_menu_links')
-                .select('*')
+                .select(MEGA_MENU_LINK_COLUMNS)
                 .eq('column_id', column.id)
-                .order('order');
+                .order('order') as any;
 
               if (linksError) throw linksError;
 

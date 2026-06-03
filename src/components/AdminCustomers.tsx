@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { UserRole } from '../types';
+import { PROFILE_COLUMNS_ADMIN } from '../lib/columns';
 
 type Customer = {
   id: string;
@@ -60,8 +61,8 @@ export default function AdminCustomers() {
     try {
       setLoading(true);
       const [{ data: profiles }, { data: orderStats }] = await Promise.all([
-        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('orders').select('user_id, total'),
+        supabase.from('profiles').select(PROFILE_COLUMNS_ADMIN).order('created_at', { ascending: false }) as any,
+        supabase.from('orders').select('user_id, total') as any,
       ]);
 
       const statsMap: Record<string, { count: number; total: number }> = {};

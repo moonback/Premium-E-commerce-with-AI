@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ShippingCarrier } from '../types';
+import { SHIPPING_CARRIER_COLUMNS } from '../lib/columns';
 
 /** Fallback si la BDD est inaccessible */
 const FALLBACK: ShippingCarrier[] = [
@@ -63,9 +64,9 @@ export function useShippingCarriers(cartTotal?: number) {
       try {
         const { data, error } = await supabase
           .from('shipping_carriers')
-          .select('*')
+          .select(SHIPPING_CARRIER_COLUMNS)
           .eq('is_active', true)
-          .order('display_order', { ascending: true });
+          .order('display_order', { ascending: true }) as any;
 
         if (!cancelled) {
           if (!error && data && data.length > 0) {

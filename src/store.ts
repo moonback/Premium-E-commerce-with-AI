@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
 import { createCheckoutOrder } from './services/checkoutService';
 import { getErrorMessage } from './lib/errors';
+import { ADDRESS_COLUMNS, CATEGORY_COLUMNS, PRODUCT_COLUMNS, PROFILE_COLUMNS, WISHLIST_COLUMNS } from './lib/columns';
 
 const USER_ROLES: UserRole[] = ['admin', 'staff', 'kiosk', 'customer'];
 
@@ -164,8 +165,8 @@ export const useStore = create<AppState>()(
         try {
           const { data, error } = await supabase
             .from('addresses')
-            .select('*')
-            .eq('user_id', user.id);
+            .select(ADDRESS_COLUMNS)
+            .eq('user_id', user.id) as any;
           if (error) throw error;
           set({ addresses: data as Address[] });
         } catch (e) {
@@ -376,7 +377,7 @@ export const useStore = create<AppState>()(
       fetchUserProfile: async (userId: string, email: string) => {
     if (!supabase) return;
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      const { data, error } = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).single() as any;
 
       if (error && error.code === 'PGRST116') {
         // Profile not found: create a safe customer profile. Elevated roles must be assigned server-side.
@@ -416,7 +417,7 @@ export const useStore = create<AppState>()(
           return;
         }
         try {
-          const { data, error } = await supabase.from('products').select('*');
+          const { data, error } = await supabase.from('products').select(PRODUCT_COLUMNS) as any;
           if (error) throw error;
           if (data && data.length > 0) {
             set({ products: data as Product[] });
@@ -431,7 +432,7 @@ export const useStore = create<AppState>()(
       fetchCategories: async () => {
         if (!supabase) return;
         try {
-          const { data, error } = await supabase.from('categories').select('*');
+          const { data, error } = await supabase.from('categories').select(CATEGORY_COLUMNS) as any;
           if (error) throw error;
           if (data && data.length > 0) {
             set({ categories: data as Category[] });
@@ -456,8 +457,8 @@ export const useStore = create<AppState>()(
         try {
           const { data, error } = await supabase
             .from('wishlist_items')
-            .select('*')
-            .eq('user_id', user.id);
+            .select(WISHLIST_COLUMNS)
+            .eq('user_id', user.id) as any;
           if (error) throw error;
           set({ wishlist: (data ?? []) as WishlistItem[] });
         } catch (e) {

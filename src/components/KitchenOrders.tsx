@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, CheckCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useStore } from '../store';
+import { ORDER_COLUMNS } from '../lib/columns';
 
 // Define the Kanban stages in order
 const STAGES = [
@@ -28,7 +29,7 @@ export default function KitchenOrders() {
   const fetchOrders = async () => {
     if (!supabase) return;
     try {
-      const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('orders').select(ORDER_COLUMNS).order('created_at', { ascending: true }) as any;
       if (error) throw error;
       setOrders((data ?? []) as KitchenOrder[]);
     } catch (e) {

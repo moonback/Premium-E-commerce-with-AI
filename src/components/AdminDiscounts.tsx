@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Tag, Plus, Edit2, Trash2, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
+import { DISCOUNT_COLUMNS } from '../lib/columns';
 
 type Discount = {
   id: string;
@@ -37,8 +38,8 @@ export default function AdminDiscounts() {
       setLoading(true);
       const { data, error } = await supabase
         .from('discounts')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(DISCOUNT_COLUMNS)
+        .order('created_at', { ascending: false }) as any;
 
       if (error) throw error;
       setDiscounts(data || []);

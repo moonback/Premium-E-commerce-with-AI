@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { StoreSettings } from '../types';
 import { getErrorMessage } from '../lib/errors';
+import { STORE_SETTINGS_COLUMNS } from '../lib/columns';
 
 type SettingsTab = 'general' | 'commerce' | 'notifications' | 'analytics' | 'catalog' | 'payment' | 'social' | 'advanced';
 
@@ -160,7 +161,10 @@ export default function AdminSettings() {
     if (!supabase) { setIsLoading(false); return; }
     try {
       const { data, error } = await supabase
-        .from('store_settings').select('*').limit(1).maybeSingle();
+        .from('store_settings')
+        .select(STORE_SETTINGS_COLUMNS)
+        .limit(1)
+        .maybeSingle() as any;
       if (error) throw error;
       if (data) { setSettings(data); setSettingsId(data.id); }
     } catch (err) {

@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { Category, Product, Spec } from '../types';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { ORDER_COLUMNS } from '../lib/columns';
 import AdminOrdersList from '../components/AdminOrdersList';
 import AdminAnalytics from '../components/AdminAnalytics';
 import AdminCustomers from '../components/AdminCustomers';
@@ -83,7 +84,7 @@ export default function Admin() {
           // Fetch all orders
           const { data: allOrders, error: ordersError } = await supabase
             .from('orders')
-            .select('*');
+            .select(ORDER_COLUMNS) as any;
 
           if (!ordersError && allOrders) {
             // 1. Calculate today's sales
@@ -101,7 +102,7 @@ export default function Admin() {
           // 3. Fetch profiles count
           const { count: profileCount, error: profileError } = await supabase
             .from('profiles')
-            .select('*', { count: 'exact', head: true });
+            .select('id', { count: 'exact', head: true });
 
           if (!profileError && profileCount !== null) {
             setTotalCustomers(profileCount);

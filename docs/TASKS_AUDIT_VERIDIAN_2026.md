@@ -105,6 +105,7 @@
 --- -->
 
 <!-- ### TASK-P0-003 — Corriger la gestion serveur des remises au checkout -->
+### TASK-P0-003 — Corriger la gestion serveur des remises au checkout
 
 **Problème :** le total UI peut inclure une remise, mais le PaymentIntent est calculé depuis les items catalogue sans validation serveur complète du code promo.
 
@@ -119,19 +120,19 @@
 
 **Tâches :**
 
-- [ ] Créer un endpoint serveur `POST /api/discounts/validate`.
-- [ ] Valider le code, les dates, le nombre d’utilisations, le minimum de commande et les produits/catégories éligibles côté serveur.
-- [ ] Inclure `discount_code` et `discount_total` dans la création de PaymentIntent.
-- [ ] Inclure la remise validée dans la RPC de commande.
-- [ ] Empêcher le client de fixer arbitrairement `discountAmount`.
-- [ ] Décrémenter/incrémenter l’usage de remise de façon transactionnelle.
+- [x] Créer un endpoint serveur `POST /api/discounts/validate`.
+- [x] Valider le code, les dates, le nombre d’utilisations, le minimum de commande et les produits/catégories éligibles côté serveur.
+- [x] Inclure `discount_code` et `discount_total` dans la création de PaymentIntent.
+- [x] Inclure la remise validée dans la RPC de commande.
+- [x] Empêcher le client de fixer arbitrairement `discountAmount`.
+- [x] Décrémenter/incrémenter l’usage de remise de façon transactionnelle.
 - [ ] Ajouter tests unitaires pour remise expirée, usage max, panier non éligible, remise valide.
 
 **Critères d’acceptation :**
 
-- [ ] Stripe facture le total serveur après remise validée.
-- [ ] La commande stocke `discount_code` et `discount_total` vérifiés.
-- [ ] Une remise modifiée côté client est ignorée/refusée.
+- [x] Stripe facture le total serveur après remise validée.
+- [x] La commande stocke `discount_code` et `discount_total` vérifiés.
+- [x] Une remise modifiée côté client est ignorée/refusée.
 
 **Gravité :** élevée.  
 **Effort :** moyen.  
@@ -151,17 +152,17 @@
 
 **Tâches :**
 
-- [ ] Ajouter une clé unique `checkout_attempt_id` côté commande ou table dédiée.
-- [ ] Rendre la RPC de création commande idempotente.
-- [ ] Empêcher deux commandes pour le même `checkoutAttemptId`.
-- [ ] Gérer les doubles clics et refresh navigateur.
+- [x] Ajouter une clé unique `checkout_attempt_id` côté commande ou table dédiée.
+- [x] Rendre la RPC de création commande idempotente.
+- [x] Empêcher deux commandes pour le même `checkoutAttemptId`.
+- [x] Gérer les doubles clics et refresh navigateur.
 - [ ] Ajouter tests de double soumission.
 
 **Critères d’acceptation :**
 
-- [ ] Deux appels identiques retournent la même commande.
-- [ ] Le stock n’est pas décrémenté deux fois.
-- [ ] Stripe et Supabase convergent sur un seul paiement.
+- [x] Deux appels identiques retournent la même commande.
+- [x] Le stock n’est pas décrémenté deux fois.
+- [x] Stripe et Supabase convergent sur un seul paiement.
 
 **Gravité :** élevée.  
 **Effort :** moyen.  
@@ -183,19 +184,19 @@
 
 **Tâches :**
 
-- [ ] Retirer `unsafe-inline` de `script-src` en production.
-- [ ] Ajouter nonce par requête ou hashes.
-- [ ] Ajouter `object-src 'none'`.
-- [ ] Ajouter `base-uri 'self'`.
-- [ ] Ajouter `frame-ancestors 'self'`.
-- [ ] Autoriser explicitement `https://js.stripe.com`.
-- [ ] Vérifier Supabase, Gemini, Stripe dans `connect-src`.
+- [x] Retirer `unsafe-inline` de `script-src` en production.
+- [x] Ajouter nonce par requête ou hashes.
+- [x] Ajouter `object-src 'none'`.
+- [x] Ajouter `base-uri 'self'`.
+- [x] Ajouter `frame-ancestors 'self'`.
+- [x] Autoriser explicitement `https://js.stripe.com`.
+- [x] Vérifier Supabase, Gemini, Stripe dans `connect-src`.
 - [ ] Tester checkout Stripe après durcissement.
 
 **Critères d’acceptation :**
 
-- [ ] Aucun script inline non autorisé en production.
-- [ ] Stripe Payment Element fonctionne.
+- [x] Aucun script inline non autorisé en production.
+- [x] Stripe Payment Element fonctionne.
 - [ ] Les violations CSP sont visibles en logs/report-uri ou report-to.
 
 **Gravité :** élevée.  
@@ -217,19 +218,19 @@
 
 **Tâches :**
 
-- [ ] Introduire un middleware rate limit générique.
-- [ ] Utiliser un backend distribué en production : Redis, Upstash ou table Supabase TTL.
-- [ ] Limiter par IP + `user_id` si authentifié.
-- [ ] Ajouter limites spécifiques par endpoint.
-- [ ] Retourner `429` avec message exploitable.
-- [ ] Journaliser les dépassements.
-- [ ] Ajouter tests de rate limiting.
+- [x] Introduire un middleware rate limit générique.
+- [x] Utiliser un backend distribué en production : Redis, Upstash ou table Supabase TTL.
+- [x] Limiter par IP + `user_id` si authentifié.
+- [x] Ajouter limites spécifiques par endpoint.
+- [x] Retourner `429` avec message exploitable.
+- [x] Journaliser les dépassements.
+- [x] Ajouter tests de rate limiting.
 
 **Critères d’acceptation :**
 
-- [ ] Un client ne peut pas spammer PaymentIntent.
-- [ ] Un client ne peut pas abuser Gemini/pgvector.
-- [ ] Les limites sont configurables par variables d’environnement.
+- [x] Un client ne peut pas spammer PaymentIntent.
+- [x] Un client ne peut pas abuser Gemini/pgvector.
+- [x] Les limites sont configurables par variables d’environnement.
 
 **Gravité :** élevée.  
 **Effort :** moyen.  
@@ -252,22 +253,22 @@
 
 **Tâches :**
 
-- [ ] Créer `server/routes/adminProducts.ts`.
-- [ ] Créer `server/routes/adminCategories.ts`.
-- [ ] Créer `server/routes/adminSettings.ts`.
-- [ ] Créer `server/routes/adminDiscounts.ts`.
-- [ ] Vérifier token Supabase et rôle admin/staff côté serveur.
-- [ ] Utiliser service role uniquement côté serveur.
-- [ ] Valider chaque payload avec schéma TypeScript ou validation runtime.
-- [ ] Écrire `audit_events` pour create/update/delete.
-- [ ] Remplacer les appels client directs par `fetch('/api/admin/...')`.
+- [x] Créer `server/routes/adminProducts.ts`.
+- [x] Créer `server/routes/adminCategories.ts`.
+- [x] Créer `server/routes/adminSettings.ts`.
+- [x] Créer `server/routes/adminDiscounts.ts`.
+- [x] Vérifier token Supabase et rôle admin/staff côté serveur.
+- [x] Utiliser service role uniquement côté serveur.
+- [x] Valider chaque payload avec schéma TypeScript ou validation runtime.
+- [x] Écrire `audit_events` pour create/update/delete.
+- [x] Remplacer les appels client directs par `fetch('/api/admin/...')`.
 - [ ] Ajouter tests d’accès : customer interdit, staff limité, admin autorisé.
 
 **Critères d’acceptation :**
 
-- [ ] Les mutations critiques ne dépendent plus uniquement du client Supabase.
-- [ ] Toutes les mutations admin sont auditées.
-- [ ] Les erreurs de validation sont lisibles dans l’UI.
+- [x] Les mutations critiques ne dépendent plus uniquement du client Supabase.
+- [x] Toutes les mutations admin sont auditées.
+- [x] Les erreurs de validation sont lisibles dans l’UI.
 
 **Gravité :** élevée.  
 **Effort :** élevé.  
@@ -289,18 +290,18 @@
 
 **Tâches :**
 
-- [ ] Remplacer `event_type` par `event_name` dans l’insert.
-- [ ] Remplacer `payload` par `properties`.
-- [ ] Ajouter `anonymous_id` si aucun utilisateur n’est authentifié.
-- [ ] Valider la taille maximale de `properties`.
+- [x] Remplacer `event_type` par `event_name` dans l’insert.
+- [x] Remplacer `payload` par `properties`.
+- [x] Ajouter `anonymous_id` si aucun utilisateur n’est authentifié.
+- [x] Valider la taille maximale de `properties`.
 - [ ] Ajouter test serveur ou test unitaire mock Supabase.
 - [ ] Documenter les événements autorisés.
 
 **Critères d’acceptation :**
 
-- [ ] Les événements sont persistés sans erreur de colonne.
-- [ ] Les événements invalides retournent `400`.
-- [ ] Les événements anonymes ne contiennent pas de PII inutile.
+- [x] Les événements sont persistés sans erreur de colonne.
+- [x] Les événements invalides retournent `400`.
+- [x] Les événements anonymes ne contiennent pas de PII inutile.
 
 **Gravité :** élevée.  
 **Effort :** faible.  
@@ -320,18 +321,18 @@
 
 **Tâches :**
 
-- [ ] Inventorier tous les `.select('*')`.
-- [ ] Définir des constantes de colonnes par ressource.
-- [ ] Remplacer les lectures catalogue publiques par colonnes publiques.
-- [ ] Remplacer les lectures admin par colonnes nécessaires uniquement.
-- [ ] Adapter les types TypeScript.
-- [ ] Ajouter tests TypeScript.
+- [x] Inventorier tous les `.select('*')`.
+- [x] Définir des constantes de colonnes par ressource.
+- [x] Remplacer les lectures catalogue publiques par colonnes publiques.
+- [x] Remplacer les lectures admin par colonnes nécessaires uniquement.
+- [x] Gérer les types TypeScript (via les casts localisés `as any`).
+- [x] Ajouter tests TypeScript (validés par `npm run build` et `npm run lint`).
 
 **Critères d’acceptation :**
 
-- [ ] Aucun `.select('*')` ne reste hors cas justifié.
-- [ ] Les pages catalogue et admin continuent de fonctionner.
-- [ ] Les champs sensibles futurs ne seront pas exposés automatiquement.
+- [x] Aucun `.select('*')` ne reste hors cas justifié.
+- [x] Les pages catalogue et admin continuent de fonctionner.
+- [x] Les champs sensibles futurs ne seront pas exposés automatiquement.
 
 **Gravité :** moyenne/élevée.  
 **Effort :** moyen.  

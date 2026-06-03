@@ -4,6 +4,7 @@ import { Trash2, Clock, Truck, Package, CheckCircle, RefreshCw, Search, ChevronD
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ORDER_COLUMNS } from '../lib/columns';
 
 type Order = {
   id: string;
@@ -49,8 +50,8 @@ export default function AdminOrdersList() {
       setLoading(true);
       const { data, error } = await supabase
         .from('orders')
-        .select('*, profiles(email, phone)')
-        .order('created_at', { ascending: false });
+        .select(`${ORDER_COLUMNS}, profiles(email, phone)`)
+        .order('created_at', { ascending: false }) as any;
       if (error) throw error;
       setOrders((data as Order[]) ?? []);
     } catch {

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { AlertTriangle, Package, TrendingDown, RefreshCw, Plus, Minus, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Product } from '../types';
+import { PRODUCT_COLUMNS_INVENTORY } from '../lib/columns';
 
 type StockStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
 type InventoryProduct = Product & { stock_status: StockStatus };
@@ -36,7 +37,10 @@ export default function AdminInventory() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('products').select('*').order('stock', { ascending: true });
+      const { data, error } = await supabase
+        .from('products')
+        .select(PRODUCT_COLUMNS_INVENTORY)
+        .order('stock', { ascending: true }) as any;
       if (error) throw error;
       setProducts(
         (data ?? []).map(p => ({

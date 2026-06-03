@@ -10,6 +10,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Product } from '../types';
+import { PRODUCT_COLUMNS_EMBEDDING } from './columns';
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 export const EMBEDDING_MODEL = 'gemini-embedding-2';
@@ -115,7 +116,7 @@ export async function vectorizeAllProducts(
 ): Promise<VectorizationResult> {
   const result: VectorizationResult = { success: 0, failed: 0, skipped: 0, errors: [] };
 
-  let query = supabase.from('products').select('*');
+  let query = supabase.from('products').select(PRODUCT_COLUMNS_EMBEDDING) as any;
   if (options.onlyMissing) query = query.is('embedding', null);
 
   const { data: products, error: fetchError } = await query;

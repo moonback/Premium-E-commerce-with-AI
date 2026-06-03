@@ -3,13 +3,14 @@ import { Star, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useStore } from '../store';
 import toast from 'react-hot-toast';
+import { REVIEW_COLUMNS } from '../lib/columns';
 
 interface Review {
   id: string;
   user_id: string;
   product_id: string;
   rating: number;
-  comment: string;
+  body: string;
   is_published: boolean;
   created_at: string;
   user_email?: string;
@@ -40,10 +41,10 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     try {
       const { data, error } = await supabase
         .from('product_reviews')
-        .select('*')
+        .select(REVIEW_COLUMNS)
         .eq('product_id', productId)
         .eq('is_published', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as any;
       
       if (error) throw error;
       setReviews((data ?? []) as Review[]);
@@ -69,7 +70,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           user_id: user.id,
           product_id: productId,
           rating,
-          comment,
+          body: comment,
           is_published: false, // Moderation required
         });
 
@@ -218,7 +219,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
                 </div>
                 {renderStars(review.rating)}
               </div>
-              <p className="text-sm text-ink/80 leading-relaxed">{review.comment}</p>
+              <p className="text-sm text-ink/80 leading-relaxed">{review.body}</p>
             </div>
           ))}
         </div>
