@@ -71,7 +71,8 @@ export type CheckoutSupabaseClient = {
 
 export function toRpcOrderItems(cart: CartItem[]): RpcOrderItem[] {
   return cart.map((item) => ({
-    product_id: item.product.id,
+    // Support both new format (productId) and legacy format (product.id) during transition
+    product_id: item.productId ?? (item as any).product?.id,
     quantity: item.quantity,
   }));
 }

@@ -21,7 +21,11 @@ const product: Product = {
   specs: [],
 };
 
-const cart: CartItem[] = [{ product, quantity: 2 }];
+const cart: CartItem[] = [{
+  productId: 'prod_test',
+  quantity: 2,
+  snapshot: { name: 'Produit test', price: 42, image: '/test.jpg' },
+}];
 
 const checkoutInfo: CheckoutInfo = {
   clientInfo: {

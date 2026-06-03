@@ -14,7 +14,8 @@ export default function CartDrawer() {
   const { 
     cart, 
     addToCart, 
-    removeFromCart, 
+    removeFromCart,
+    updateCartQuantity,
     isCartOpen, 
     setCartOpen, 
     products,
@@ -45,7 +46,7 @@ export default function CartDrawer() {
     setPromoError('');
 
     try {
-      const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+      const total = cart.reduce((sum, item) => sum + (item.snapshot.price * item.quantity), 0);
       
       const { data, error } = await supabase.rpc('validate_discount_code', {
         p_code: promoCode.trim().toUpperCase(),
@@ -77,7 +78,7 @@ export default function CartDrawer() {
     toast.success('Code promo retiré');
   };
 
-  const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const total = cart.reduce((sum, item) => sum + (item.snapshot.price * item.quantity), 0);
   const finalTotal = total - discountAmount;
 
   return (
@@ -115,24 +116,31 @@ export default function CartDrawer() {
                 </div>
               ) : (
                 <>
-                  {cart.map(item => (
-                    <div key={item.product.id} className="flex gap-4">
+                  {cart.map(item => {
+                    // Merge snapshot with live product data for display
+                    const liveProduct = products.find(p => p.id === item.productId);
+                    const name = liveProduct?.name ?? item.snapshot.name;
+                    const image = liveProduct?.image ?? item.snapshot.image;
+                    const price = item.snapshot.price;
+                    const categories = liveProduct?.categories ?? [];
+                    return (
+                    <div key={item.productId} className="flex gap-4">
                       <div className="w-20 h-20 bg-soft-green rounded-tl-3xl rounded-br-3xl overflow-hidden shrink-0">
-                        <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover mix-blend-overlay opacity-80" />
+                        <img src={image} alt={name} className="w-full h-full object-cover mix-blend-overlay opacity-80" />
                       </div>
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
-                          <h4 className="font-serif font-medium">{item.product.name}</h4>
-                          <p className="text-ink/50 text-xs italic uppercase">{item.product.categories.join(', ')}</p>
+                          <h4 className="font-serif font-medium">{name}</h4>
+                          <p className="text-ink/50 text-xs italic uppercase">{categories.join(', ')}</p>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3 bg-soft-green rounded-lg p-1">
                             <button
                               onClick={() => {
                                 if (item.quantity > 1) {
-                                  addToCart(item.product, -1);
+                                  updateCartQuantity(item.productId, item.quantity - 1);
                                 } else {
-                                  removeFromCart(item.product.id);
+                                  removeFromCart(item.productId);
                                 }
                               }}
                               className="p-1 hover:bg-white rounded-md transition-colors text-ink/60"
@@ -141,23 +149,24 @@ export default function CartDrawer() {
                             </button>
                             <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
                             <button
-                              onClick={() => addToCart(item.product, 1)}
+                              onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
                               className="p-1 hover:bg-white rounded-md transition-colors text-ink/60"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
                           </div>
-                          <span className="font-semibold text-sm">{(item.product.price * item.quantity).toFixed(2)}€</span>
+                          <span className="font-semibold text-sm">{(price * item.quantity).toFixed(2)}€</span>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Recommendations in cart */}
                   {cart.length > 0 && products.length > 0 && (
                     <div className="pt-6 border-t border-ink/10">
                       <ProductRecommendations
-                        currentProduct={cart[0]?.product}
+                        currentProduct={products.find(p => p.id === cart[0]?.productId)}
                         products={products}
                         title="Complétez votre panier"
                         maxItems={2}

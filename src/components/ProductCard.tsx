@@ -56,18 +56,7 @@ function ProductCard({ product }: { product: Product }) {
         transition={{ duration: 0.2, ease: 'easeOut' }}
         className="group relative flex flex-col justify-between bg-transparent p-6 border border-ink/5 rounded-lg overflow-hidden hover:border-ink/20 hover:shadow-2xl transition-all duration-300"
       >
-        {/* Gradient overlay on hover using AnimatePresence */}
-        <AnimatePresence>
-          {isHover && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/30 to-transparent pointer-events-none"
-              transition={{ duration: 0.3 }}
-            />
-          )}
-        </AnimatePresence>
+        
 
         <div className="absolute top-4 left-4 text-[10px] font-bold uppercase opacity-30 z-10 transition-opacity group-hover:opacity-100">
           N°{product.id.replace('prod_', '').padStart(3, '0')}

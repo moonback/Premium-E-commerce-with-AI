@@ -33,7 +33,7 @@ export default function DiscountCodeInput({
     setIsValidating(true);
     try {
       const items = cart.map((item) => ({
-        product_id: item.product.id,
+        product_id: item.productId,
         quantity: item.quantity,
       }));
 

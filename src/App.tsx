@@ -3,16 +3,16 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import StoreLayout from './components/StoreLayout';
 import { AnimatePresence } from 'motion/react';
 import PageTransition from './components/PageTransition';
-import VoiceAssistant from './components/VoiceAssistant';
-import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import SkipLinks from './components/SkipLinks';
-import PWAInstallPrompt, { OfflineIndicator } from './components/PWAInstallPrompt';
 import ScrollProgress from './components/ScrollProgress';
 import { useServiceWorker } from './hooks/usePWA';
 import { ToastProvider } from './components/ui/Toast';
 import { useStore } from './store';
+// OfflineIndicator is a tiny status banner — eager import is acceptable
+import { OfflineIndicator } from './components/PWAInstallPrompt';
 
+// ── Page routes (lazy-loaded) ─────────────────────────────────────────────────
 const StoreFront = lazy(() => import('./pages/StoreFront'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -27,6 +27,13 @@ const MentionsLegales = lazy(() => import('./pages/MentionsLegales'));
 const CGV = lazy(() => import('./pages/CGV'));
 const Livraison = lazy(() => import('./pages/Livraison'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
+
+// ── UI overlays — deferred until after first paint ────────────────────────────
+// VoiceAssistant embeds WebSocket + AudioContext; no need to load until user interacts.
+// AuthModal and PWAInstallPrompt are shown on demand, never blocking initial render.
+const VoiceAssistant = lazy(() => import('./components/VoiceAssistant'));
+const AuthModal = lazy(() => import('./components/AuthModal'));
+const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt'));
 
 function RouteFallback() {
   return (
@@ -66,6 +73,8 @@ function AppContent() {
       <SkipLinks />
       <ScrollProgress />
       <OfflineIndicator />
+
+      {/* Page routing — each route chunk is lazy-loaded */}
       <AnimatePresence mode="wait">
         <Suspense fallback={<RouteFallback />}>
           <Routes location={location}>
@@ -88,9 +97,13 @@ function AppContent() {
           </Routes>
         </Suspense>
       </AnimatePresence>
-      <VoiceAssistant />
-      <AuthModal />
-      <PWAInstallPrompt />
+
+      {/* Global overlays — loaded after routes, no fallback needed */}
+      <Suspense fallback={null}>
+        <VoiceAssistant />
+        <AuthModal />
+        <PWAInstallPrompt />
+      </Suspense>
     </div>
   );
 }

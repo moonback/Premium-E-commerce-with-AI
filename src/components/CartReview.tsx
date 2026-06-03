@@ -4,11 +4,10 @@ import { useStore } from '../store';
 import { Link } from 'react-router-dom';
 
 export default function CartReview({ onNext }: { onNext: () => void }) {
-  const { cart, resetCheckout, setCartOpen } = useStore();
-  const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const { cart, products, setCartOpen } = useStore();
+  const total = cart.reduce((sum, item) => sum + item.snapshot.price * item.quantity, 0);
 
   const handleProceed = () => {
-    // Close drawer if open and go to next step
     setCartOpen(false);
     onNext();
   };
@@ -25,16 +24,23 @@ export default function CartReview({ onNext }: { onNext: () => void }) {
         <p className="text-ink/60">Le panier est vide.</p>
       ) : (
         <div className="space-y-4">
-          {cart.map((item) => (
-            <div key={item.product.id} className="flex items-center gap-4">
-              <img src={item.product.image} alt={item.product.name} className="w-16 h-16 object-cover rounded-lg" />
-              <div className="flex-1">
-                <p className="font-serif">{item.product.name}</p>
-                <p className="text-xs text-ink/50">{(item.product.categories || []).join(', ')}</p>
+          {cart.map((item) => {
+            const liveProduct = products.find(p => p.id === item.productId);
+            const name = liveProduct?.name ?? item.snapshot.name;
+            const image = liveProduct?.image ?? item.snapshot.image;
+            const price = item.snapshot.price;
+            const categories = liveProduct?.categories ?? [];
+            return (
+              <div key={item.productId} className="flex items-center gap-4">
+                <img src={image} alt={name} className="w-16 h-16 object-cover rounded-lg" />
+                <div className="flex-1">
+                  <p className="font-serif">{name}</p>
+                  <p className="text-xs text-ink/50">{categories.join(', ')}</p>
+                </div>
+                <span className="font-medium">{item.quantity} × {price.toFixed(2)}€</span>
               </div>
-              <span className="font-medium">{item.quantity} × {item.product.price.toFixed(2)}€</span>
-            </div>
-          ))}
+            );
+          })}
           <div className="flex justify-between font-bold text-xl pt-4 border-t border-ink/10">
             <span>Sous‑total</span>
             <span>{total.toFixed(2)}€</span>

@@ -111,7 +111,7 @@ async function ensureTestUser(
     // Auto-confirm via admin API
     const svc = serviceClient();
     const { data: users } = await svc.auth.admin.listUsers();
-    const user = users?.users?.find((u) => u.email === email);
+    const user = users?.users?.find((u: any) => u.email === email);
     if (user) {
       await svc.auth.admin.updateUserById(user.id, { email_confirm: true });
     }

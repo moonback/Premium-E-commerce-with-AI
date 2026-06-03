@@ -14,15 +14,19 @@ export default function POS() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const total = posCart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const total = posCart.reduce((sum, item) => sum + (item.snapshot.price * item.quantity), 0);
 
   const addToCart = (product: Product) => {
     setPosCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+      const existing = prev.find(item => item.productId === product.id);
       if (existing) {
-        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, {
+        productId: product.id,
+        quantity: 1,
+        snapshot: { name: product.name, price: product.price, image: product.image },
+      }];
     });
   };
 
@@ -91,22 +95,22 @@ export default function POS() {
             </div>
           ) : (
             posCart.map(item => (
-              <div key={item.product.id} className="flex flex-col gap-2 p-3 bg-soft-green/30 border border-ink/5">
+              <div key={item.productId} className="flex flex-col gap-2 p-3 bg-soft-green/30 border border-ink/5">
                 <div className="flex justify-between items-start">
-                  <span className="font-serif text-sm">{item.product.name}</span>
-                  <span className="font-semibold text-sm">{(item.product.price * item.quantity).toFixed(2)}€</span>
+                  <span className="font-serif text-sm">{item.snapshot.name}</span>
+                  <span className="font-semibold text-sm">{(item.snapshot.price * item.quantity).toFixed(2)}€</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-3 bg-white border border-ink/10 p-1">
                     <button
-                      onClick={() => setPosCart(prev => prev.map(p => p.product.id === item.product.id ? { ...p, quantity: Math.max(0, p.quantity - 1) } : p).filter(p => p.quantity > 0))}
+                      onClick={() => setPosCart(prev => prev.map(p => p.productId === item.productId ? { ...p, quantity: Math.max(0, p.quantity - 1) } : p).filter(p => p.quantity > 0))}
                       className="p-1 hover:bg-soft-green/50 text-ink/60 transition-colors"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
                     <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
                     <button
-                      onClick={() => setPosCart(prev => prev.map(p => p.product.id === item.product.id ? { ...p, quantity: p.quantity + 1 } : p))}
+                      onClick={() => setPosCart(prev => prev.map(p => p.productId === item.productId ? { ...p, quantity: p.quantity + 1 } : p))}
                       className="p-1 hover:bg-soft-green/50 text-ink/60 transition-colors"
                     >
                       <Plus className="w-3 h-3" />

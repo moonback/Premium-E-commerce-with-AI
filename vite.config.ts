@@ -19,7 +19,8 @@ export default defineConfig(() => {
             if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router-dom/')) return 'vendor-react';
             if (id.includes('/@supabase/') || id.includes('/zustand/')) return 'vendor-data';
             if (id.includes('/motion/')) return 'vendor-motion';
-            if (id.includes('/lucide-react/')) return 'vendor-icons';
+            // lucide-react: no manual chunk — let Rollup tree-shake icons per lazy route chunk.
+            // Each lazy page/component only bundles the icons it actually imports.
             return undefined;
           },
         },

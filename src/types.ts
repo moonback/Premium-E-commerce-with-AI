@@ -56,9 +56,23 @@ export type Product = {
   embedding_updated_at?: string | null; // null = pas encore vectorisé
 };
 
+/**
+ * Lightweight cart snapshot — only the fields needed to display/render the cart.
+ * The full Product object is NOT persisted to avoid stale data in localStorage.
+ * At checkout, prices are re-validated server-side.
+ */
+export type CartItemSnapshot = {
+  name: string;
+  price: number;   // price at time of add — informational only, server re-validates
+  image: string;
+};
+
 export type CartItem = {
-  product: Product;
+  /** @deprecated Use productId instead of product.id */
+  product?: Product;
+  productId: string;
   quantity: number;
+  snapshot: CartItemSnapshot;
 };
 
 export type Address = {

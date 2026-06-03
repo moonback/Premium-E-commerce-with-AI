@@ -63,13 +63,13 @@ function OrderSummary({ subtotal, discountAmount, total, onDiscountApplied, onDi
           <p className="text-sm text-ink/50">Votre panier est vide.</p>
         ) : (
           cart.map((item) => (
-            <div key={item.product.id} className="flex gap-3">
-              <img src={item.product.image} alt="" className="h-14 w-14 rounded-2xl object-cover" />
+            <div key={item.productId} className="flex gap-3">
+              <img src={item.snapshot.image} alt="" className="h-14 w-14 rounded-2xl object-cover" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-serif text-sm text-ink">{item.product.name}</p>
+                <p className="truncate font-serif text-sm text-ink">{item.snapshot.name}</p>
                 <p className="text-xs text-ink/45">Qté {item.quantity}</p>
               </div>
-              <p className="text-sm font-semibold text-ink">{formatPrice(item.product.price * item.quantity)}</p>
+              <p className="text-sm font-semibold text-ink">{formatPrice(item.snapshot.price * item.quantity)}</p>
             </div>
           ))
         )}
@@ -134,10 +134,10 @@ export default function Checkout() {
       : `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
   const checkoutAttemptId = checkoutAttemptIdRef.current;
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.snapshot.price * item.quantity, 0);
   const total = subtotal - discountAmount;
   const paymentItems = useMemo(
-    () => cart.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+    () => cart.map((item) => ({ productId: item.productId, quantity: item.quantity })),
     [cart]
   );
 
@@ -165,10 +165,10 @@ export default function Checkout() {
     setIsSubmitting(true);
     try {
       const items = cart.map(item => ({
-        id: item.product.id,
-        name: item.product.name,
+        id: item.productId,
+        name: item.snapshot.name,
         quantity: item.quantity,
-        unitPrice: item.product.price,
+        unitPrice: item.snapshot.price,
       }));
       const deliveryMethod = checkoutInfo.deliveryMethod;
       const status = 'Nouvelle';
@@ -312,17 +312,17 @@ export default function Checkout() {
       >
         <div className="space-y-4 p-4">
           {cart.map((item) => (
-            <div key={item.product.id} className="flex gap-3 border-b border-ink/10 pb-4">
+            <div key={item.productId} className="flex gap-3 border-b border-ink/10 pb-4">
               <img 
-                src={item.product.image} 
+                src={item.snapshot.image} 
                 alt="" 
                 className="h-20 w-20 rounded-2xl object-cover" 
               />
               <div className="min-w-0 flex-1">
-                <p className="font-serif text-base text-ink">{item.product.name}</p>
+                <p className="font-serif text-base text-ink">{item.snapshot.name}</p>
                 <p className="text-sm text-ink/60">Quantité: {item.quantity}</p>
                 <p className="mt-1 text-sm font-semibold text-ink">
-                  {formatPrice(item.product.price * item.quantity)}
+                  {formatPrice(item.snapshot.price * item.quantity)}
                 </p>
               </div>
             </div>
