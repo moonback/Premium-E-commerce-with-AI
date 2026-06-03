@@ -7,6 +7,12 @@ export type CheckoutOrderResult = {
   profileSynced: boolean;
 };
 
+export type PendingOrderResult = {
+  orderId: string;
+  orderNumber: string;
+  checkoutAttemptId: string;
+};
+
 type CreateCheckoutOrderInput = {
   cart: CartItem[];
   checkoutInfo: CheckoutInfo;
@@ -82,6 +88,9 @@ export function toProfileUpdate(clientInfo: CheckoutInfo['clientInfo']): Profile
   };
 }
 
+/**
+ * @deprecated Use atomic checkout flow with create_pending_order_with_items on the server instead.
+ */
 export async function createCheckoutOrderWithClient(
   client: CheckoutSupabaseClient | null,
   { cart, checkoutInfo, user }: CreateCheckoutOrderInput
@@ -125,6 +134,9 @@ export async function createCheckoutOrderWithClient(
   return { orderId, orderNumber, profileSynced: !profileError };
 }
 
+/**
+ * @deprecated Use atomic checkout flow with create_pending_order_with_items on the server instead.
+ */
 export async function createCheckoutOrder(input: CreateCheckoutOrderInput): Promise<CheckoutOrderResult> {
   return createCheckoutOrderWithClient(supabase as unknown as CheckoutSupabaseClient | null, input);
 }

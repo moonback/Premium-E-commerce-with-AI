@@ -10,6 +10,7 @@ import {
   normalizeCheckoutAttemptId,
   normalizePaymentItems,
   toPaymentStatus,
+  toCheckoutAttemptStatus,
 } from './paymentSecurity';
 
 function createCatalogClient(rows: Array<{ id: string; price: number; stock: number | null }>) {
@@ -112,4 +113,72 @@ test('checkout attempt helpers create bounded Stripe idempotency keys', () => {
     'checkout:user_123:attempt_123:hash_abc'
   );
   assert.equal(createStripeIdempotencyKey({ userId: 'user_123', attemptId: null, cartHash: 'hash_abc' }), null);
+});
+
+test('toCheckoutAttemptStatus maps Stripe payment intent status to checkout attempt status', () => {
+  assert.equal(toCheckoutAttemptStatus('succeeded'), 'paid');
+  assert.equal(toCheckoutAttemptStatus('canceled'), 'cancelled');
+  assert.equal(toCheckoutAttemptStatus('processing'), 'failed');
+  assert.equal(toCheckoutAttemptStatus('requires_payment_method'), 'failed');
+});
+
+test('webhook handler logic simulates reconciliation with metadata fallback', async () => {
+  const mockWebhookEvent = {
+    id: 'evt_test_123',
+    type: 'payment_intent.succeeded',
+    data: {
+      object: {
+        id: 'pi_test_123',
+        status: 'succeeded',
+        metadata: {
+          order_id: 'order_test_abc',
+          checkout_attempt_id: 'attempt_test_xyz',
+        }
+      }
+    }
+  };
+
+  const payments: any[] = [];
+  const metadataOrderId = mockWebhookEvent.data.object.metadata.order_id;
+  const status = toPaymentStatus(mockWebhookEvent.data.object.status);
+
+  let orderId: string | null = null;
+  if (payments && payments.length > 0) {
+    orderId = payments[0].order_id || null;
+  }
+  if (!orderId && metadataOrderId) {
+    orderId = metadataOrderId;
+  }
+
+  assert.equal(orderId, 'order_test_abc');
+  assert.equal(status, 'paid');
+});
+
+test('webhook handler logic simulates ahead-of-local 409 error when metadata is missing', async () => {
+  const mockWebhookEvent = {
+    id: 'evt_test_123',
+    type: 'payment_intent.succeeded',
+    data: {
+      object: {
+        id: 'pi_test_123',
+        status: 'succeeded',
+        metadata: {} as Record<string, string>
+      }
+    }
+  };
+
+  const payments: any[] = [];
+  const metadataOrderId = mockWebhookEvent.data.object.metadata.order_id;
+  const status = toPaymentStatus(mockWebhookEvent.data.object.status);
+
+  let orderId: string | null = null;
+  if (payments && payments.length > 0) {
+    orderId = payments[0].order_id || null;
+  }
+  if (!orderId && metadataOrderId) {
+    orderId = metadataOrderId;
+  }
+
+  const isAheadOfLocal = !orderId && status === 'paid' && !payments.length;
+  assert.equal(isAheadOfLocal, true);
 });

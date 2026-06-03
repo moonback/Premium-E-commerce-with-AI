@@ -50,6 +50,7 @@ export interface AppState {
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
   checkout: (paymentIntentId?: string | null, paymentProviderStatus?: string | null) => Promise<string | null>;
+  confirmOrderLocally: (orderId: string, orderNumber: string) => Promise<void>;
   updateOrderStatus: (orderId: string, status: string) => Promise<void>;
   initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
@@ -293,6 +294,52 @@ export const useStore = create<AppState>()(
         }));
 
         return completedOrderId;
+      },
+
+      confirmOrderLocally: async (orderId: string, orderNumber: string) => {
+        const state = get();
+        const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+        const pointsEarned = Math.floor(total / 10);
+
+        if (supabase && state.user) {
+          try {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({
+                address: state.checkoutInfo.clientInfo.address || '',
+                phone: state.checkoutInfo.clientInfo.phone || '',
+                address_line1: state.checkoutInfo.clientInfo.addressLine1 || '',
+                address_line2: state.checkoutInfo.clientInfo.addressLine2 || '',
+                city: state.checkoutInfo.clientInfo.city || '',
+                postal_code: state.checkoutInfo.clientInfo.postalCode || '',
+                country: state.checkoutInfo.clientInfo.country || '',
+              })
+              .eq('id', state.user.id);
+
+            if (profileError) {
+              console.warn('Profile sync failed', profileError);
+            } else {
+              set({
+                user: {
+                  ...state.user,
+                  address: state.checkoutInfo.clientInfo.address || '',
+                  phone: state.checkoutInfo.clientInfo.phone || '',
+                },
+              });
+            }
+          } catch (e) {
+            console.error('Failed to sync profile', e);
+          }
+        }
+
+        set(state => ({
+          cart: [],
+          loyaltyPoints: state.loyaltyPoints + pointsEarned,
+          lastOrderId: orderId,
+          lastOrderNumber: orderNumber,
+        }));
+
+        toast.success(`Commande validée ! +${pointsEarned} points`);
       },
 
       initSession: async () => {

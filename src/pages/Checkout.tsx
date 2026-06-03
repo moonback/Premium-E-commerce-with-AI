@@ -1,5 +1,5 @@
 // src/pages/Checkout.tsx
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
@@ -116,7 +116,7 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const {
-    checkout,
+    confirmOrderLocally,
     resetCheckout,
     setClientInfo,
     setDeliveryMethod,
@@ -128,6 +128,12 @@ export default function Checkout() {
     discountAmount,
   } = useStore();
   const navigate = useNavigate();
+  const checkoutAttemptIdRef = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+  const checkoutAttemptId = checkoutAttemptIdRef.current;
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const total = subtotal - discountAmount;
   const paymentItems = useMemo(
@@ -149,7 +155,12 @@ export default function Checkout() {
   const back = useCallback(() => setStep((s) => Math.max(s - 1, 0)), []);
 
   // ---- FINAL PAYMENT HANDLER -------------------------------------------
-  const handlePaymentSuccess = async (paymentIntentId: string, providerStatus: string) => {
+  const handlePaymentSuccess = async (
+    paymentIntentId: string,
+    providerStatus: string,
+    orderId: string,
+    orderNumber: string
+  ) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -161,15 +172,17 @@ export default function Checkout() {
       }));
       const deliveryMethod = checkoutInfo.deliveryMethod;
       const status = 'Nouvelle';
-      const orderId = await checkout(paymentIntentId, providerStatus); // creates order after PSP acceptance; paid status is reconciled by webhook
-      const orderNumber = useStore.getState().lastOrderNumber;
+      
+      // Update local store state (cart, points, lastOrder details) and sync profile
+      await confirmOrderLocally(orderId, orderNumber);
+      
       resetCheckout();
       toast.success("✅ Commande validée ! Merci pour votre achat.");
       navigate("/order-confirmation", {
         state: { orderId, orderNumber, total, deliveryMethod, items, status },
       });
-    } catch {
-      // checkout() already shows the actionable error and keeps the cart intact
+    } catch (err) {
+      console.error("Error confirming order locally:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -243,6 +256,11 @@ export default function Checkout() {
                   customerEmail={checkoutInfo.clientInfo.email}
                   onBack={back}
                   onSuccess={handlePaymentSuccess}
+                  checkoutData={{
+                    clientInfo: checkoutInfo.clientInfo,
+                    deliveryMethod: checkoutInfo.deliveryMethod,
+                  }}
+                  checkoutAttemptId={checkoutAttemptId}
                 />
               </motion.div>
             )}

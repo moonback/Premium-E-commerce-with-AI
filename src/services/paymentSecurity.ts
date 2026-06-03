@@ -15,7 +15,22 @@ type ProductPaymentRow = {
 export type StripeWebhookEvent = {
   id: string;
   type: string;
-  data?: { object?: { id?: string; status?: string } };
+  data?: {
+    object?: {
+      id?: string;
+      status?: string;
+      amount_received?: number;
+      currency?: string;
+      metadata?: {
+        order_id?: string;
+        checkout_attempt_id?: string;
+        source?: string;
+        item_count?: string;
+        cart_hash?: string;
+        customer_name?: string;
+      };
+    };
+  };
 };
 
 export function normalizePaymentItems(rawItems: unknown) {
@@ -170,4 +185,16 @@ export function getPaymentIntentErrorStatus(message: string) {
     return 503;
   }
   return 502;
+}
+
+/** Map Stripe PaymentIntent status to checkout_attempt status */
+export function toCheckoutAttemptStatus(stripeStatus?: string): 'paid' | 'failed' | 'cancelled' {
+  switch (stripeStatus) {
+    case 'succeeded':
+      return 'paid';
+    case 'canceled':
+      return 'cancelled';
+    default:
+      return 'failed';
+  }
 }

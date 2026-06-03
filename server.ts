@@ -58,6 +58,7 @@ import {
   getStripeWebhookPayload,
   normalizeCheckoutAttemptId,
   toPaymentStatus,
+  toCheckoutAttemptStatus,
 } from "./src/services/paymentSecurity";
 import type { Request, Response, NextFunction } from "express";
 import { randomUUID } from "crypto";
@@ -272,8 +273,26 @@ async function startServer() {
     try {
       const event = getStripeWebhookPayload(req.body, signature, stripeWebhookSecret);
       const paymentIntentId = event.data?.object?.id;
+      const metadata = event.data?.object?.metadata;
+      const checkoutAttemptId = metadata?.checkout_attempt_id;
+      const metadataOrderId = metadata?.order_id;
+
+      if (!supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
+        log('warn', 'webhook_no_supabase', { paymentIntentId, eventType: event.type });
+        res.status(503).json({ error: "Payment reconciliation is not configured" });
+        return;
+      }
+
       if (supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
         const status = toPaymentStatus(event.data?.object?.status);
+        const requestId = (req as Request & { requestId?: string }).requestId;
+
+        log('info', 'webhook_received', {
+          requestId, eventType: event.type, paymentIntentId,
+          checkoutAttemptId, metadataOrderId, status,
+        });
+
+        // ── Reconcile payments table ──────────────────────────────────────
         const { data: payments, error } = await supabaseAdmin
           .from("payments")
           .update({
@@ -287,44 +306,112 @@ async function startServer() {
           .select("id, order_id");
 
         if (error) {
-          console.warn("Unable to reconcile Stripe payment webhook", error);
+          log('error', 'webhook_payment_reconcile_failed', { requestId, paymentIntentId, error: error.message });
           res.status(500).json({ error: "Payment reconciliation failed" });
           return;
         }
 
-        if (!payments || payments.length === 0) {
-          if (status === "paid") {
-            console.warn("Stripe webhook arrived before local payment row", { paymentIntentId, eventId: event.id });
-            res.status(409).json({ error: "Payment row not ready" });
-            return;
-          }
-          res.json({ received: true, ignored: "no_local_payment" });
+        // ── Determine order ID from payments row or metadata fallback ─────
+        let orderId: string | null = null;
+        if (payments && payments.length > 0) {
+          orderId = payments[0].order_id || null;
+        }
+        // Fallback: if webhook arrived before the payment row was created,
+        // use the order_id from PaymentIntent metadata for reconciliation
+        if (!orderId && metadataOrderId) {
+          orderId = metadataOrderId;
+          log('info', 'webhook_metadata_fallback', { requestId, paymentIntentId, orderId });
+        }
+
+        if (!orderId && status === 'paid' && !payments?.length) {
+          // Webhook arrived before local payment row — 409 so Stripe retries
+          log('warn', 'webhook_ahead_of_local', { requestId, paymentIntentId, eventId: event.id });
+          res.status(409).json({ error: "Payment row not ready" });
           return;
         }
 
-        const orderIds = payments
-          .map((payment) => payment.order_id)
-          .filter((orderId): orderId is string => typeof orderId === "string" && orderId.length > 0);
-        if (orderIds.length > 0) {
-          const { error: orderError } = await supabaseAdmin
-            .from("orders")
-            .update({ payment_status: status })
-            .in("id", orderIds);
-          if (orderError) {
-            console.warn("Unable to update order payment status", orderError);
-            res.status(500).json({ error: "Order reconciliation failed" });
-            return;
+        // ── Handle payment outcomes ───────────────────────────────────────
+        if (event.type === 'payment_intent.succeeded') {
+          // Consume stock reservations (decrement real stock)
+          if (checkoutAttemptId) {
+            const { error: consumeError } = await supabaseAdmin
+              .rpc('consume_stock_reservations', { p_checkout_attempt_id: checkoutAttemptId });
+            if (consumeError) {
+              log('error', 'webhook_consume_stock_failed', { requestId, checkoutAttemptId, error: consumeError.message });
+            } else {
+              log('info', 'webhook_stock_consumed', { requestId, checkoutAttemptId });
+            }
+          }
+
+          // Update order status to 'Nouvelle' (confirmed) and payment_status to 'paid'
+          if (orderId) {
+            const { error: orderError } = await supabaseAdmin
+              .from("orders")
+              .update({
+                payment_status: 'paid' as const,
+                status: 'Nouvelle' as const,
+              })
+              .eq("id", orderId);
+            if (orderError) {
+              log('error', 'webhook_order_update_failed', { requestId, orderId, error: orderError.message });
+              res.status(500).json({ error: "Order reconciliation failed" });
+              return;
+            }
+          }
+        } else if (event.type === 'payment_intent.payment_failed') {
+          // Release stock reservations
+          if (checkoutAttemptId) {
+            const { error: releaseError } = await supabaseAdmin
+              .rpc('release_stock_reservations', {
+                p_checkout_attempt_id: checkoutAttemptId,
+                p_new_status: 'failed',
+              });
+            if (releaseError) {
+              log('error', 'webhook_release_stock_failed', { requestId, checkoutAttemptId, error: releaseError.message });
+            } else {
+              log('info', 'webhook_stock_released_failed', { requestId, checkoutAttemptId });
+            }
+          }
+          if (orderId) {
+            await supabaseAdmin
+              .from("orders")
+              .update({ payment_status: 'failed' as const })
+              .eq("id", orderId);
+          }
+        } else if (event.type === 'payment_intent.canceled') {
+          // Release stock reservations
+          if (checkoutAttemptId) {
+            const { error: releaseError } = await supabaseAdmin
+              .rpc('release_stock_reservations', {
+                p_checkout_attempt_id: checkoutAttemptId,
+                p_new_status: 'cancelled',
+              });
+            if (releaseError) {
+              log('error', 'webhook_release_stock_cancelled_failed', { requestId, checkoutAttemptId, error: releaseError.message });
+            } else {
+              log('info', 'webhook_stock_released_cancelled', { requestId, checkoutAttemptId });
+            }
+          }
+          if (orderId) {
+            await supabaseAdmin
+              .from("orders")
+              .update({ payment_status: 'cancelled' as const })
+              .eq("id", orderId);
+          }
+        } else {
+          // Other payment_intent events — just update the payment_status on the order
+          if (orderId) {
+            await supabaseAdmin
+              .from("orders")
+              .update({ payment_status: status })
+              .eq("id", orderId);
           }
         }
-      } else if (!supabaseAdmin && paymentIntentId && event.type.startsWith("payment_intent.")) {
-        console.warn("Stripe webhook received but SUPABASE_SERVICE_ROLE_KEY is not configured");
-        res.status(503).json({ error: "Payment reconciliation is not configured" });
-        return;
       }
 
       res.json({ received: true });
     } catch (error) {
-      console.warn("Invalid Stripe webhook", error);
+      log('warn', 'webhook_invalid', { error: error instanceof Error ? error.message : 'unknown' });
       res.status(400).json({ error: "Invalid webhook" });
     }
   });
@@ -389,15 +476,69 @@ async function startServer() {
 
     const currency = String(req.body?.currency || "eur").toLowerCase();
     const customer = req.body?.customer as { name?: string; email?: string } | undefined;
+    const checkoutData = req.body?.checkoutData as {
+      clientInfo?: Record<string, string>;
+      deliveryMethod?: string;
+    } | undefined;
 
     if (!/^[a-z]{3}$/.test(currency)) {
       res.status(400).json({ error: "Invalid currency" });
       return;
     }
 
+    const requestId = (req as Request & { requestId?: string }).requestId;
+
     try {
       const catalogClient = supabaseAdmin || supabaseAuth;
       const { amountCents, itemCount, cartHash } = await calculatePaymentAmountCents(catalogClient, req.body?.items);
+
+      const checkoutAttemptId = normalizeCheckoutAttemptId(req.body?.checkoutAttemptId);
+      if (!checkoutAttemptId) {
+        res.status(400).json({ error: "checkoutAttemptId is required" });
+        return;
+      }
+
+      // ── Step 1: Create pending order with stock reservations ──────────
+      let orderId: string | null = null;
+      let orderNumber: string | null = null;
+
+      if (supabaseAdmin && authenticatedUserId) {
+        const rpcItems = (req.body?.items as Array<{ product_id: string; quantity: number }> || [])
+          .map((item: { product_id: string; quantity: number }) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+          }));
+
+        const { data: pendingResult, error: pendingError } = await supabaseAdmin
+          .rpc('create_pending_order_with_items', {
+            p_checkout_attempt_id: checkoutAttemptId,
+            p_user_id: authenticatedUserId,
+            p_items: rpcItems,
+            p_checkout: {
+              clientInfo: checkoutData?.clientInfo || {},
+              deliveryMethod: checkoutData?.deliveryMethod || 'courier',
+            },
+          });
+
+        if (pendingError) {
+          log('error', 'pending_order_failed', { requestId, checkoutAttemptId, error: pendingError.message });
+          const status = pendingError.message.includes('Insufficient stock') ? 400 : 500;
+          res.status(status).json({ error: pendingError.message });
+          return;
+        }
+
+        const result = pendingResult as { order_id?: string; order_number?: string; idempotent?: boolean } | null;
+        orderId = result?.order_id || null;
+        orderNumber = result?.order_number || null;
+
+        if (result?.idempotent) {
+          log('info', 'pending_order_idempotent', { requestId, checkoutAttemptId, orderId });
+        } else {
+          log('info', 'pending_order_created', { requestId, checkoutAttemptId, orderId, orderNumber });
+        }
+      }
+
+      // ── Step 2: Create Stripe PaymentIntent with order metadata ────────
       const body = new URLSearchParams({
         amount: String(amountCents),
         currency,
@@ -406,11 +547,13 @@ async function startServer() {
         "metadata[source]": "veridian_checkout",
         "metadata[item_count]": String(itemCount),
         "metadata[cart_hash]": cartHash,
+        "metadata[checkout_attempt_id]": checkoutAttemptId,
       });
+      if (orderId) body.set("metadata[order_id]", orderId);
+      if (orderNumber) body.set("metadata[order_number]", orderNumber);
       if (customer?.email) body.set("receipt_email", customer.email);
       if (customer?.name) body.set("metadata[customer_name]", customer.name);
 
-      const checkoutAttemptId = normalizeCheckoutAttemptId(req.body?.checkoutAttemptId);
       const idempotencyKey = createStripeIdempotencyKey({
         userId: authenticatedUserId,
         attemptId: checkoutAttemptId,
@@ -429,11 +572,53 @@ async function startServer() {
       const paymentIntent = await stripeResponse.json() as StripePaymentIntent & { error?: { message?: string } };
 
       if (!stripeResponse.ok || !paymentIntent.client_secret) {
+        // PaymentIntent failed — release stock reservations
+        if (supabaseAdmin && checkoutAttemptId) {
+          await supabaseAdmin.rpc('release_stock_reservations', {
+            p_checkout_attempt_id: checkoutAttemptId,
+            p_new_status: 'failed',
+          });
+          log('warn', 'stripe_intent_failed_stock_released', { requestId, checkoutAttemptId });
+        }
         res.status(stripeResponse.status).json({ error: paymentIntent.error?.message || "Stripe payment intent failed" });
         return;
       }
 
-      res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id, amountCents });
+      // ── Step 3: Link PaymentIntent to checkout attempt ─────────────────
+      if (supabaseAdmin && checkoutAttemptId) {
+        await supabaseAdmin
+          .from('checkout_attempts')
+          .update({ payment_intent_id: paymentIntent.id, updated_at: new Date().toISOString() })
+          .eq('checkout_attempt_id', checkoutAttemptId);
+
+        // Also create the payments row early so the webhook can reconcile
+        if (orderId) {
+          await supabaseAdmin
+            .from('payments')
+            .upsert({
+              order_id: orderId,
+              provider: 'stripe',
+              provider_payment_id: paymentIntent.id,
+              status: 'requires_payment',
+              raw_provider_status: 'requires_payment_method',
+              amount: amountCents / 100,
+              currency: currency.toUpperCase(),
+              metadata: { source: 'create_intent', checkout_attempt_id: checkoutAttemptId },
+              reconciled_at: new Date().toISOString(),
+            }, { onConflict: 'provider_payment_id' });
+        }
+      }
+
+      log('info', 'payment_intent_created', { requestId, paymentIntentId: paymentIntent.id, orderId, checkoutAttemptId, amountCents });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amountCents,
+        orderId,
+        orderNumber,
+        checkoutAttemptId,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Payment provider unavailable";
       const status = getPaymentIntentErrorStatus(message);
@@ -441,7 +626,7 @@ async function startServer() {
         res.status(status).json({ error: message });
         return;
       }
-      console.error("Unable to create Stripe PaymentIntent", error);
+      log('error', 'create_intent_failed', { requestId, message });
       res.status(status).json({ error: "Payment provider unavailable" });
     }
   });
