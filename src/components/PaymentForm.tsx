@@ -35,14 +35,21 @@ type PaymentFormItem = {
 };
 
 interface PaymentFormProps {
-  onSuccess?: (paymentIntentId: string, providerStatus: string) => void | Promise<void>;
+  onSuccess?: (paymentIntentId: string, providerStatus: string, orderId: string, orderNumber: string) => void | Promise<void>;
   onBack?: () => void;
   formId?: string;
   isSubmitting?: boolean;
   totalAmount?: number;
   customerName?: string;
   customerEmail?: string;
+  /** Cart items — shapes are normalized server-side; client price is ignored */
   items?: PaymentFormItem[];
+  checkoutData?: {
+    clientInfo?: Record<string, string>;
+    deliveryMethod?: string;
+  };
+  checkoutAttemptId?: string;
+  discountCode?: string;
 }
 
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
@@ -86,12 +93,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   customerName = "",
   customerEmail = "",
   items = [],
+  checkoutData,
+  checkoutAttemptId: externalAttemptId,
+  discountCode,
 }) => {
-  const checkoutAttemptIdRef = useRef(
+  const internalAttemptIdRef = useRef(
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
+  const checkoutAttemptId = externalAttemptId || internalAttemptIdRef.current;
   const paymentElementRef = useRef<StripePaymentElement | null>(null);
   const elementsRef = useRef<StripeElements | null>(null);
   const stripeRef = useRef<StripeInstance | null>(null);
@@ -101,6 +112,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [verifiedAmountCents, setVerifiedAmountCents] = useState<number | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [pendingOrderNumber, setPendingOrderNumber] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -116,17 +129,31 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         },
         body: JSON.stringify({
           items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
-          checkoutAttemptId: checkoutAttemptIdRef.current,
+          checkoutAttemptId,
           currency: "eur",
           customer: { name: customerName, email: customerEmail },
+          checkoutData,
+          discountCode,
         }),
       });
 
-      const payload = await response.json() as { clientSecret?: string; amountCents?: number; error?: string };
+      const payload = await response.json() as {
+        clientSecret?: string;
+        amountCents?: number;
+        orderId?: string;
+        orderNumber?: string;
+        checkoutAttemptId?: string;
+        error?: string;
+      };
       if (!response.ok || !payload.clientSecret) {
-        throw new Error(payload.error || "Impossible d’initialiser le paiement.");
+        throw new Error(payload.error || "Impossible d'initialiser le paiement.");
       }
-      return { clientSecret: payload.clientSecret, amountCents: payload.amountCents ?? null };
+      return {
+        clientSecret: payload.clientSecret,
+        amountCents: payload.amountCents ?? null,
+        orderId: payload.orderId ?? null,
+        orderNumber: payload.orderNumber ?? null,
+      };
     }
 
     async function initializeStripePaymentElement() {
@@ -137,6 +164,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
         const stripe = window.Stripe(stripePublishableKey);
         setVerifiedAmountCents(paymentIntentSetup.amountCents);
+        setPendingOrderId(paymentIntentSetup.orderId);
+        setPendingOrderNumber(paymentIntentSetup.orderNumber);
         const elements = stripe.elements({ clientSecret: paymentIntentSetup.clientSecret, locale: "fr" });
         const paymentElement = elements.create("payment", {
           layout: "tabs",
@@ -172,7 +201,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       stripeRef.current = null;
       setIsStripeReady(false);
     };
-  }, [customerEmail, customerName, items, totalAmount]);
+  }, [customerEmail, customerName, items, totalAmount, checkoutData, checkoutAttemptId, discountCode]);
 
   useEffect(() => setName(customerName), [customerName]);
   useEffect(() => setEmail(customerEmail), [customerEmail]);
@@ -220,7 +249,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         throw new Error("Le paiement n’est pas confirmé par le PSP.");
       }
 
-      await onSuccess?.(paymentIntent.id, paymentIntent.status);
+      await onSuccess?.(paymentIntent.id, paymentIntent.status, pendingOrderId || '', pendingOrderNumber || '');
     } catch (err: unknown) {
       setError(getErrorMessage(err));
       document.getElementById("payment-error")?.scrollIntoView({ behavior: "smooth", block: "center" });

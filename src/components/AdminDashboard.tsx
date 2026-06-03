@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ORDER_COLUMNS } from '../lib/columns';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Order = {
@@ -56,8 +57,8 @@ export default function AdminDashboard() {
         supabase.from('orders').select('total, status').gte('created_at', today.toISOString()),
         supabase.from('orders').select('total').gte('created_at', yesterday.toISOString()).lt('created_at', today.toISOString()),
         supabase.from('products').select('stock'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('orders').select('*, profiles(email)').order('created_at', { ascending: false }).limit(6),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('orders').select(`${ORDER_COLUMNS}, profiles(email)`).order('created_at', { ascending: false }).limit(6) as any,
       ]);
 
       const todaySales = todayOrders?.reduce((s, o) => s + (o.total || 0), 0) ?? 0;

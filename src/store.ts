@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase';
 import toast from 'react-hot-toast';
 import { createCheckoutOrder } from './services/checkoutService';
 import { getErrorMessage } from './lib/errors';
+import { ADDRESS_COLUMNS, CATEGORY_COLUMNS, PRODUCT_COLUMNS, PROFILE_COLUMNS, WISHLIST_COLUMNS } from './lib/columns';
 
 const USER_ROLES: UserRole[] = ['admin', 'staff', 'kiosk', 'customer'];
 
@@ -50,6 +51,7 @@ export interface AppState {
   removeFromCart: (productId: string) => void;
   toggleFavorite: (productId: string) => void;
   checkout: (paymentIntentId?: string | null, paymentProviderStatus?: string | null) => Promise<string | null>;
+  confirmOrderLocally: (orderId: string, orderNumber: string) => Promise<void>;
   updateOrderStatus: (orderId: string, status: string) => Promise<void>;
   initSession: () => Promise<void>;
   fetchUserProfile: (userId: string, email: string) => Promise<void>;
@@ -163,8 +165,8 @@ export const useStore = create<AppState>()(
         try {
           const { data, error } = await supabase
             .from('addresses')
-            .select('*')
-            .eq('user_id', user.id);
+            .select(ADDRESS_COLUMNS)
+            .eq('user_id', user.id) as any;
           if (error) throw error;
           set({ addresses: data as Address[] });
         } catch (e) {
@@ -295,6 +297,52 @@ export const useStore = create<AppState>()(
         return completedOrderId;
       },
 
+      confirmOrderLocally: async (orderId: string, orderNumber: string) => {
+        const state = get();
+        const total = state.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+        const pointsEarned = Math.floor(total / 10);
+
+        if (supabase && state.user) {
+          try {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({
+                address: state.checkoutInfo.clientInfo.address || '',
+                phone: state.checkoutInfo.clientInfo.phone || '',
+                address_line1: state.checkoutInfo.clientInfo.addressLine1 || '',
+                address_line2: state.checkoutInfo.clientInfo.addressLine2 || '',
+                city: state.checkoutInfo.clientInfo.city || '',
+                postal_code: state.checkoutInfo.clientInfo.postalCode || '',
+                country: state.checkoutInfo.clientInfo.country || '',
+              })
+              .eq('id', state.user.id);
+
+            if (profileError) {
+              console.warn('Profile sync failed', profileError);
+            } else {
+              set({
+                user: {
+                  ...state.user,
+                  address: state.checkoutInfo.clientInfo.address || '',
+                  phone: state.checkoutInfo.clientInfo.phone || '',
+                },
+              });
+            }
+          } catch (e) {
+            console.error('Failed to sync profile', e);
+          }
+        }
+
+        set(state => ({
+          cart: [],
+          loyaltyPoints: state.loyaltyPoints + pointsEarned,
+          lastOrderId: orderId,
+          lastOrderNumber: orderNumber,
+        }));
+
+        toast.success(`Commande validée ! +${pointsEarned} points`);
+      },
+
       initSession: async () => {
         if (!supabase) {
           set({ isSessionLoading: false });
@@ -329,7 +377,7 @@ export const useStore = create<AppState>()(
       fetchUserProfile: async (userId: string, email: string) => {
     if (!supabase) return;
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      const { data, error } = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).single() as any;
 
       if (error && error.code === 'PGRST116') {
         // Profile not found: create a safe customer profile. Elevated roles must be assigned server-side.
@@ -369,10 +417,16 @@ export const useStore = create<AppState>()(
           return;
         }
         try {
-          const { data, error } = await supabase.from('products').select('*');
+          const { data, error } = await supabase.from('products').select(PRODUCT_COLUMNS) as any;
           if (error) throw error;
           if (data && data.length > 0) {
-            set({ products: data as Product[] });
+            // Map/compute isNew property on the frontend
+            const mapped = data.map((p: any) => {
+              const isNew = p.badges?.includes('new') || 
+                (p.created_at && (new Date().getTime() - new Date(p.created_at).getTime()) < 14 * 24 * 60 * 60 * 1000);
+              return { ...p, isNew } as Product;
+            });
+            set({ products: mapped });
           }
         } catch (err) {
           console.error("Error fetching products:", err);
@@ -384,7 +438,7 @@ export const useStore = create<AppState>()(
       fetchCategories: async () => {
         if (!supabase) return;
         try {
-          const { data, error } = await supabase.from('categories').select('*');
+          const { data, error } = await supabase.from('categories').select(CATEGORY_COLUMNS) as any;
           if (error) throw error;
           if (data && data.length > 0) {
             set({ categories: data as Category[] });
@@ -409,8 +463,8 @@ export const useStore = create<AppState>()(
         try {
           const { data, error } = await supabase
             .from('wishlist_items')
-            .select('*')
-            .eq('user_id', user.id);
+            .select(WISHLIST_COLUMNS)
+            .eq('user_id', user.id) as any;
           if (error) throw error;
           set({ wishlist: (data ?? []) as WishlistItem[] });
         } catch (e) {

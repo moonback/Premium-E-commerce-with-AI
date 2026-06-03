@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Tag, X, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { useStore } from '../store';
 
 interface DiscountCodeInputProps {
   orderTotal: number;
@@ -21,30 +22,48 @@ export default function DiscountCodeInput({
   const [code, setCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
 
+  const { cart } = useStore();
+
   const handleApply = async () => {
     if (!code.trim()) {
       toast.error('Veuillez entrer un code promo');
       return;
     }
 
-    if (!supabase) {
-      toast.error('Service non disponible');
-      return;
-    }
-
     setIsValidating(true);
     try {
-      const { data, error } = await supabase.rpc('validate_discount_code', {
-        p_code: code.trim().toUpperCase(),
-        p_order_amount: orderTotal,
+      const items = cart.map((item) => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+      }));
+
+      let token: string | null = null;
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        token = data.session?.access_token ?? null;
+      }
+
+      const response = await fetch('/api/discounts/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          code: code.trim().toUpperCase(),
+          items,
+        }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      // The function returns a jsonb object directly
+      if (!response.ok) {
+        throw new Error(data.error || 'Impossible de valider le code promo.');
+      }
+
       if (data.valid) {
-        onDiscountApplied(data.code, data.discount_amount);
-        toast.success(`Code ${data.code} appliqué ! -${data.discount_amount.toFixed(2)}€`);
+        onDiscountApplied(data.code, data.discountAmount);
+        toast.success(`Code ${data.code} appliqué ! -${data.discountAmount.toFixed(2)}€`);
         setCode('');
       } else {
         toast.error(data.error || 'Code promo invalide');

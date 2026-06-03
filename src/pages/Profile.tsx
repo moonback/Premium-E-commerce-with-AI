@@ -25,6 +25,7 @@ import {
 import ProfileInfo from '../components/ProfileInfo';
 import AddressBook from '../components/AddressBook';
 import { supabase } from '../lib/supabase';
+import { ORDER_COLUMNS } from '../lib/columns';
 import { getErrorMessage } from '../lib/errors';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -120,9 +121,9 @@ export default function Profile() {
         try {
           const { data, error } = await supabase
             .from('orders')
-            .select('*')
+            .select(ORDER_COLUMNS)
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false }) as any;
           if (!error && data) {
             setOrders((data ?? []) as ProfileOrder[]);
           }

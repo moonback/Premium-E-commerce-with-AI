@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { StoreSettings } from '../types';
 import { getErrorMessage } from '../lib/errors';
+import { STORE_SETTINGS_COLUMNS } from '../lib/columns';
 
 type SettingsTab = 'general' | 'commerce' | 'notifications' | 'analytics' | 'catalog' | 'payment' | 'social' | 'advanced';
 
@@ -160,7 +161,10 @@ export default function AdminSettings() {
     if (!supabase) { setIsLoading(false); return; }
     try {
       const { data, error } = await supabase
-        .from('store_settings').select('*').limit(1).maybeSingle();
+        .from('store_settings')
+        .select(STORE_SETTINGS_COLUMNS)
+        .limit(1)
+        .maybeSingle() as any;
       if (error) throw error;
       if (data) { setSettings(data); setSettingsId(data.id); }
     } catch (err) {
@@ -175,18 +179,29 @@ export default function AdminSettings() {
     if (!supabase) { toast.error('Supabase non configuré'); return; }
     setIsSaving(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
+
       const payload = { ...settings };
       delete (payload as any).id;
       delete (payload as any).created_at;
       delete (payload as any).updated_at;
 
-      if (settingsId) {
-        const { error } = await supabase.from('store_settings').update(payload).eq('id', settingsId);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase.from('store_settings').insert([payload]).select().single();
-        if (error) throw error;
-        if (data) setSettingsId(data.id);
+      const response = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
+      if (resJson.settings) {
+        setSettings(resJson.settings);
+        setSettingsId(resJson.settings.id);
       }
       toast.success('Paramètres sauvegardés');
     } catch (err) {

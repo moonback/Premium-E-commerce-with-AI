@@ -66,6 +66,9 @@ export default function CategoryModal({ isOpen, onClose, editingCategory, catego
     e.preventDefault();
     if (!supabase) return toast.error("Supabase requis");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return toast.error("Session expirée");
+
       const parent = categories.find(c => c.id === catFormParent);
       const newLevel = parent ? parent.level + 1 : 1;
       
@@ -84,38 +87,43 @@ export default function CategoryModal({ isOpen, onClose, editingCategory, catego
              return toast.error("Action impossible : le déplacement ferait dépasser la limite de 3 niveaux.");
          }
          
-         const { error } = await supabase.from('categories').update({
-             name: catFormName,
-             parent_id: catFormParent || null,
-             level: newLevel,
-             image_url: catFormImageUrl || null,
-             seo: Object.keys(seoData).length > 0 ? seoData : null,
-         }).eq('id', editingCategory.id);
+         const response = await fetch(`/api/admin/categories/${editingCategory.id}`, {
+             method: "PUT",
+             headers: {
+                 "Content-Type": "application/json",
+                 "Authorization": `Bearer ${session.access_token}`
+             },
+             body: JSON.stringify({
+                 name: catFormName,
+                 parent_id: catFormParent || null,
+                 image_url: catFormImageUrl || null,
+                 seo: Object.keys(seoData).length > 0 ? seoData : null,
+             })
+         });
+
+         const resJson = await response.json();
+         if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
          
-         if (error) throw error;
-         
-         const oldCategory = categories.find(c => c.id === editingCategory.id);
-         if (oldCategory && oldCategory.level !== newLevel) {
-            const levelDiff = newLevel - oldCategory.level;
-            for (const child of children) {
-               await supabase.from('categories').update({ level: child.level + levelDiff }).eq('id', child.id);
-            }
-            for (const gc of grandchildren) {
-               await supabase.from('categories').update({ level: gc.level + levelDiff }).eq('id', gc.id);
-            }
-         }
          toast.success("Catégorie modifiée");
       } else {
          if (newLevel > 3) return toast.error("Maximum 3 niveaux de catégories");
-         const { error } = await supabase.from('categories').insert([{
-            id: `cat_${Date.now()}`,
-            name: catFormName,
-            parent_id: catFormParent || null,
-            level: newLevel,
-            image_url: catFormImageUrl || null,
-            seo: Object.keys(seoData).length > 0 ? seoData : null,
-         }]);
-         if (error) throw error;
+         const response = await fetch("/api/admin/categories", {
+             method: "POST",
+             headers: {
+                 "Content-Type": "application/json",
+                 "Authorization": `Bearer ${session.access_token}`
+             },
+             body: JSON.stringify({
+                 name: catFormName,
+                 parent_id: catFormParent || null,
+                 image_url: catFormImageUrl || null,
+                 seo: Object.keys(seoData).length > 0 ? seoData : null,
+             })
+         });
+
+         const resJson = await response.json();
+         if (!response.ok) throw new Error(resJson.error || "Erreur serveur");
+
          toast.success("Catégorie ajoutée");
       }
       

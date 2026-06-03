@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { StoreSettings } from '../types';
+import { STORE_SETTINGS_COLUMNS } from '../lib/columns';
 
 /** Valeurs de fallback si la BDD est inaccessible ou vide */
 const FALLBACK: Partial<StoreSettings> = {
@@ -43,9 +44,9 @@ export function useStoreSettings() {
       try {
         const { data, error } = await supabase
           .from('store_settings')
-          .select('*')
+          .select(STORE_SETTINGS_COLUMNS)
           .limit(1)
-          .maybeSingle();
+          .maybeSingle() as any;
 
         if (!cancelled) {
           if (!error && data) {

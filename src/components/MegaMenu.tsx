@@ -11,6 +11,7 @@ import { slugify } from '../lib/slugify';
 import { supabase } from '../lib/supabase';
 import { MegaMenuItem, MegaMenuLink } from '../types';
 import * as LucideIcons from 'lucide-react';
+import { MEGA_MENU_ITEM_COLUMNS, MEGA_MENU_COLUMN_COLUMNS, MEGA_MENU_LINK_COLUMNS } from '../lib/columns';
 
 export interface MegaMenuProps {
   className?: string;
@@ -42,9 +43,9 @@ export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
     try {
       const { data: items, error: itemsError } = await supabase
         .from('mega_menu_items')
-        .select('*')
+        .select(MEGA_MENU_ITEM_COLUMNS)
         .eq('is_active', true)
-        .order('order');
+        .order('order') as any;
 
       if (itemsError) throw itemsError;
 
@@ -52,9 +53,9 @@ export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
         (items || []).map(async (item) => {
           const { data: columns, error: columnsError } = await supabase
             .from('mega_menu_columns')
-            .select('*')
+            .select(MEGA_MENU_COLUMN_COLUMNS)
             .eq('menu_item_id', item.id)
-            .order('order');
+            .order('order') as any;
 
           if (columnsError) throw columnsError;
 
@@ -62,9 +63,9 @@ export default function MegaMenu({ className, onOpenChange }: MegaMenuProps) {
             (columns || []).map(async (column) => {
               const { data: links, error: linksError } = await supabase
                 .from('mega_menu_links')
-                .select('*')
+                .select(MEGA_MENU_LINK_COLUMNS)
                 .eq('column_id', column.id)
-                .order('order');
+                .order('order') as any;
 
               if (linksError) throw linksError;
 
