@@ -135,9 +135,7 @@ export default function Header() {
                     <span className="text-white text-base sm:text-xl md:text-2xl font-bold tracking-tight leading-none">
                       Véridian
                     </span>
-                    <span className="text-[#ff9900] text-[7px] sm:text-[8px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-medium -mt-0.5">
-                      Premium Shop
-                    </span>
+                    
                   </div>
                 </Link>
               </div>
@@ -203,7 +201,7 @@ export default function Header() {
                   >
                     <span className="text-[10px] text-white/70">Bonjour, {user ? user.email.split('@')[0] : 'Identifiez-vous'}</span>
                     <span className="text-sm font-bold flex items-center gap-1">
-                      Compte & Listes
+                      Mon Compte
                       <ChevronDown className="w-3 h-3" />
                     </span>
                   </button>

@@ -8,7 +8,6 @@ import SEO from '../components/SEO';
 import { buildStoreJsonLd } from '../lib/seo';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import TrustBadges from '../components/TrustBadges';
-import { RecentActivityNotification } from '../components/SocialProof';
 import {
   LayoutGrid,
   Shirt,
@@ -203,8 +202,7 @@ export default function StoreFront() {
         keywords={activeTab !== 'Tout' ? activeTab : 'e-commerce, boutique, premium'}
       />
       
-      <RecentActivityNotification />
-
+      {/* <RecentActivityNotification /> */}
       {/* ═══════════════════════════════════════════════════════════════════════
           HERO CAROUSEL — Full width rotating banners like Amazon
       ═══════════════════════════════════════════════════════════════════════ */}
