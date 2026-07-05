@@ -223,3 +223,16 @@ body {
     @apply transition-all duration-200;
   }
 }
+
+
+/* Mobile bottom navigation safe area */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Add padding to main content for mobile bottom nav */
+@media (max-width: 768px) {
+  #root {
+    padding-bottom: 4rem; /* 64px for bottom nav */
+  }
+}

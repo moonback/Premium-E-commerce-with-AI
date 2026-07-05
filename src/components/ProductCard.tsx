@@ -52,29 +52,23 @@ function ProductCard({ product }: { product: Product }) {
         onMouseLeave={() => setIsHover(false)}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.03 }}
+        whileHover={{ y: -4 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="group relative flex flex-col justify-between bg-transparent p-6 border border-ink/5 rounded-lg overflow-hidden hover:border-ink/20 hover:shadow-2xl transition-all duration-300"
+        className="group relative flex flex-col bg-white p-4 border border-gray-200 rounded-lg overflow-hidden hover:border-[#ff9900] hover:shadow-lg transition-all duration-300"
       >
-        
-
-        <div className="absolute top-4 left-4 text-[10px] font-bold uppercase opacity-30 z-10 transition-opacity group-hover:opacity-100">
-          N°{product.id.replace('prod_', '').padStart(3, '0')}
-        </div>
-
-        <Link to={productPath} className="relative aspect-[4/5] overflow-hidden bg-soft-green mb-6 block">
-          {/* Badges dynamiques */}
+        <Link to={productPath} className="relative aspect-square overflow-hidden bg-gray-50 mb-3 block rounded">
+          {/* Badges */}
           <ProductBadges
             isNew={product.isNew}
             stock={product.stock}
-            isBestseller={false} // À implémenter avec analytics
-            isTrending={false}   // À implémenter avec analytics
+            isBestseller={false}
+            isTrending={false}
           />
 
           {/* Badge produit en lot */}
           {product.is_batch_product && (
-            <div className="absolute top-4 left-4 z-20 bg-ink text-bg px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
-              📦 Lot de {product.batch_size}
+            <div className="absolute top-2 left-2 z-20 bg-[#c7511f] text-white px-2 py-1 text-[10px] font-bold uppercase rounded">
+              Lot de {product.batch_size}
             </div>
           )}
 
@@ -82,19 +76,19 @@ function ProductCard({ product }: { product: Product }) {
           <OptimizedImage
             src={product.image}
             alt={product.name}
-            width={400}
-            height={500}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            width={300}
+            height={300}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
 
-          {/* Quick actions on hover */}
+          {/* Quick actions overlay */}
           <AnimatePresence>
             {isHover && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/20 flex items-center justify-center gap-2 z-20"
               >
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -103,7 +97,7 @@ function ProductCard({ product }: { product: Product }) {
                     e.preventDefault();
                     setShowQuickView(true);
                   }}
-                  className="p-3 rounded-full bg-bg shadow-lg hover:bg-accent hover:text-bg transition-colors"
+                  className="p-2 rounded-full bg-white shadow-lg hover:bg-[#ff9900] hover:text-white transition-colors"
                   aria-label="Aperçu rapide"
                 >
                   <Eye className="w-4 h-4" />
@@ -118,71 +112,60 @@ function ProductCard({ product }: { product: Product }) {
             whileTap={{ scale: 0.9 }}
             onClick={handleWishlistToggle}
             className={cn(
-              "absolute top-4 right-4 p-2 rounded-full transition-all z-20 shadow-lg",
+              "absolute top-2 right-2 p-2 rounded-full transition-all z-20 shadow-md",
               isFavorite 
-                ? "bg-accent text-white" 
-                : "glass text-ink hover:bg-bg"
+                ? "bg-red-500 text-white" 
+                : "bg-white text-ink/60 hover:bg-red-50 hover:text-red-500"
             )}
             aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
-            <Heart className={cn('w-4 h-4 transition-all', isFavorite && 'fill-white')} />
+            <Heart className={cn('w-3.5 h-3.5 transition-all', isFavorite && 'fill-white')} />
           </motion.button>
         </Link>
 
-        <div>
-          <div className="flex justify-between items-start mb-1">
-            <Link to={productPath}>
-              <h3 className="font-serif text-xl leading-tight hover:text-ink/70 transition-colors">
-                {product.name}
-              </h3>
-            </Link>
-            <div className="text-right">
-              <span className="font-semibold">{product.price.toFixed(2)}€</span>
+        <div className="flex-1 flex flex-col">
+          <Link to={productPath} className="mb-2">
+            <h3 className="text-sm font-medium leading-tight line-clamp-2 hover:text-[#007185] transition-colors mb-1">
+              {product.name}
+            </h3>
+          </Link>
+          
+          <ProductRating productId={product.id} />
+
+          <div className="mt-auto pt-2">
+            <div className="flex items-baseline gap-2 mb-3">
+              <span className="text-lg font-bold text-[#c7511f]">{product.price.toFixed(2)}€</span>
               {product.is_batch_product && (
-                <div className="text-[10px] text-ink/60 uppercase tracking-wider">
-                  Lot de {product.batch_size}
-                </div>
+                <span className="text-[10px] text-ink/50">
+                  ({(product.price / product.batch_size!).toFixed(2)}€/unité)
+                </span>
               )}
             </div>
-          </div>
-          <ProductRating productId={product.id} />
-          <p className="text-ink/60 text-xs opacity-50 italic uppercase mb-3 line-clamp-2">
-            {product.description}
-          </p>
 
-          <div className="flex flex-wrap gap-2 mb-6">
-            {product.effects.slice(0, 3).map((effect) => (
-              <span
-                key={effect}
-                className="px-3 py-1 rounded-full border border-ink/20 text-[10px] uppercase tracking-wider text-ink"
-              >
-                {effect}
-              </span>
-            ))}
-            {product.effects.length > 3 && (
-              <span className="px-3 py-1 rounded-full border border-ink/20 text-[10px] uppercase tracking-wider text-ink/50">
-                +{product.effects.length - 3}
-              </span>
-            )}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              animate={added ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className={cn(
+                'w-full py-2 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-colors',
+                product.stock === 0
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#ff9900] text-ink hover:bg-[#fa8900]'
+              )}
+            >
+              {product.stock === 0 ? (
+                'Rupture de stock'
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5" />
+                  Ajouter au panier
+                </>
+              )}
+            </motion.button>
           </div>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            animate={added ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={cn(
-              'w-full py-4 border border-ink text-ink font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-colors',
-              product.stock === 0
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-ink hover:text-bg'
-            )}
-          >
-            <Plus className="w-4 h-4" />
-            {product.stock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}
-          </motion.button>
         </div>
       </motion.div>
 

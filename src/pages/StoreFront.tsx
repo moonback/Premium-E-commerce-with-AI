@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useStore } from '../store';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,17 +28,12 @@ import {
   ChevronRight,
   Mail,
   Award,
+  Clock,
+  Zap,
+  Tag,
+  Gift,
 } from 'lucide-react';
-import {
-  HeroSection,
-  FeaturedCategories,
-  FeaturedProducts,
-  SavoirFaireSection,
-  TestimonialsSection,
-  NewsletterSection,
-  BrandValuesSection,
-  AnimatedCounter,
-} from '../components/storefront';
+import { AnimatedCounter } from '../components/storefront';
 
 // ─── Category config ────────────────────────────────────────────────────────
 // Maps a category name (case-insensitive prefix match) to an icon + accent color.
@@ -71,16 +66,43 @@ export default function StoreFront() {
   const { products, categories: storeCategories, searchQuery, isLoadingProducts } = useStore();
   const [activeTab, setActiveTab] = useState('Tout');
   const [currentPage, setCurrentPage] = useState(1);
-  const [testimonialIndex, setTestimonialIndex] = useState(0);
   const [email, setEmail] = useState('');
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const prefersReducedMotion = useReducedMotion();
-  const PRODUCTS_PER_PAGE = 12;
+  const PRODUCTS_PER_PAGE = 20;
 
-  const testimonials = [
-    { name: 'Sophie M.', role: 'Cliente fidèle', initials: 'SM', rating: 5, text: 'Une expérience d\'achat exceptionnelle. Les produits sont d\'une qualité remarquable et la livraison est toujours rapide.' },
-    { name: 'Thomas L.', role: 'Acheteur régulier', initials: 'TL', rating: 5, text: 'Je suis impressionné par la qualité des produits et le service client irréprochable. Je recommande vivement.' },
-    { name: 'Camille D.', role: 'Nouvelle cliente', initials: 'CD', rating: 5, text: 'Première commande et déjà conquise ! Emballage soigné, produits conformes à la description. Je reviendrai.' },
+  // Hero carousel images
+  const heroSlides = [
+    {
+      image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&q=80',
+      title: 'Collection Premium',
+      subtitle: 'Découvrez nos nouveautés exclusives',
+      cta: 'Acheter maintenant',
+      link: '#deals'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&q=80',
+      title: 'Offres Spéciales',
+      subtitle: 'Jusqu\'à -50% sur une sélection de produits',
+      cta: 'Voir les offres',
+      link: '#featured'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1920&q=80',
+      title: 'Livraison Gratuite',
+      subtitle: 'Sur toutes les commandes de plus de 100€',
+      cta: 'En profiter',
+      link: '#collection'
+    }
   ];
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCarouselIndex(prev => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
 
   const categoryImages = [
     'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80',
@@ -140,15 +162,26 @@ export default function StoreFront() {
     setCurrentPage(1);
   }, [activeTab, searchQuery]);
 
-  // Featured products (top 4 by rating or newest)
+  // Featured products (top 8 by rating or newest)
   const featuredProducts = useMemo(
+    () => [...products].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 8),
+    [products]
+  );
+
+  // Deal of the day - highest discount or featured product
+  const dealOfTheDay = useMemo(() => {
+    return products.length > 0 ? products[Math.floor(Math.random() * Math.min(5, products.length))] : null;
+  }, [products]);
+
+  // Best sellers - top 4 products
+  const bestSellers = useMemo(
     () => [...products].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 4),
     [products]
   );
 
-  // Top categories for editorial section
+  // Top categories for editorial section (4 main categories with images)
   const editorialCategories = useMemo(
-    () => storeCategories.filter(c => c.level === 1).slice(0, 4),
+    () => storeCategories.filter(c => c.level === 1).slice(0, 8),
     [storeCategories]
   );
 
@@ -160,7 +193,7 @@ export default function StoreFront() {
     : `Découvrez notre sélection de ${activeTab.toLowerCase()} premium avec livraison rapide et service client exceptionnel.`;
 
   return (
-    <div className="bg-bg flex-1">
+    <div className="bg-[#f0f2f2] flex-1">
       <SEO
         title={categoryTitle}
         description={categoryDescription}
@@ -171,43 +204,195 @@ export default function StoreFront() {
       />
       
       <RecentActivityNotification />
-      
-      <HeroSection 
-        productsCount={products.length} 
-        categoriesCount={storeCategories.filter(c => c.level === 1).length} 
-      />
-
-      <TrustBadges />
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          CATEGORIES EN VEDETTE — Magazine editorial grid
+          HERO CAROUSEL — Full width rotating banners like Amazon
       ═══════════════════════════════════════════════════════════════════════ */}
-      {editorialCategories.length > 0 && (
-        <section className="py-20 md:py-28">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-gradient-to-b from-[#e3e6e6] to-transparent pb-20">
+        <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
+          <AnimatePresence mode="wait">
             <motion.div
-              initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-              whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="flex items-end justify-between mb-12"
+              key={carouselIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0"
             >
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-3 block">Explorer</span>
-                <h2 className="text-3xl md:text-5xl font-light font-serif text-ink">
-                  Nos <span className="italic">Univers</span>
-                </h2>
-              </div>
-              <a
-                href="#collection"
-                className="hidden md:flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50 hover:text-ink transition-colors group"
+              <div 
+                className="w-full h-full bg-cover bg-center"
+                style={{ backgroundImage: `url('${heroSlides[carouselIndex].image}')` }}
               >
-                Tout voir
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </a>
+                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+              </div>
+              <div className="absolute inset-0 flex items-center">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.6 }}
+                    className="max-w-xl"
+                  >
+                    <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+                      {heroSlides[carouselIndex].title}
+                    </h1>
+                    <p className="text-lg md:text-xl text-white/90 mb-8">
+                      {heroSlides[carouselIndex].subtitle}
+                    </p>
+                    <a
+                      href={heroSlides[carouselIndex].link}
+                      className="inline-block px-8 py-4 bg-[#ff9900] hover:bg-[#fa8900] text-ink font-bold rounded-lg shadow-lg transition-colors text-sm"
+                    >
+                      {heroSlides[carouselIndex].cta}
+                    </a>
+                  </motion.div>
+                </div>
+              </div>
             </motion.div>
+          </AnimatePresence>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {editorialCategories.map((cat, i) => (
+          {/* Carousel Navigation */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
+            {heroSlides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCarouselIndex(idx)}
+                className={`w-3 h-3 rounded-full transition-all ${
+                  idx === carouselIndex ? 'bg-white w-8' : 'bg-white/50 hover:bg-white/75'
+                }`}
+                aria-label={`Slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+
+          {/* Arrow Navigation */}
+          <button
+            onClick={() => setCarouselIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full transition-colors z-20"
+            aria-label="Précédent"
+          >
+            <ChevronLeft className="w-6 h-6 text-white" />
+          </button>
+          <button
+            onClick={() => setCarouselIndex((prev) => (prev + 1) % heroSlides.length)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full transition-colors z-20"
+            aria-label="Suivant"
+          >
+            <ChevronRight className="w-6 h-6 text-white" />
+          </button>
+        </div>
+
+        {/* Category Cards Grid - Overlapping Hero */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 relative z-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {editorialCategories.slice(0, 4).map((cat, i) => (
+              <motion.a
+                key={cat.id}
+                href={`#collection`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveTab(cat.name);
+                  document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+                animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all"
+              >
+                <div className="aspect-square overflow-hidden">
+                  <img
+                    src={cat.image_url || categoryImages[i]}
+                    alt={cat.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-4">
+                  <h3 className="font-bold text-sm mb-1">{cat.name}</h3>
+                  <span className="text-xs text-[#007185] hover:text-[#c7511f] hover:underline font-medium">
+                    Acheter maintenant
+                  </span>
+                </div>
+              </motion.a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Badges */}
+      <div className="bg-white border-t border-b border-gray-200 py-4">
+        <TrustBadges />
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          DEAL OF THE DAY — Highlighted product with countdown
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {dealOfTheDay && !isLoadingProducts && (
+        <section className="py-12 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Zap className="w-6 h-6 text-[#ff9900]" />
+              <h2 className="text-2xl md:text-3xl font-bold text-ink">Offre du jour</h2>
+            </div>
+            <div className="bg-gradient-to-r from-[#ff9900]/10 to-transparent border border-[#ff9900]/20 rounded-lg p-6 md:p-8">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <Link to={`/product/${dealOfTheDay.id}`}>
+                    <img
+                      src={dealOfTheDay.image}
+                      alt={dealOfTheDay.name}
+                      className="w-full h-auto rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
+                    />
+                  </Link>
+                </div>
+                <div>
+                  <div className="inline-block px-3 py-1 bg-[#c7511f] text-white text-xs font-bold rounded-full mb-4">
+                    OFFRE LIMITÉE
+                  </div>
+                  <Link to={`/product/${dealOfTheDay.id}`}>
+                    <h3 className="text-2xl md:text-3xl font-bold text-ink mb-4 hover:text-[#007185]">
+                      {dealOfTheDay.name}
+                    </h3>
+                  </Link>
+                  <p className="text-ink/70 mb-6 leading-relaxed">
+                    {dealOfTheDay.description}
+                  </p>
+                  <div className="flex items-baseline gap-3 mb-6">
+                    <span className="text-3xl md:text-4xl font-bold text-[#c7511f]">
+                      {dealOfTheDay.price.toFixed(2)}€
+                    </span>
+                    <span className="text-lg text-ink/50 line-through">
+                      {(dealOfTheDay.price * 1.3).toFixed(2)}€
+                    </span>
+                    <span className="px-2 py-1 bg-[#c7511f] text-white text-sm font-bold rounded">
+                      -30%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-6 text-sm text-ink/60">
+                    <Clock className="w-4 h-4" />
+                    <span>Se termine dans 23h 45min</span>
+                  </div>
+                  <Link
+                    to={`/product/${dealOfTheDay.id}`}
+                    className="inline-block px-8 py-3 bg-[#ff9900] hover:bg-[#fa8900] text-ink font-bold rounded-lg shadow-md transition-colors"
+                  >
+                    Voir l'offre
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          CATEGORIES — Visual grid like Amazon departments
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {editorialCategories.length > 4 && (
+        <section className="py-12 bg-[#f0f2f2]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-ink mb-8">Acheter par catégorie</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
+              {editorialCategories.slice(4).map((cat, i) => (
                 <motion.a
                   key={cat.id}
                   href={`#collection`}
@@ -219,28 +404,21 @@ export default function StoreFront() {
                   initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
                   whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className={`group relative overflow-hidden cursor-pointer ${
-                    i === 0 ? 'row-span-2 min-h-[300px] md:min-h-[500px]' : 'min-h-[200px] md:min-h-[240px]'
-                  }`}
+                  transition={{ delay: i * 0.1 }}
+                  className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all"
                 >
-                  {/* Image */}
-                  <div className="absolute inset-0">
+                  <div className="aspect-[4/3] overflow-hidden">
                     <img
-                      src={cat.image_url || categoryImages[i] || categoryImages[0]}
+                      src={cat.image_url || categoryImages[i % categoryImages.length]}
                       alt={cat.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                   </div>
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent group-hover:from-ink/90 transition-all duration-500" />
-                  {/* Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
-                    <h3 className="text-white font-serif text-lg md:text-xl mb-1">{cat.name}</h3>
-                    <div className="flex items-center gap-2 text-white/60 text-[11px] font-medium uppercase tracking-[0.1em] group-hover:text-white/80 transition-colors">
-                      <span>Découvrir</span>
-                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                    </div>
+                  <div className="p-4">
+                    <h3 className="font-bold text-sm mb-1">{cat.name}</h3>
+                    <span className="text-xs text-[#007185] hover:text-[#c7511f] hover:underline font-medium">
+                      Découvrir
+                    </span>
                   </div>
                 </motion.a>
               ))}
@@ -250,39 +428,25 @@ export default function StoreFront() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          FEATURED PRODUCTS — Top rated
+          FEATURED PRODUCTS — Product grid in Amazon style
       ═══════════════════════════════════════════════════════════════════════ */}
       {!isLoadingProducts && featuredProducts.length > 0 && (
-        <section id="featured" className="bg-white py-20 md:py-28">
+        <section id="featured" className="py-12 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-              whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-14"
-            >
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <span className="h-px w-8 bg-accent/30" />
-                <TrendingUp className="w-4 h-4 text-accent" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Sélection</span>
-                <span className="h-px w-8 bg-accent/30" />
-              </div>
-              <h2 className="text-3xl md:text-5xl font-light font-serif text-ink mb-4">
-                Produits <span className="italic">Vedettes</span>
-              </h2>
-              <p className="text-ink/50 max-w-lg mx-auto text-sm leading-relaxed">
-                Nos articles les plus appréciés, sélectionnés pour leur qualité exceptionnelle et leur design intemporel
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-ink">Produits recommandés pour vous</h2>
+              <a href="#collection" className="text-[#007185] hover:text-[#c7511f] hover:underline font-medium text-sm">
+                Tout voir
+              </a>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {featuredProducts.map((product, i) => (
                 <motion.div
                   key={product.id}
                   initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
                   whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  transition={{ duration: 0.5, delay: i * 0.05 }}
                 >
                   <ProductCard product={product} />
                 </motion.div>
@@ -375,177 +539,77 @@ export default function StoreFront() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          TESTIMONIALS — Immersive carousel
+          TESTIMONIALS — Customer reviews section
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="bg-ink py-20 md:py-28 relative overflow-hidden">
-        {/* Decorative background */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl" />
-        
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <motion.div
-            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-14"
-          >
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <span className="h-px w-8 bg-accent/30" />
-              <Star className="w-4 h-4 text-accent fill-accent" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">Témoignages</span>
-              <span className="h-px w-8 bg-accent/30" />
-            </div>
-            <h2 className="text-3xl md:text-5xl font-light font-serif text-white">
-              Ce que disent <span className="italic text-accent/80">nos clients</span>
-            </h2>
-          </motion.div>
-
-          {/* Testimonial card */}
-          <div className="relative">
-            <AnimatePresence mode="wait">
+      <section className="py-12 bg-[#f7f7f7]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-ink mb-8">Ce que disent nos clients</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { name: 'Sophie M.', rating: 5, text: 'Excellente qualité, livraison rapide. Je recommande vivement !' },
+              { name: 'Thomas L.', rating: 5, text: 'Produits conformes à la description. Service client très réactif.' },
+              { name: 'Camille D.', rating: 5, text: 'Ma boutique préférée ! Toujours satisfaite de mes achats.' },
+            ].map((testimonial, i) => (
               <motion.div
-                key={testimonialIndex}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.4 }}
-                className="max-w-3xl mx-auto text-center"
+                key={i}
+                initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+                whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white p-6 rounded-lg shadow-sm"
               >
-                {/* Stars */}
-                <div className="flex justify-center gap-1 mb-8">
-                  {Array.from({ length: testimonials[testimonialIndex].rating }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 text-accent fill-accent" />
+                <div className="flex gap-1 mb-3">
+                  {Array.from({ length: testimonial.rating }).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-[#ff9900] fill-[#ff9900]" />
                   ))}
                 </div>
-
-                {/* Quote */}
-                <Quote className="w-10 h-10 text-accent/20 mx-auto mb-6" />
-                <p className="text-lg md:text-xl text-white/80 mb-10 leading-relaxed font-light italic">
-                  "{testimonials[testimonialIndex].text}"
-                </p>
-
-                {/* Author */}
-                <div className="flex items-center justify-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center text-white font-bold text-sm">
-                    {testimonials[testimonialIndex].initials}
-                  </div>
-                  <div className="text-left">
-                    <p className="text-white font-semibold text-sm">{testimonials[testimonialIndex].name}</p>
-                    <p className="text-white/40 text-xs uppercase tracking-wider">{testimonials[testimonialIndex].role}</p>
-                  </div>
-                </div>
+                <p className="text-ink/80 text-sm mb-4 leading-relaxed">"{testimonial.text}"</p>
+                <p className="text-ink/60 text-xs font-semibold">{testimonial.name}</p>
               </motion.div>
-            </AnimatePresence>
-
-            {/* Nav buttons */}
-            <div className="flex items-center justify-center gap-4 mt-10">
-              <button
-                onClick={() => setTestimonialIndex(i => i === 0 ? testimonials.length - 1 : i - 1)}
-                className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/50 hover:text-white hover:border-white/40 transition-colors"
-                aria-label="Témoignage précédent"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              
-              {/* Dots */}
-              <div className="flex gap-2">
-                {testimonials.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setTestimonialIndex(i)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      i === testimonialIndex ? 'bg-accent w-6' : 'bg-white/20 hover:bg-white/40'
-                    }`}
-                    aria-label={`Témoignage ${i + 1}`}
-                  />
-                ))}
-              </div>
-
-              <button
-                onClick={() => setTestimonialIndex(i => i === testimonials.length - 1 ? 0 : i + 1)}
-                className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/50 hover:text-white hover:border-white/40 transition-colors"
-                aria-label="Témoignage suivant"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          COLLECTION — Product catalogue with category pills
+          COLLECTION — Main product catalogue with filters
       ═══════════════════════════════════════════════════════════════════════ */}
-      <main id="collection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 scroll-mt-24">
+      <main id="collection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 scroll-mt-24 bg-white">
         {/* Section header */}
-        <motion.div
-          initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-          whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-3 block">Catalogue</span>
-          <h2 className="text-3xl md:text-5xl font-light font-serif text-ink mb-4">
-            Notre <span className="italic">Collection</span>
+        <div className="mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-ink mb-4">
+            {activeTab === 'Tout' ? 'Tous les produits' : activeTab}
           </h2>
-          <p className="text-ink/50 max-w-lg mx-auto text-sm">
-            Parcourez l'ensemble de nos produits premium, filtrés par catégorie
+          <p className="text-ink/60 text-sm">
+            {filteredProducts.length} résultat{filteredProducts.length !== 1 ? 's' : ''}
           </p>
-        </motion.div>
+        </div>
 
-        {/* Visual category pills */}
-        <div className="flex gap-3 mb-12 overflow-x-auto pb-3 scrollbar-hide md:justify-center">
+        {/* Category filters - Amazon style horizontal pills */}
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-3 scrollbar-hide">
           {categories.map(cat => {
-            const { icon: Icon, accent, bg } = getCategoryConfig(cat);
             const isActive = activeTab === cat;
-            const catObj = cat !== 'Tout' ? categoryMap[cat] : null;
-            const hasImage = !!catObj?.image_url;
             return (
               <button
                 key={cat}
                 onClick={() => handleTabChange(cat)}
-                className="relative flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl whitespace-nowrap transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent min-w-[72px]"
+                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                  isActive 
+                    ? 'bg-ink text-white shadow-md' 
+                    : 'bg-white border border-gray-300 text-ink hover:bg-gray-50'
+                }`}
                 aria-pressed={isActive}
               >
-                {/* Animated background pill */}
-                {isActive && (
-                  <motion.span
-                    layoutId="category-active-bg"
-                    className={`absolute inset-0 rounded-2xl ${hasImage ? 'bg-ink/10' : bg} border border-current/20`}
-                    style={{ originX: 0.5, originY: 0.5 }}
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-
-                {/* Icon or uploaded image */}
-                <span className={`relative z-10 transition-all duration-200 ${isActive ? accent : 'text-ink/40'}`}>
-                  {hasImage ? (
-                    <img
-                      src={catObj!.image_url!}
-                      alt={cat}
-                      className={`w-6 h-6 rounded-lg object-cover transition-all duration-200 ${isActive ? 'ring-2 ring-current' : 'opacity-50 grayscale'}`}
-                    />
-                  ) : (
-                    <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                  )}
-                </span>
-
-                {/* Label */}
-                <span
-                  className={`relative z-10 text-[10px] font-bold uppercase tracking-widest transition-colors duration-200 ${
-                    isActive ? accent : 'text-ink/50'
-                  }`}
-                >
-                  {cat}
-                </span>
+                {cat}
               </button>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+        {/* Product Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {isLoadingProducts ? (
-            Array.from({ length: 8 }).map((_, i) => (
+            Array.from({ length: 20 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))
           ) : (
@@ -553,9 +617,8 @@ export default function StoreFront() {
               <motion.div
                 key={product.id}
                 initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-                whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: prefersReducedMotion ? 0 : 0.5, delay: prefersReducedMotion ? 0 : i * 0.1 }}
+                animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.02 }}
               >
                 <ProductCard product={product} />
               </motion.div>
@@ -565,41 +628,55 @@ export default function StoreFront() {
 
         {!isLoadingProducts && filteredProducts.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-ink/50 italic text-xl">Aucun article ne correspond à votre recherche...</p>
+            <Package className="w-16 h-16 text-ink/20 mx-auto mb-4" />
+            <p className="text-ink/50 text-lg">Aucun produit trouvé</p>
+            <p className="text-ink/40 text-sm mt-2">Essayez avec d'autres filtres</p>
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination - Amazon style */}
         {!isLoadingProducts && totalPages > 1 && (
-          <div className="mt-16 flex items-center justify-center gap-2">
+          <div className="mt-12 flex items-center justify-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] border border-ink/15 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm border border-gray-300 text-ink hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed rounded"
             >
               Précédent
             </button>
             
-            <div className="flex gap-1.5">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-10 h-10 text-[11px] font-semibold transition-colors ${
-                    currentPage === page
-                      ? 'bg-ink text-bg'
-                      : 'border border-ink/15 text-ink hover:bg-ink/5'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 text-sm font-medium transition-colors rounded ${
+                      currentPage === page
+                        ? 'bg-[#ff9900] text-white'
+                        : 'border border-gray-300 text-ink hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
             </div>
 
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] border border-ink/15 text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm border border-gray-300 text-ink hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed rounded"
             >
               Suivant
             </button>
@@ -608,97 +685,60 @@ export default function StoreFront() {
       </main>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          NEWSLETTER — Glassmorphism design
+          NEWSLETTER — Amazon-inspired CTA section
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-20 md:py-28 overflow-hidden">
-        {/* Background image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=1920&q=80')" }}
-        />
-        <div className="absolute inset-0 bg-ink/80 backdrop-blur-sm" />
-        
-        <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <span className="h-px w-8 bg-accent/30" />
-              <Mail className="w-4 h-4 text-accent" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">Newsletter</span>
-              <span className="h-px w-8 bg-accent/30" />
-            </div>
-            <h2 className="text-3xl md:text-5xl font-light font-serif text-white mb-4">
-              Restez <span className="italic text-accent/80">informé</span>
-            </h2>
-            <p className="text-white/50 mb-10 max-w-xl mx-auto text-sm leading-relaxed">
-              Inscrivez-vous à notre newsletter pour recevoir nos dernières nouveautés, offres exclusives et conseils style.
-            </p>
-
-            {/* Glassmorphism form card */}
-            <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-2xl max-w-md mx-auto">
-              <form onSubmit={handleNewsletterSubmit} className="space-y-4">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Votre adresse email"
-                  required
-                  className="w-full px-5 py-3.5 bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-accent/50 transition-colors text-sm rounded-lg"
-                />
-                <button
-                  type="submit"
-                  className="w-full px-6 py-3.5 bg-accent text-white font-semibold text-sm uppercase tracking-[0.15em] hover:bg-accent/90 transition-colors rounded-lg"
-                >
-                  S'inscrire
-                </button>
-              </form>
-              <p className="text-[10px] text-white/30 mt-4">
-                En vous inscrivant, vous acceptez de recevoir nos communications marketing.
-              </p>
-            </div>
-          </motion.div>
+      <section className="py-12 bg-gradient-to-r from-[#232f3e] to-[#1a2332]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            Inscrivez-vous à notre newsletter
+          </h2>
+          <p className="text-white/70 mb-8 text-sm">
+            Recevez nos meilleures offres et nos nouveautés en exclusivité
+          </p>
+          
+          <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Votre adresse email"
+              required
+              className="flex-1 px-4 py-3 bg-white border-none text-ink placeholder:text-ink/40 focus:outline-none focus:ring-2 focus:ring-[#ff9900] text-sm rounded"
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 bg-[#ff9900] hover:bg-[#fa8900] text-ink font-bold text-sm transition-colors rounded whitespace-nowrap"
+            >
+              S'inscrire
+            </button>
+          </form>
+          <p className="text-white/40 text-xs mt-4">
+            En vous inscrivant, vous acceptez de recevoir nos communications marketing
+          </p>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          BRAND VALUES — Engagements
+          BRAND VALUES — Trust indicators
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="bg-bg py-20 md:py-28 border-t border-ink/5">
+      <section className="py-12 bg-white border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-14"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-3 block">Nos valeurs</span>
-            <h2 className="text-3xl md:text-5xl font-light font-serif text-ink mb-4">
-              Nos <span className="italic">Engagements</span>
-            </h2>
-            <p className="text-ink/50 max-w-lg mx-auto text-sm">
-              Des valeurs qui guident chacune de nos actions
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             {[
               {
-                icon: Leaf,
-                title: 'Durabilité',
-                desc: 'Nous nous engageons pour un commerce responsable et des produits durables qui respectent l\'environnement.',
+                icon: Package,
+                title: 'Livraison rapide',
+                desc: 'Livraison gratuite dès 100€ d\'achat',
               },
               {
                 icon: Award,
-                title: 'Excellence',
-                desc: 'Chaque produit est sélectionné avec soin pour garantir une qualité exceptionnelle et une satisfaction totale.',
+                title: 'Qualité garantie',
+                desc: 'Produits sélectionnés avec soin',
               },
               {
-                icon: Sparkles,
-                title: 'Innovation',
-                desc: 'Nous utilisons les dernières technologies pour vous offrir une expérience d\'achat unique et personnalisée.',
+                icon: Gift,
+                title: 'Service client',
+                desc: 'Support 7j/7 pour vous accompagner',
               },
             ].map((value, i) => (
               <motion.div
@@ -706,14 +746,14 @@ export default function StoreFront() {
                 initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
                 whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="text-center group"
+                transition={{ delay: i * 0.1 }}
+                className="flex flex-col items-center"
               >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/8 mb-6 group-hover:bg-accent/15 transition-colors duration-300">
-                  <value.icon className="w-7 h-7 text-accent" strokeWidth={1.5} />
+                <div className="w-16 h-16 rounded-full bg-[#ff9900]/10 flex items-center justify-center mb-4">
+                  <value.icon className="w-8 h-8 text-[#ff9900]" />
                 </div>
-                <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-3 text-ink">{value.title}</h3>
-                <p className="text-ink/50 text-sm leading-relaxed max-w-xs mx-auto">{value.desc}</p>
+                <h3 className="text-lg font-bold mb-2 text-ink">{value.title}</h3>
+                <p className="text-ink/60 text-sm">{value.desc}</p>
               </motion.div>
             ))}
           </div>
